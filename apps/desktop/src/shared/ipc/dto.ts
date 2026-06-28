@@ -310,3 +310,108 @@ export interface ConfirmTagsPayload {
   readonly seasons?: readonly string[];
   readonly tags?: readonly string[];
 }
+
+/* ------------------------- Phase 7 outfit history ------------------------- */
+
+/** A persisted outfit-usage record crossing the IPC boundary. */
+export interface OutfitHistoryEntryDTO {
+  readonly id: string;
+  readonly garmentIds: readonly string[];
+  readonly signature: string;
+  readonly outfitId: string | null;
+  readonly label: string | null;
+  readonly wornOn: string;
+  readonly time: string | null;
+  readonly place: string | null;
+  readonly event: string | null;
+  readonly occasion: string | null;
+  readonly weather: string | null;
+  readonly temperatureC: number | null;
+  readonly role: string | null;
+  readonly comments: string | null;
+  readonly satisfaction: number | null;
+  readonly source: string;
+  readonly createdAt: string;
+}
+
+export interface OutfitHistoryPageDTO {
+  readonly items: readonly OutfitHistoryEntryDTO[];
+  readonly total: number;
+  readonly page: number;
+  readonly totalPages: number;
+}
+
+export interface OutfitHistoryStatisticsDTO {
+  readonly totalUses: number;
+  readonly uniqueOutfits: number;
+  readonly byRole: Readonly<Record<string, number>>;
+  readonly byEvent: Readonly<Record<string, number>>;
+  readonly byOccasion: Readonly<Record<string, number>>;
+  readonly averageSatisfaction: number | null;
+  readonly garmentUsage: ReadonlyArray<readonly [string, number]>;
+  readonly lastWornOn: string | null;
+}
+
+export interface RepetitionGroupDTO {
+  readonly signature: string;
+  readonly count: number;
+  readonly garmentIds: readonly string[];
+  readonly wornOn: readonly string[];
+}
+
+/** Extensible usage context captured when recording a usage. */
+export interface OutfitUsageContextPayload {
+  readonly wornOn?: string;
+  readonly time?: string;
+  readonly place?: string;
+  readonly event?: string;
+  readonly occasion?: string;
+  readonly weather?: string;
+  readonly temperatureC?: number;
+  readonly role?: string;
+  readonly comments?: string;
+  readonly satisfaction?: number;
+  readonly label?: string;
+}
+
+export interface RecordUsagePayload {
+  readonly garmentIds: readonly string[];
+  readonly context?: OutfitUsageContextPayload;
+}
+
+export interface RecordFeedbackPayload {
+  readonly garmentIds: readonly string[];
+  readonly accepted: boolean;
+  readonly context?: OutfitUsageContextPayload;
+}
+
+export interface RepeatOutfitPayload {
+  readonly entryId: string;
+  readonly context?: OutfitUsageContextPayload;
+}
+
+export interface AnnotateHistoryPayload {
+  readonly entryId: string;
+  readonly place?: string | null;
+  readonly event?: string | null;
+  readonly role?: string | null;
+  readonly comments?: string | null;
+  readonly label?: string | null;
+  readonly satisfaction?: number | null;
+}
+
+export interface HistorySearchPayload {
+  readonly text?: string;
+  readonly role?: string;
+  readonly event?: string;
+  readonly place?: string;
+  readonly occasion?: string;
+  readonly source?: string;
+  readonly minSatisfaction?: number;
+  readonly from?: string;
+  readonly to?: string;
+  readonly sortBy?: 'wornOn' | 'satisfaction' | 'createdAt';
+  readonly sortDirection?: 'asc' | 'desc';
+  readonly page?: number;
+  readonly pageSize?: number;
+}

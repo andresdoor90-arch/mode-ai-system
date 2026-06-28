@@ -17,6 +17,7 @@ import {
   IpcChannels,
   type AddGarmentPayload,
   type AiStatusDTO,
+  type AnnotateHistoryPayload,
   type AppInfoDTO,
   type CategoryDTO,
   type CategoryNodeDTO,
@@ -25,11 +26,18 @@ import {
   type ConfirmTagsPayload,
   type GarmentDTO,
   type GarmentSearchPayload,
+  type HistorySearchPayload,
   type IpcResponse,
+  type OutfitHistoryPageDTO,
+  type OutfitHistoryStatisticsDTO,
   type OutfitSuggestionDTO,
   type PhotoTransformPayload,
   type RecommendationRequestPayload,
   type RecommendationSetDTO,
+  type RecordFeedbackPayload,
+  type RecordUsagePayload,
+  type RepeatOutfitPayload,
+  type RepetitionGroupDTO,
   type ReorderPayload,
   type StyleAnalysisDTO,
   type SuggestionsPayload,
@@ -126,6 +134,28 @@ const api = {
       payload: RecommendationRequestPayload,
     ): Promise<IpcResponse<RecommendationSetDTO>> => invoke(IpcChannels.aiRecommend, payload),
     status: (): Promise<IpcResponse<AiStatusDTO>> => invoke(IpcChannels.aiStatus),
+  },
+  history: {
+    search: (payload: HistorySearchPayload = {}): Promise<IpcResponse<OutfitHistoryPageDTO>> =>
+      invoke(IpcChannels.historySearch, payload),
+    statistics: (): Promise<IpcResponse<OutfitHistoryStatisticsDTO>> =>
+      invoke(IpcChannels.historyStatistics),
+    recentRepetitions: (window?: number): Promise<IpcResponse<readonly RepetitionGroupDTO[]>> =>
+      invoke(IpcChannels.historyRecentRepetitions, { window }),
+    forGarment: (garmentId: string): Promise<IpcResponse<OutfitHistoryPageDTO>> =>
+      invoke(IpcChannels.historyGarment, { garmentId }),
+    recordUsage: (payload: RecordUsagePayload): Promise<IpcResponse<{ id: string }>> =>
+      invoke(IpcChannels.historyRecordUsage, payload),
+    recordFeedback: (
+      payload: RecordFeedbackPayload,
+    ): Promise<IpcResponse<{ historyEntryId: string | null; accepted: boolean }>> =>
+      invoke(IpcChannels.historyRecordFeedback, payload),
+    repeat: (
+      payload: RepeatOutfitPayload,
+    ): Promise<IpcResponse<{ historyEntryId: string; garmentIds: readonly string[] }>> =>
+      invoke(IpcChannels.historyRepeat, payload),
+    annotate: (payload: AnnotateHistoryPayload): Promise<IpcResponse<{ id: string }>> =>
+      invoke(IpcChannels.historyAnnotate, payload),
   },
   style: {
     analysis: (): Promise<IpcResponse<StyleAnalysisDTO>> => invoke(IpcChannels.styleAnalysis),

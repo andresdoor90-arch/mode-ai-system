@@ -10,6 +10,7 @@ import { IpcChannels } from './channels';
 import type {
   AddGarmentPayload,
   AiStatusDTO,
+  AnnotateHistoryPayload,
   AppInfoDTO,
   CategoryDTO,
   CategoryNodeDTO,
@@ -18,10 +19,18 @@ import type {
   CreateCategoryPayload,
   GarmentDTO,
   GarmentSearchPayload,
+  HistorySearchPayload,
+  OutfitHistoryEntryDTO,
+  OutfitHistoryPageDTO,
+  OutfitHistoryStatisticsDTO,
   OutfitSuggestionDTO,
   PhotoTransformPayload,
   RecommendationRequestPayload,
   RecommendationSetDTO,
+  RecordFeedbackPayload,
+  RecordUsagePayload,
+  RepeatOutfitPayload,
+  RepetitionGroupDTO,
   ReorderPayload,
   SeasonPayload,
   StyleAnalysisDTO,
@@ -95,6 +104,30 @@ export interface IpcContract {
     response: RecommendationSetDTO;
   };
   [IpcChannels.aiStatus]: { request: NoPayload; response: AiStatusDTO };
+
+  [IpcChannels.historySearch]: {
+    request: HistorySearchPayload;
+    response: OutfitHistoryPageDTO;
+  };
+  [IpcChannels.historyStatistics]: { request: NoPayload; response: OutfitHistoryStatisticsDTO };
+  [IpcChannels.historyRecentRepetitions]: {
+    request: { window?: number };
+    response: readonly RepetitionGroupDTO[];
+  };
+  [IpcChannels.historyGarment]: {
+    request: { garmentId: string };
+    response: OutfitHistoryPageDTO;
+  };
+  [IpcChannels.historyRecordUsage]: { request: RecordUsagePayload; response: { id: string } };
+  [IpcChannels.historyRecordFeedback]: {
+    request: RecordFeedbackPayload;
+    response: { historyEntryId: string | null; accepted: boolean };
+  };
+  [IpcChannels.historyRepeat]: {
+    request: RepeatOutfitPayload;
+    response: { historyEntryId: string; garmentIds: readonly string[] };
+  };
+  [IpcChannels.historyAnnotate]: { request: AnnotateHistoryPayload; response: { id: string } };
 
   [IpcChannels.styleAnalysis]: { request: NoPayload; response: StyleAnalysisDTO };
   [IpcChannels.styleColorPalette]: { request: NoPayload; response: ColorPaletteDTO };

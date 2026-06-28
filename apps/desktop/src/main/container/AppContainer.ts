@@ -29,6 +29,8 @@ import {
   ADD_PHOTOS,
   AIOrchestrator,
   AIProviderRouter,
+  AnnotateOutfitHistoryHandler,
+  ANNOTATE_OUTFIT_HISTORY,
   ArchiveGarmentHandler,
   ARCHIVE_GARMENT,
   Color,
@@ -55,8 +57,14 @@ import {
   GET_COLOR_PALETTE,
   GetGarmentsByCategoryHandler,
   GET_GARMENTS_BY_CATEGORY,
+  GetGarmentUsageHistoryHandler,
+  GET_GARMENT_USAGE_HISTORY,
+  GetOutfitHistoryStatisticsHandler,
+  GET_OUTFIT_HISTORY_STATISTICS,
   GetOutfitSuggestionsHandler,
   GET_OUTFIT_SUGGESTIONS,
+  GetRecentRepetitionsHandler,
+  GET_RECENT_REPETITIONS,
   GetSeasonalWardrobeHandler,
   GET_SEASONAL_WARDROBE,
   GetStyleAnalysisHandler,
@@ -69,6 +77,12 @@ import {
   RATE_OUTFIT,
   RecommendOutfitsHandler,
   RECOMMEND_OUTFITS,
+  RecordOutfitFeedbackHandler,
+  RECORD_OUTFIT_FEEDBACK,
+  RecordOutfitUsageHandler,
+  RECORD_OUTFIT_USAGE,
+  RepeatOutfitHandler,
+  REPEAT_OUTFIT,
   RemovePhotoHandler,
   REMOVE_PHOTO,
   RemoveGarmentHandler,
@@ -82,6 +96,8 @@ import {
   Season,
   SearchGarmentsHandler,
   SEARCH_GARMENTS,
+  SearchOutfitHistoryHandler,
+  SEARCH_OUTFIT_HISTORY,
   SeedDefaultTaxonomyCommand,
   SeedDefaultTaxonomyHandler,
   SEED_DEFAULT_TAXONOMY,
@@ -122,28 +138,39 @@ import {
   InMemoryEventBus,
   InMemoryPreferenceMemoryStore,
   InMemoryVectorStore,
+  MigrationRunner,
+  type SqlDatabase,
+  createSqliteDatabase,
+  defaultMigrationsDir,
+  loadMigrations,
 } from '@mas/infrastructure';
 
 import {
-  InMemoryCategoryRepository,
-  InMemoryCollectionRepository,
-  InMemoryGarmentRepository,
-  InMemoryOutfitRepository,
-  InMemoryUserProfileRepository,
-} from './inMemoryRepositories';
+  createInMemoryPersistence,
+  createSqlPersistence,
+  type Persistence,
+} from './persistence';
 
-export interface Repositories {
-  readonly garments: InMemoryGarmentRepository;
-  readonly outfits: InMemoryOutfitRepository;
-  readonly collections: InMemoryCollectionRepository;
-  readonly profiles: InMemoryUserProfileRepository;
-  readonly categories: InMemoryCategoryRepository;
-}
+/** The wired repository ports (SQL-backed in production, swappable for tests). */
+export type Repositories = Persistence;
 
 /** Options for assembling the container. */
 export interface AppContainerOptions {
-  /** Directory for durable app data (preference memory, etc.). */
+  /** Directory for durable app data (the SQLite DB, preference memory, etc.). */
   readonly dataDir?: string;
+  /**
+   * Inject an already-open {@link SqlDatabase} (offline tests pass a
+   * bun:sqlite-backed store). When provided it becomes the real backing and
+   * migrations are applied to it automatically.
+   */
+  readonly database?: SqlDatabase;
+  /**
+   * Force the in-memory persistence (no database). Defaults to false; used by
+   * lightweight smoke tests that do not need durability.
+   */
+  readonly inMemory?: boolean;
+  /** Skip seeding demo garments (the taxonomy is still seeded when empty). */
+  readonly skipDemoSeed?: boolean;
 }
 
 /**
@@ -162,16 +189,18 @@ export class AppContainer {
   private readonly router: AIProviderRouter;
   private readonly memory: MemoryEngine;
   private readonly sync: WardrobeSyncCoordinator;
+  private readonly database: SqlDatabase | undefined;
+  private readonly skipDemoSeed: boolean;
 
-  private constructor(options: AppContainerOptions = {}) {
+  private constructor(
+    persistence: Persistence,
+    options: AppContainerOptions,
+    database: SqlDatabase | undefined,
+  ) {
     this.ids = new SequentialIdGenerator('mas');
-    this.repositories = {
-      garments: new InMemoryGarmentRepository(),
-      outfits: new InMemoryOutfitRepository(),
-      collections: new InMemoryCollectionRepository(),
-      profiles: new InMemoryUserProfileRepository(),
-      categories: new InMemoryCategoryRepository(),
-    };
+    this.repositories = persistence;
+    this.database = database;
+    this.skipDemoSeed = options.skipDemoSeed ?? false;
 
     this.events = new InMemoryEventBus();
 
@@ -192,6 +221,9 @@ export class AppContainer {
       garments: this.repositories.garments,
       outfits: this.repositories.outfits,
       profiles: this.repositories.profiles,
+      // Persisted usage history feeds freshness / recent-repetition so
+      // recommendations improve over time (Phase 7 Part B).
+      history: this.repositories.history,
       router: this.router,
       memory: this.memory,
     });
@@ -205,9 +237,10 @@ export class AppContainer {
     this.registerHandlers();
   }
 
-  /** Tear down event subscriptions (used on shutdown / teardown). */
+  /** Tear down event subscriptions + close the database (used on shutdown). */
   public dispose(): void {
     this.sync.stop();
+    this.database?.close();
   }
 
   /**
@@ -244,9 +277,32 @@ export class AppContainer {
     };
   }
 
-  /** Build the container and seed it with demonstration data. */
+  /** Build the container, opening + migrating the database and seeding it. */
   public static async create(options: AppContainerOptions = {}): Promise<AppContainer> {
-    const container = new AppContainer(options);
+    let database: SqlDatabase | undefined;
+    let persistence: Persistence;
+
+    if (options.inMemory === true) {
+      persistence = createInMemoryPersistence();
+    } else if (options.database !== undefined) {
+      database = options.database;
+      persistence = createSqlPersistence(database);
+    } else if (options.dataDir !== undefined) {
+      // Production path: a durable, file-backed SQLite database under userData.
+      database = await createSqliteDatabase(`${options.dataDir}/mas.db`);
+      persistence = createSqlPersistence(database);
+    } else {
+      // No durable location and no injected DB ⇒ volatile fallback.
+      persistence = createInMemoryPersistence();
+    }
+
+    // Apply migrations to whatever real database backs us (idempotent + tracked).
+    if (database !== undefined) {
+      const runner = new MigrationRunner(database);
+      runner.migrate(await loadMigrations(defaultMigrationsDir()));
+    }
+
+    const container = new AppContainer(persistence, options, database);
     await container.seed();
     return container;
   }
@@ -269,7 +325,7 @@ export class AppContainer {
   }
 
   private registerHandlers(): void {
-    const { garments, outfits, collections, profiles, categories } = this.repositories;
+    const { garments, outfits, collections, profiles, categories, history } = this.repositories;
     const events = this.events;
     const suggester = new DeferredVisionTagSuggester();
 
@@ -294,7 +350,16 @@ export class AppContainer {
       .register(RATE_OUTFIT, new RateOutfitHandler(outfits))
       .register(CREATE_COLLECTION, new CreateCollectionHandler(garments, collections, this.ids))
       .register(UPDATE_PROFILE, new UpdateProfileHandler(profiles))
-      .register(SET_PREFERENCES, new SetPreferencesHandler(profiles));
+      .register(SET_PREFERENCES, new SetPreferencesHandler(profiles))
+      // Phase 7 Part B — outfit history (the accept/feedback path records usage
+      // automatically AND feeds the preference memory).
+      .register(
+        RECORD_OUTFIT_FEEDBACK,
+        new RecordOutfitFeedbackHandler(garments, history, this.ids, this.memory),
+      )
+      .register(RECORD_OUTFIT_USAGE, new RecordOutfitUsageHandler(garments, history, this.ids))
+      .register(REPEAT_OUTFIT, new RepeatOutfitHandler(garments, history, this.ids))
+      .register(ANNOTATE_OUTFIT_HISTORY, new AnnotateOutfitHistoryHandler(history));
 
     this.queries
       .register(GET_WARDROBE, new GetWardrobeHandler(garments, collections))
@@ -307,7 +372,11 @@ export class AppContainer {
       .register(GET_STYLE_ANALYSIS, new GetStyleAnalysisHandler(garments))
       .register(GET_COLOR_PALETTE, new GetColorPaletteHandler(garments, profiles))
       .register(GET_OUTFIT_SUGGESTIONS, new GetOutfitSuggestionsHandler(garments, profiles))
-      .register(RECOMMEND_OUTFITS, new RecommendOutfitsHandler(this.orchestrator));
+      .register(RECOMMEND_OUTFITS, new RecommendOutfitsHandler(this.orchestrator))
+      .register(SEARCH_OUTFIT_HISTORY, new SearchOutfitHistoryHandler(history))
+      .register(GET_OUTFIT_HISTORY_STATISTICS, new GetOutfitHistoryStatisticsHandler(history))
+      .register(GET_RECENT_REPETITIONS, new GetRecentRepetitionsHandler(history))
+      .register(GET_GARMENT_USAGE_HISTORY, new GetGarmentUsageHistoryHandler(history));
   }
 
   /**
@@ -318,8 +387,16 @@ export class AppContainer {
   private async seed(): Promise<void> {
     // Module 1: seed the default taxonomy as user-editable category DATA. This
     // is the enum→data migration in action — nothing is hardcoded; the user can
-    // edit, regroup, reorder or delete any of it.
+    // edit, regroup, reorder or delete any of it. Idempotent: the command is a
+    // no-op when categories already exist, so it is safe on every startup.
     await this.commands.send(new SeedDefaultTaxonomyCommand());
+
+    // Only seed demonstration garments on a FRESH store. With durable SQLite
+    // persistence this guard prevents the demo set from being re-added on every
+    // restart; existing user data is left untouched.
+    if (this.skipDemoSeed || (await this.repositories.garments.count()) > 0) {
+      return;
+    }
 
     const c = (hex: string, name: string): Color => unwrap(Color.fromHex(hex, name));
 
