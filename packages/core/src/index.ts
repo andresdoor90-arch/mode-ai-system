@@ -15,7 +15,7 @@
 export const CORE_PACKAGE_NAME = '@mas/core' as const;
 
 /** Semantic version of the core package. */
-export const CORE_VERSION = '0.2.0' as const;
+export const CORE_VERSION = '0.5.0' as const;
 
 /* ----------------------------- shared kernel ----------------------------- */
 export * from './shared/errors';
@@ -80,3 +80,7 @@ export * from './application/commands/collectionCommands';
 export * from './application/queries/wardrobeQueries';
 export * from './application/queries/styleQueries';
 export * from './application/queries/suggestionQueries';
+export * from './application/queries/recommendationQueries';
+
+/* ----------------------- AI orchestration (cognitive engine) -------------- */
+export * from './application/orchestration';

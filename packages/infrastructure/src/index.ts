@@ -14,6 +14,7 @@
  *  - `repositories`  — SQLite-backed repository implementations + mappers
  *  - `vector`        — provider-agnostic vector store (ChromaDB + in-memory)
  *  - `ai`            — provider-agnostic AI text/embedding ports + base adapters
+ *  - `memory`        — persistent preference-memory stores for the AI engine
  *  - `backup`        — backup & restore of database/images/config
  *  - `transfer`      — portable import/export bundles
  *  - `id`            — UUID-backed id generator
@@ -30,7 +31,7 @@ import { CORE_PACKAGE_NAME } from '@mas/core';
 export const INFRASTRUCTURE_PACKAGE_NAME = '@mas/infrastructure' as const;
 
 /** Semantic version of the infrastructure package. */
-export const INFRASTRUCTURE_VERSION = '0.3.0' as const;
+export const INFRASTRUCTURE_VERSION = '0.4.0' as const;
 
 /** The core package this layer depends on (sanity check for workspace wiring). */
 export const DEPENDS_ON = CORE_PACKAGE_NAME;
@@ -44,6 +45,7 @@ export * from './database';
 export * from './repositories';
 export * from './vector';
 export * from './ai';
+export * from './memory';
 export * from './backup';
 export * from './transfer';
 export * from './id';

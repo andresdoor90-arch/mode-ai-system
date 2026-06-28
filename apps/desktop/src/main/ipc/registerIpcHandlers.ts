@@ -19,6 +19,7 @@ import {
   GetOutfitSuggestionsQuery,
   GetStyleAnalysisQuery,
   GetWardrobeQuery,
+  RecommendOutfitsQuery,
   RemoveGarmentCommand,
   UpdateGarmentCommand,
   toId,
@@ -40,6 +41,7 @@ import {
   colorsToPaletteDto,
   collectionToDto,
   garmentToDto,
+  recommendationSetToDto,
 } from '../mappers/toDto';
 
 /** Wrap an async handler so any thrown error becomes a failure envelope. */
@@ -169,6 +171,30 @@ export function registerIpcHandlers(container: AppContainer): void {
       result.value.map((s) => ({ garments: s.garments.map(garmentToDto), score: s.score })),
     );
   });
+
+  /* ------------------------------ ai / engine ----------------------------- */
+  handle(IpcChannels.aiRecommend, async (_event, payload) => {
+    const p = payload as {
+      message?: string;
+      occasion?: string;
+      season?: string;
+      referenceDate?: string;
+    };
+    const result = await queries.ask(
+      new RecommendOutfitsQuery({
+        message: p.message ?? '',
+        ...(p.occasion !== undefined ? { occasion: toOccasion(p.occasion) } : {}),
+        ...(p.season !== undefined ? { season: toSeason(p.season) } : {}),
+        ...(p.referenceDate !== undefined ? { referenceDate: p.referenceDate } : {}),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess(recommendationSetToDto(result.value));
+  });
+
+  handle(IpcChannels.aiStatus, async () => ipcSuccess(await container.aiStatus()));
 
   /* --------------------------------- style -------------------------------- */
   handle(IpcChannels.styleAnalysis, async () => {

@@ -3,8 +3,8 @@
  *
  * Global state is split by concern (UI, wardrobe, outfit, user, AI status),
  * each store owning a single slice. Pure transition logic lives under
- * `./logic`. The AI status store is a placeholder only — no engine is wired in
- * Phase 4.
+ * `./logic`. Since Phase 5 the AI status store mirrors the real engine
+ * capability reported over IPC (rules-only "degraded" vs provider-backed).
  */
 export { useUiStore } from './uiStore';
 export { useWardrobeStore } from './wardrobeStore';

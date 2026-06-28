@@ -7,6 +7,7 @@
  * a domain class instance.
  */
 import type { Color, Garment, Outfit, WardrobeCollection } from '@mas/core';
+import type { RecommendationSet } from '@mas/core';
 
 import type {
   ColorDTO,
@@ -15,6 +16,7 @@ import type {
   GarmentStatusDTO,
   OutfitDTO,
   CollectionDTO,
+  RecommendationSetDTO,
 } from '../../shared/ipc';
 
 export function colorToDto(color: Color): ColorDTO {
@@ -67,4 +69,22 @@ export function outfitToDto(outfit: Outfit): OutfitDTO {
 
 export function colorsToPaletteDto(colors: readonly Color[]): ColorPaletteDTO {
   return { colors: colors.map(colorToDto) };
+}
+
+/** Map a full orchestration result to its serialisable DTO. */
+export function recommendationSetToDto(set: RecommendationSet): RecommendationSetDTO {
+  return {
+    occasion: String(set.context.occasion),
+    season: String(set.context.season),
+    recommendations: set.recommendations.map((rec) => ({
+      kind: rec.kind,
+      label: rec.label,
+      garments: rec.garments.map(garmentToDto),
+      score: rec.score,
+      explanation: rec.explanation,
+    })),
+    providerId: set.providerId,
+    degraded: set.degraded,
+    notes: [...set.notes],
+  };
 }

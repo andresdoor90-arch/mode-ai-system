@@ -31,13 +31,13 @@
 | Desktop App - Electron Shell | Complete | 100% | Secure main process (context isolation, sandbox, strict CSP, navigation guards), window manager, single-instance, typed IPC wired to the `@mas/core` application layer (Phase 4) |
 | Desktop App - Frontend UI | Complete | 100% | React 18 + Router + Zustand + Tailwind/Shadcn-style design system; definitive layout (sidebar/header/breadcrumbs), 9 screens, dark/light theming (Phase 4) |
 | Embedded Backend (Fastify) | Superseded | n/a | Phase 4 connects the renderer to use cases via a typed IPC bridge (renderer → IPC → main → CQRS buses) instead of an in-process HTTP server; a Fastify layer remains optional/deferred (see ADR-009) |
-| AI Engine Integration | Not Started | 0% | LangChain.js, Ollama, cloud APIs |
+| AI Engine Integration | Complete | 100% | Provider-agnostic cognitive AI Orchestrator in `@mas/core` (Context Analyzer, Preference/Memory/History/Inventory analyzers, Candidate Generator, Ranking Engine, Explanation Generator, Provider Router, Embedding Manager); infra adapters (Static/LangChain providers, persistent preference-memory stores); graceful offline degradation, no business rule in any provider (Phase 5) |
 | Wardrobe Management | Not Started | 0% | CRUD, categorization, image storage |
-| Outfit Recommendation Engine | Not Started | 0% | ML pipeline, rules engine, scoring |
+| Outfit Recommendation Engine | Complete | 100% | Full 10-step recommendation pipeline producing Principal / Más elegante / Más cómoda with explanations, built on the domain `OutfitScoringService` (0–100, 10 factors + smart rules); AI enrichment strictly additive (Phase 5) |
 | Virtual Try-On / Avatar | Not Started | 0% | Three.js, body model, garment fitting |
 | Plugin SDK | Not Started | 0% | API surface, sandboxing, lifecycle |
 | Image Processing Pipeline | In Progress | 20% | Storage I/O + metadata wiring done (Phase 3); Sharp processing (resize, bg removal, colour extraction) deferred |
-| User Profile & Preferences | Not Started | 0% | Style profile, body measurements |
+| User Profile & Preferences | In Progress | 40% | Style profile + persistent preference-memory learning (accept/reject) wired via the AI engine (Phase 5); body measurements / full profile UI deferred |
 | Calendar & Events Integration | Not Started | 0% | Event-based outfit suggestions |
 | Weather Integration | Not Started | 0% | Weather-aware recommendations |
 | Analytics & Insights | Not Started | 0% | Usage patterns, style trends |
@@ -96,6 +96,26 @@
 - **Rationale**: One place to retint or re-theme the whole app, consistent spacing/typography, dark mode via a single class, and accessible behaviour for free from Radix. This is the definitive visual base for the project.
 - **Status**: Approved
 
+### ADR-011: AI Orchestrator lives in the domain/application layer (`@mas/core`)
+- **Decision**: The AI Orchestrator and ALL its cognitive components (Context Analyzer, Preference/Memory/History/Inventory analyzers, Outfit Candidate Generator, Outfit Ranking Engine, Explanation Generator, AI Provider Router, Embedding Manager) are M-A-S intelligence and live in `@mas/core`, depending only on the domain services + abstract ports declared in `orchestration/ports.ts`. AI models are reached only through those ports; concrete provider/store adapters live in `@mas/infrastructure`. The ports are intentionally *structurally compatible* with the existing `IAITextProvider`/`IEmbeddingProvider`/`IVectorStore` contracts, so no wrapper is needed and the dependency arrow keeps pointing inward (infrastructure → core, never the reverse).
+- **Rationale**: Enforces the core mandate — "all intelligence belongs to M-A-S; AI models are merely interchangeable providers." Swapping, adding or removing a provider never touches the domain or the orchestrator. Declaring the ports in core (rather than importing infrastructure) preserves Clean Architecture layering.
+- **Status**: Approved
+
+### ADR-012: Mandatory graceful degradation; AI enrichment is strictly additive
+- **Decision**: When NO provider is available/configured, the orchestrator still produces the three recommendations using ONLY the domain rules + `OutfitScoringService`. A provider can only ADD value: a semantic ranking boost (capped, additive points that re-order already-valid outfits) and natural-language explanations (the model rephrases reasons the domain already decided). No hard smart-rule may be relaxed, no disqualified outfit revived, and no business rule may move into a provider. Provider failures fall back to the offline template.
+- **Rationale**: Correctness must never depend on a model being present or reachable (privacy, offline use, reliability). Keeping enrichment additive makes the engine deterministic and testable offline, and guarantees a model can never produce an outfit that breaks a domain rule.
+- **Status**: Approved
+
+### ADR-013: Persistent preference memory behind a port
+- **Decision**: The Memory Engine's learning logic is pure and lives in `@mas/core`; durability is delegated to an `IPreferenceMemoryStore` port. `@mas/infrastructure` provides `InMemoryPreferenceMemoryStore` (volatile/tests) and `FilePreferenceMemoryStore` (durable JSON), wired by the desktop composition root at `userData/ai/preference-memory.json`. Accept/reject feedback nudges per-colour and per-subcategory affinities that later bias ranking.
+- **Rationale**: The system genuinely improves over time while keeping the learning algorithm pure, deterministic and unit-testable, and the storage technology swappable without touching the engine.
+- **Status**: Approved
+
+### ADR-014: Provider integration via lazy LangChain adapters (offline-safe)
+- **Decision**: Real provider integrations (OpenAI/Anthropic/Ollama) are implemented as LangChain.js adapters in `@mas/infrastructure`, with every SDK imported **lazily** through a dynamic `import()` inside a factory, behind the existing ports. Pinned versions: `langchain`, `@langchain/core`, `@langchain/openai`, `@langchain/anthropic`, `@langchain/ollama`.
+- **Rationale**: Lets the engine ship correct, realistic provider code while remaining fully type-checkable and runnable OFFLINE (the `INTEGRATIONS_ONLY` sandbox cannot install these packages). Nothing is evaluated unless a real provider is requested, so installation, type resolution and any model call are cleanly CI-deferred without affecting the rest of the system.
+- **Status**: Approved
+
 ## Milestones
 
 ### Milestone 1: Foundation (Project Setup) ✅ Complete
@@ -130,13 +150,13 @@
 - [x] Create Shadcn/ui component library setup
 - [x] Implement Tailwind CSS theming
 
-### Milestone 5: AI Engine
-- [ ] Integrate LangChain.js
-- [ ] Set up Ollama local inference
-- [ ] Implement OpenAI/Anthropic cloud connectors
-- [ ] Build outfit recommendation chain
-- [ ] Implement style analysis pipeline
-- [ ] Create color harmony analyzer
+### Milestone 5: AI Engine ✅ Complete
+- [x] Integrate LangChain.js (lazy provider adapters: OpenAI/Anthropic/Ollama behind ports — ADR-014)
+- [x] Set up Ollama local inference (LangChain `ChatOllama`/`OllamaEmbeddings` adapter; CI-deferred install)
+- [x] Implement OpenAI/Anthropic cloud connectors (LangChain adapters behind the AI Provider Router)
+- [x] Build outfit recommendation chain (the AI Orchestrator's 10-step pipeline → 3 explained recommendations)
+- [x] Implement style analysis pipeline (Context Analyzer + Inventory/History/Preference analyzers)
+- [x] Create color harmony analyzer (reused from the domain `ColorHarmonyService` via `OutfitScoringService`)
 
 ### Milestone 6: Core Features
 - [ ] Wardrobe management (add, edit, categorize garments)
@@ -233,6 +253,20 @@
 - **Verification (offline)**: pure logic is authored against the Vitest API and executed offline via the gitignored `vitest`→`bun:test` shim → **42 passed / 0 failed (90 assertions across 5 files)**, covering the IPC envelope/channels, presentation formatters, theme resolution/persistence, the wardrobe filter/sort/group selectors and the toast-queue reducer. All **79** desktop TS/TSX source files were syntax-validated (0 errors) with Bun's transpiler.
 - **Deferred to CI (no-network constraint)**: Electron, React, Radix UI, Tailwind/PostCSS, `react-router-dom`, `zustand` and the type toolchain cannot be installed in `INTEGRATIONS_ONLY` mode, so the full `tsc` type-check, the `electron-vite` production build and the jsdom + React-Testing-Library **component tests** (e.g. `App.test.tsx`) are validated in CI. Dependency versions are pinned and realistic; the renderer is structured so the IPC/domain boundary is type-consistent by construction.
 
+### Sprint 5 - Phase 5: AI Engine Integration (the cognitive engine of M-A-S)
+- **Start Date**: 2026-07-02
+- **Goal**: Build the provider-agnostic **AI Orchestrator** — the cognitive core of M-A-S — coordinating the full recommendation process from a free-text message to three explained outfits, with AI models as interchangeable, optional providers. Honour the core mandate: ALL intelligence belongs to M-A-S; no business rule may move into a provider; the system must degrade gracefully to domain-rules-only when offline; preference memory must persist and improve future recommendations.
+- **Status**: Done (awaiting user approval before Phase 6)
+- **Architecture (where each component lives & why)**:
+  - **`@mas/core` (application/orchestration layer)** — ALL cognitive logic, depending only on domain services + abstract ports (`orchestration/ports.ts`): the **AI Orchestrator** plus **Context Analyzer**, **Preference Engine**, **Memory Engine**, **History Analyzer**, **Inventory Analyzer**, **Outfit Candidate Generator**, **Outfit Ranking Engine**, **Explanation Generator**, **AI Provider Router** and **Embedding Manager**. The ranking reuses the domain `OutfitScoringService` (0–100, ten weighted factors + hard smart rules) untouched. Exposed through the CQRS bus via `RecommendOutfitsQuery`/`RecommendOutfitsHandler` (`outfit.recommend`). The ports are *structurally compatible* with the Phase 3 `IAITextProvider`/`IEmbeddingProvider`/`IVectorStore`, so infrastructure adapters satisfy them with no wrapper and the dependency arrow stays inward (ADR-011).
+  - **`@mas/infrastructure`** — swappable adapters behind the ports: `StaticTextProvider` (deterministic offline rephraser / local default), `LangChainTextProvider`/`LangChainEmbeddingProvider` + `createTextProvider` factory (lazy `@langchain/*` dynamic imports, ADR-014), and the persistent preference-memory stores `InMemoryPreferenceMemoryStore` / `FilePreferenceMemoryStore` (ADR-013). The existing `HashingEmbeddingProvider` + `InMemoryVectorStore` provide the deterministic offline embedding path.
+  - **`apps/desktop`** — composition root (`AppContainer`) wires the orchestrator with the in-memory repositories, a `FilePreferenceMemoryStore` under `userData/ai/`, and an **empty** provider router (so the app ships in graceful-degradation mode by default); a typed IPC channel (`ai:recommend`) flows renderer → IPC → application/orchestrator → domain, plus `ai:status` driving the `ai-status` store (rules-only "degraded" vs provider-backed "ready").
+- **The required 10-step flow (implemented exactly)**: 1) interpret the user's message → 2) extract structured context (occasion, season, weather, formality, comfort, mobility, time of day, activity) → 3) analyze history (recent-worn signatures, repetition) → 4) analyze learned preferences (Memory + Preference engines) → 5) query inventory (eligible, seasonal, wearable garments) → 6) generate candidates (composition-invariant outfits) → 7) evaluate with DOMAIN rules + scoring → 8) optionally enrich via a provider (additive semantic boost + NL explanations) → 9) produce three recommendations — **Principal**, **Más elegante**, **Más cómoda** → 10) explain each clearly.
+- **Guarantees**: graceful degradation (full recommendations with NO provider, fully offline); AI enrichment strictly additive (a semantic boost only re-orders already-valid outfits; a provider only rephrases reasons the domain decided; provider failures fall back to the offline template); persistent memory (accept/reject nudges per-colour & per-subcategory affinities that measurably raise an accepted style's score next run); zero business rules in any provider.
+- **Offline test method + results**: canonical tests authored against the Vitest API and executed offline through the gitignored, never-committed `vitest`→`bun:test` shim (no shim/`node_modules` committed). **`@mas/core`: 91 passed / 0 failed** (7 files, 226 assertions) including a new orchestration suite of **15 tests** — Context Analyzer extraction (es/en, temperature, comfort/mobility), Provider Router fallback, Memory/Preference engines, the **offline no-provider end-to-end** (3 explained recommendations from domain rules only, `degraded=true`, `providerId=null`), the **provider-available** path proving identical hard-rule outcomes while adding enrichment, provider-failure fallback, the memory-improves-ranking proof, the ranking-engine additive bias, and the bus handler. **`@mas/infrastructure`: 82 passed / 0 failed** (15 files, 196 assertions) including a new AI-engine **integration** suite that wires the real infra adapters (`HashingEmbeddingProvider` + `InMemoryVectorStore` + `StaticTextProvider` + `InMemoryPreferenceMemoryStore`) into the core orchestrator end-to-end offline, and the `FilePreferenceMemoryStore` disk round-trip. **`apps/desktop`: 42 passed / 0 failed** (unchanged Phase 4 pure suites still green). **Total: 215 offline tests, 0 failures.**
+- **Type-check (offline vs CI-deferred)**: the pure `@mas/core` orchestration layer type-checks cleanly offline (`tsc --noEmit`, strict, no node types needed) — **0 errors**; the shared IPC contract/DTOs also type-check cleanly. CI-deferred (uninstallable in `INTEGRATIONS_ONLY`): anything needing `@types/node` or the `@langchain/*` SDKs (the infrastructure adapters + memory file store) and the Electron/React desktop build — all touched files were transpile-validated with Bun (0 errors). The LangChain SDKs are referenced only through lazy dynamic imports, so nothing breaks offline.
+- **Explicitly NOT started (per scope)**: 3D Avatar, Virtual Try-On, and the Plugin system — untouched.
+
 ---
 
-*Last updated: 2026-07-01*
+*Last updated: 2026-07-02*

@@ -76,6 +76,45 @@ export interface OutfitSuggestionDTO {
   readonly score: number;
 }
 
+/* -------------------------------------------------------------------------- */
+/* AI engine (recommendations)                                                */
+/* -------------------------------------------------------------------------- */
+
+/** One explained recommendation crossing the IPC boundary. */
+export interface OutfitRecommendationDTO {
+  /** 'principal' | 'mas-elegante' | 'mas-comoda'. */
+  readonly kind: string;
+  /** Display label, e.g. 'Principal', 'Más elegante', 'Más cómoda'. */
+  readonly label: string;
+  readonly garments: readonly GarmentDTO[];
+  readonly score: number;
+  readonly explanation: string;
+}
+
+/** The full result of one orchestration run, in serialisable form. */
+export interface RecommendationSetDTO {
+  readonly occasion: string;
+  readonly season: string;
+  readonly recommendations: readonly OutfitRecommendationDTO[];
+  /** Id of the AI provider that enriched the run, or null when offline. */
+  readonly providerId: string | null;
+  /** True when only domain rules were used (no provider available). */
+  readonly degraded: boolean;
+  readonly notes: readonly string[];
+}
+
+/** Reflects the AI engine's current capability for the UI status indicator. */
+export interface AiStatusDTO {
+  /** A text/embedding provider is configured and available. */
+  readonly providerAvailable: boolean;
+  /** Id of the active provider, or null. */
+  readonly providerId: string | null;
+  /** Recommendations are available at all (always true — rules work offline). */
+  readonly recommendationsEnabled: boolean;
+  /** True when running on domain rules only (no provider). */
+  readonly degraded: boolean;
+}
+
 export interface StyleAnalysisDTO {
   readonly totalGarments: number;
   readonly byCategory: Readonly<Record<string, number>>;
@@ -132,6 +171,14 @@ export interface SuggestionsPayload {
   readonly occasion: string;
   readonly season: string;
   readonly limit?: number;
+}
+
+/** Free-text (plus optional overrides) request for AI recommendations. */
+export interface RecommendationRequestPayload {
+  readonly message: string;
+  readonly occasion?: string;
+  readonly season?: string;
+  readonly referenceDate?: string;
 }
 
 export interface CategoryPayload {

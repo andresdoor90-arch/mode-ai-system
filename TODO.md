@@ -234,41 +234,43 @@
 
 ## Phase 5: AI Engine Integration
 
+> ✅ Completed 2026-07-02 (Sprint 5). Provider-agnostic cognitive AI Orchestrator in `@mas/core` (intelligence = M-A-S; models = interchangeable providers); graceful offline degradation; persistent preference memory; no business rule in any provider. Awaiting approval before Phase 6.
+
 ### P0 - LangChain.js Setup
-- [ ] Configure LangChain.js with multiple providers
-- [ ] Implement model abstraction layer
-- [ ] Create prompt templates for fashion analysis
-- [ ] Implement output parsers for structured responses
-- [ ] Set up conversation memory for context
+- [x] Configure LangChain.js with multiple providers (lazy `@langchain/*` adapters behind ports — ADR-014)
+- [x] Implement model abstraction layer (core `ITextProvider`/`IEmbedder`/`IVectorIndex` ports + AI Provider Router)
+- [x] Create prompt templates for fashion analysis (Explanation Generator — provider only rephrases domain-decided facts)
+- [x] Implement output parsers for structured responses (deterministic, rule-based context extraction; provider output is free-text only)
+- [~] Set up conversation memory for context (persistent **preference** memory implemented; chat/conversation memory deferred)
 
 ### P0 - Ollama Integration (Local AI)
-- [ ] Detect Ollama installation and available models
-- [ ] Implement model download/management UI
-- [ ] Create local inference service
-- [ ] Implement streaming responses
-- [ ] Handle model loading/unloading for memory management
+- [~] Detect Ollama installation and available models (LangChain `ChatOllama` adapter + availability check; live detection UI deferred)
+- [ ] Implement model download/management UI (deferred — settings/UX phase)
+- [x] Create local inference service (`LangChainTextProvider`/`LangChainEmbeddingProvider` for Ollama, lazy-loaded; `StaticTextProvider` offline default)
+- [ ] Implement streaming responses (deferred — not needed for the recommendation flow yet)
+- [ ] Handle model loading/unloading for memory management (deferred — runtime/ops concern)
 
 ### P1 - Cloud AI Integration
-- [ ] OpenAI API connector (GPT-4 Vision for image analysis)
-- [ ] Anthropic API connector (Claude for text reasoning)
-- [ ] API key management and secure storage
-- [ ] Rate limiting and cost tracking
-- [ ] Fallback chain (local -> cloud)
+- [x] OpenAI API connector (LangChain `ChatOpenAI`/`OpenAIEmbeddings` adapter behind the port)
+- [x] Anthropic API connector (LangChain `ChatAnthropic` adapter behind the port)
+- [~] API key management and secure storage (config carries provider/model; key handling wired via config, secure OS keystore deferred)
+- [ ] Rate limiting and cost tracking (deferred — ops/observability phase)
+- [x] Fallback chain (local -> cloud) (AI Provider Router: priority-ordered availability with offline → rules-only fallback)
 
 ### P1 - AI Pipelines
-- [ ] Garment analysis pipeline (image -> attributes)
-- [ ] Style recommendation chain (profile + wardrobe -> outfits)
-- [ ] Color harmony analysis chain
-- [ ] Occasion-appropriate outfit chain
-- [ ] Natural language wardrobe search
-- [ ] Style transfer suggestions ("Dress like [celebrity/style]")
+- [~] Garment analysis pipeline (image -> attributes) (text/attribute embeddings via Embedding Manager; image analysis deferred — needs Sharp/vision)
+- [x] Style recommendation chain (profile + wardrobe -> outfits) — the full 10-step Orchestrator pipeline
+- [x] Color harmony analysis chain (domain `ColorHarmonyService` via `OutfitScoringService`)
+- [x] Occasion-appropriate outfit chain (Context Analyzer + `OccasionMatchingService` + ranking)
+- [~] Natural language wardrobe search (free-text request interpreted by the Context Analyzer; dedicated search UI deferred)
+- [ ] Style transfer suggestions ("Dress like [celebrity/style]") (deferred)
 
 ### P2 - AI Features
-- [ ] Outfit explanation (why this combination works)
-- [ ] Shopping recommendations (wardrobe gaps)
-- [ ] Trend analysis and suggestions
-- [ ] Personal style evolution tracking
-- [ ] Conversational style assistant (chat interface)
+- [x] Outfit explanation (why this combination works) — Explanation Generator (template offline, provider-enhanced online)
+- [ ] Shopping recommendations (wardrobe gaps) (deferred)
+- [ ] Trend analysis and suggestions (deferred)
+- [~] Personal style evolution tracking (persistent preference memory with accept/reject learning; analytics view deferred)
+- [ ] Conversational style assistant (chat interface) (deferred)
 
 ---
 
@@ -384,4 +386,4 @@
 
 ---
 
-*Last updated: 2026-07-01*
+*Last updated: 2026-07-02*

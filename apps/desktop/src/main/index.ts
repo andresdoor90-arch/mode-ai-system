@@ -30,7 +30,7 @@ if (!gotLock) {
   void app.whenReady().then(async () => {
     installSecurityPolicies();
 
-    const container = await AppContainer.create();
+    const container = await AppContainer.create({ dataDir: app.getPath('userData') });
     registerIpcHandlers(container);
 
     createMainWindow();

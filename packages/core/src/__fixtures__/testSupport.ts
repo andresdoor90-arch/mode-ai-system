@@ -209,3 +209,161 @@ export class InMemoryCalendarEventRepository implements ICalendarEventRepository
     this.store.delete(id);
   }
 }
+
+
+
+/* -------------------------------------------------------------------------- */
+/* AI orchestration test doubles (pure, no infrastructure)                    */
+/* -------------------------------------------------------------------------- */
+
+import {
+  type EmbeddingVectorResult,
+  type IEmbedder,
+  type IPreferenceMemoryStore,
+  type ITextProvider,
+  type IVectorIndex,
+  type IndexedVector,
+  type OrchestratorChatMessage,
+  type PreferenceMemorySnapshot,
+  type TextGenerationOptions,
+  type TextGenerationResult,
+  type VectorHit,
+  type VectorSearchOptions,
+} from '../application/orchestration/ports';
+
+/**
+ * A deterministic, offline text provider for tests. It echoes a marked,
+ * provider-flavoured rephrasing of the prompt so assertions can detect that
+ * enrichment happened — without any network call. Availability is toggleable to
+ * exercise the router's fallback behaviour.
+ */
+export class FakeTextProvider implements ITextProvider {
+  public calls = 0;
+  public constructor(
+    public readonly id = 'fake-llm',
+    private available = true,
+  ) {}
+
+  public setAvailable(value: boolean): void {
+    this.available = value;
+  }
+
+  public async isAvailable(): Promise<boolean> {
+    return this.available;
+  }
+
+  public async complete(
+    messages: readonly OrchestratorChatMessage[],
+    _options?: TextGenerationOptions,
+  ): Promise<TextGenerationResult> {
+    this.calls += 1;
+    const user = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+    return {
+      text: `[IA] ${user}`,
+      model: `${this.id}-model`,
+      tokensUsed: user.length,
+    };
+  }
+}
+
+/** A text provider whose model call always throws, to test graceful fallback. */
+export class ThrowingTextProvider implements ITextProvider {
+  public constructor(public readonly id = 'broken-llm') {}
+  public async isAvailable(): Promise<boolean> {
+    return true;
+  }
+  public async complete(): Promise<TextGenerationResult> {
+    throw new Error('provider exploded');
+  }
+}
+
+/** Deterministic hashing embedder mirroring the infrastructure stub. */
+export class FakeEmbedder implements IEmbedder {
+  public readonly id = 'fake-embedder';
+  public constructor(public readonly dimension = 32) {}
+
+  public async embed(inputs: readonly string[]): Promise<EmbeddingVectorResult> {
+    return {
+      vectors: inputs.map((text) => this.hash(text)),
+      model: this.id,
+      dimension: this.dimension,
+    };
+  }
+
+  private hash(text: string): number[] {
+    const v = new Array<number>(this.dimension).fill(0);
+    for (let i = 0; i < text.length; i += 1) {
+      const code = text.charCodeAt(i);
+      const slot = (code * 31 + i) % this.dimension;
+      v[slot] = (v[slot] ?? 0) + ((code % 13) - 6) / 6;
+    }
+    const mag = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+    return mag === 0 ? v : v.map((x) => x / mag);
+  }
+}
+
+/** Brute-force in-memory vector index (cosine), pure and dependency-free. */
+export class InMemoryVectorIndex implements IVectorIndex {
+  private readonly records = new Map<string, IndexedVector>();
+
+  public async upsert(records: readonly IndexedVector[]): Promise<void> {
+    for (const r of records) {
+      this.records.set(r.id, { id: r.id, vector: [...r.vector], ...(r.metadata ? { metadata: { ...r.metadata } } : {}) });
+    }
+  }
+
+  public async query(
+    vector: readonly number[],
+    options: VectorSearchOptions = {},
+  ): Promise<readonly VectorHit[]> {
+    const topK = options.topK ?? 10;
+    const hits: VectorHit[] = [];
+    for (const r of this.records.values()) {
+      hits.push({ id: r.id, score: (cosine(vector, r.vector) + 1) / 2, ...(r.metadata ? { metadata: r.metadata } : {}) });
+    }
+    hits.sort((a, b) => b.score - a.score);
+    return hits.slice(0, topK);
+  }
+
+  public async delete(ids: readonly string[]): Promise<void> {
+    for (const id of ids) {
+      this.records.delete(id);
+    }
+  }
+
+  public async count(): Promise<number> {
+    return this.records.size;
+  }
+}
+
+const cosine = (a: readonly number[], b: readonly number[]): number => {
+  if (a.length !== b.length || a.length === 0) {
+    return 0;
+  }
+  let dot = 0;
+  let ma = 0;
+  let mb = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    const x = a[i] ?? 0;
+    const y = b[i] ?? 0;
+    dot += x * y;
+    ma += x * x;
+    mb += y * y;
+  }
+  return ma === 0 || mb === 0 ? 0 : dot / (Math.sqrt(ma) * Math.sqrt(mb));
+};
+
+/** In-memory preference-memory store for testing the Memory Engine. */
+export class InMemoryPreferenceMemoryStore implements IPreferenceMemoryStore {
+  private snapshot: PreferenceMemorySnapshot | null = null;
+  public saves = 0;
+
+  public async load(): Promise<PreferenceMemorySnapshot | null> {
+    return this.snapshot;
+  }
+
+  public async save(snapshot: PreferenceMemorySnapshot): Promise<void> {
+    this.snapshot = snapshot;
+    this.saves += 1;
+  }
+}

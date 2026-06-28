@@ -9,11 +9,14 @@
 import { IpcChannels } from './channels';
 import type {
   AddGarmentPayload,
+  AiStatusDTO,
   AppInfoDTO,
   CategoryPayload,
   ColorPaletteDTO,
   GarmentDTO,
   OutfitSuggestionDTO,
+  RecommendationRequestPayload,
+  RecommendationSetDTO,
   SeasonPayload,
   StyleAnalysisDTO,
   SuggestionsPayload,
@@ -46,6 +49,12 @@ export interface IpcContract {
     request: SuggestionsPayload;
     response: readonly OutfitSuggestionDTO[];
   };
+
+  [IpcChannels.aiRecommend]: {
+    request: RecommendationRequestPayload;
+    response: RecommendationSetDTO;
+  };
+  [IpcChannels.aiStatus]: { request: NoPayload; response: AiStatusDTO };
 
   [IpcChannels.styleAnalysis]: { request: NoPayload; response: StyleAnalysisDTO };
   [IpcChannels.styleColorPalette]: { request: NoPayload; response: ColorPaletteDTO };

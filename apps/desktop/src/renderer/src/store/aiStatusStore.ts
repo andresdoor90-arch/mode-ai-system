@@ -1,29 +1,68 @@
 /**
- * AI status store (Zustand) — PLACEHOLDER.
+ * AI status store (Zustand).
  *
- * Phase 4 deliberately does NOT connect any AI engine, model or recommendation
- * intelligence. This store exists only to reserve the global-state shape the UI
- * will bind to once the AI engine lands (Phase 5), and to drive the
- * "AI engine: not configured" indicators shown across the interface today.
+ * Reflects the AI engine's real capability, reported by the main process over
+ * IPC (`ai:status`). Since Phase 5 the cognitive engine is wired and always
+ * able to recommend from domain rules — even with NO model configured — so
+ * `recommendationsEnabled` is true once the bridge has answered. The `status`
+ * distinguishes the rules-only (`degraded`) mode from a fully provider-backed
+ * `ready` mode.
  *
- * It performs no inference, makes no network/model calls and holds no provider
- * credentials. The status is fixed to `not-configured` until Phase 5 wires it.
+ * The store still performs no inference and holds no credentials; it only
+ * mirrors the status the orchestrator exposes.
  */
 import { create } from 'zustand';
 
-/** Lifecycle of the (future) local/cloud AI engine. */
-export type AiEngineStatus = 'not-configured' | 'idle' | 'loading' | 'ready' | 'error';
+import { ipc, isBridgeAvailable } from '../ipc/client';
+
+/** Lifecycle of the local/cloud AI engine. */
+export type AiEngineStatus = 'not-configured' | 'idle' | 'loading' | 'ready' | 'degraded' | 'error';
 
 interface AiStatusState {
   status: AiEngineStatus;
-  /** Human-readable note for the UI; never a real model/provider name yet. */
+  /** Human-readable note for the UI. */
   detail: string;
-  /** Whether intelligent recommendations are available (always false in Phase 4). */
+  /** Id of the active AI provider, or null when running on rules only. */
+  providerId: string | null;
+  /** Whether intelligent recommendations are available at all. */
   recommendationsEnabled: boolean;
+  /** Refresh the status from the main process. */
+  refresh: () => Promise<void>;
 }
 
-export const useAiStatusStore = create<AiStatusState>(() => ({
+export const useAiStatusStore = create<AiStatusState>((set) => ({
   status: 'not-configured',
-  detail: 'The AI engine is not connected yet. Coming in a later phase.',
+  detail: 'Comprobando el motor de IA…',
+  providerId: null,
   recommendationsEnabled: false,
+  refresh: async () => {
+    if (!isBridgeAvailable()) {
+      set({
+        status: 'not-configured',
+        detail: 'El puente del escritorio no está disponible.',
+        providerId: null,
+        recommendationsEnabled: false,
+      });
+      return;
+    }
+    try {
+      set({ status: 'loading', detail: 'Comprobando el motor de IA…' });
+      const info = await ipc.getAiStatus();
+      set({
+        status: info.providerAvailable ? 'ready' : 'degraded',
+        detail: info.providerAvailable
+          ? `Proveedor de IA activo: ${info.providerId ?? 'desconocido'}.`
+          : 'Sin proveedor de IA: recomendaciones basadas solo en las reglas del dominio.',
+        providerId: info.providerId,
+        recommendationsEnabled: info.recommendationsEnabled,
+      });
+    } catch {
+      set({
+        status: 'error',
+        detail: 'No se pudo obtener el estado del motor de IA.',
+        providerId: null,
+        recommendationsEnabled: false,
+      });
+    }
+  },
 }));
