@@ -11,15 +11,24 @@ import type {
   AddGarmentPayload,
   AiStatusDTO,
   AppInfoDTO,
+  CategoryDTO,
+  CategoryNodeDTO,
   CategoryPayload,
   ColorPaletteDTO,
+  CreateCategoryPayload,
   GarmentDTO,
+  GarmentSearchPayload,
   OutfitSuggestionDTO,
+  PhotoTransformPayload,
   RecommendationRequestPayload,
   RecommendationSetDTO,
+  ReorderPayload,
   SeasonPayload,
   StyleAnalysisDTO,
   SuggestionsPayload,
+  TagSuggestionDTO,
+  ConfirmTagsPayload,
+  UpdateCategoryPayload,
   UpdateGarmentPayload,
   WardrobeViewDTO,
 } from './dto';
@@ -40,10 +49,41 @@ export interface IpcContract {
     response: readonly GarmentDTO[];
   };
   [IpcChannels.wardrobeSeasonal]: { request: SeasonPayload; response: readonly GarmentDTO[] };
+  [IpcChannels.wardrobeSearch]: {
+    request: GarmentSearchPayload;
+    response: { items: readonly GarmentDTO[]; total: number; page: number; totalPages: number };
+  };
+
+  [IpcChannels.categoryList]: { request: NoPayload; response: readonly CategoryDTO[] };
+  [IpcChannels.categoryTree]: { request: NoPayload; response: readonly CategoryNodeDTO[] };
+  [IpcChannels.categoryCreate]: { request: CreateCategoryPayload; response: { id: string } };
+  [IpcChannels.categoryUpdate]: { request: UpdateCategoryPayload; response: { id: string } };
+  [IpcChannels.categoryReorder]: { request: ReorderPayload; response: { ok: true } };
+  [IpcChannels.categoryDelete]: { request: { id: string }; response: { id: string } };
 
   [IpcChannels.garmentAdd]: { request: AddGarmentPayload; response: { id: string } };
   [IpcChannels.garmentUpdate]: { request: UpdateGarmentPayload; response: { id: string } };
   [IpcChannels.garmentRemove]: { request: { id: string }; response: { id: string } };
+  [IpcChannels.garmentDuplicate]: { request: { id: string; name?: string }; response: { id: string } };
+  [IpcChannels.garmentArchive]: { request: { id: string }; response: { id: string } };
+  [IpcChannels.garmentRestore]: { request: { id: string }; response: { id: string } };
+
+  [IpcChannels.photosAdd]: {
+    request: { garmentId: string; photos: readonly { storageKey: string }[] };
+    response: { photoIds: readonly string[] };
+  };
+  [IpcChannels.photoRemove]: { request: { garmentId: string; photoId: string }; response: { ok: true } };
+  [IpcChannels.photosReorder]: {
+    request: { garmentId: string; orderedPhotoIds: readonly string[] };
+    response: { ok: true };
+  };
+  [IpcChannels.photoTransform]: { request: PhotoTransformPayload; response: { ok: true } };
+
+  [IpcChannels.tagsSuggest]: {
+    request: { garmentId: string; colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[] };
+    response: TagSuggestionDTO;
+  };
+  [IpcChannels.tagsConfirm]: { request: ConfirmTagsPayload; response: { id: string } };
 
   [IpcChannels.outfitSuggestions]: {
     request: SuggestionsPayload;

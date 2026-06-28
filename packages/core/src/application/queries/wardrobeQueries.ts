@@ -1,7 +1,6 @@
 import { type Result, ok } from '../../shared/Result';
 import { type Garment } from '../../domain/entities/Garment';
 import { type WardrobeCollection } from '../../domain/entities/WardrobeCollection';
-import { type GarmentCategory } from '../../domain/value-objects/GarmentCategory';
 import { type Season } from '../../domain/value-objects/Season';
 import { type IGarmentRepository } from '../../domain/repositories/IGarmentRepository';
 import { type ICollectionRepository } from '../../domain/repositories/ICollectionRepository';
@@ -47,7 +46,7 @@ export const GET_GARMENTS_BY_CATEGORY = 'wardrobe.garments-by-category';
 /** Fetch all garments in a given category. */
 export class GetGarmentsByCategoryQuery implements Query<readonly Garment[]> {
   public readonly type = GET_GARMENTS_BY_CATEGORY;
-  public constructor(public readonly category: GarmentCategory) {}
+  public constructor(public readonly category: string) {}
 }
 
 export class GetGarmentsByCategoryHandler

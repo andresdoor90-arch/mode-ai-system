@@ -25,8 +25,10 @@ export enum LayerSlot {
   Accessory = 'accessory',
 }
 
-/** Map a category to the body slot it primarily occupies. */
-export const categoryLayerSlot = (category: GarmentCategory): LayerSlot => {
+/** Map a category to the body slot it primarily occupies. Accepts dynamic
+ * category slugs/ids; unknown categories fall back to an accessory slot so
+ * user-defined categories never break composition or rendering. */
+export const categoryLayerSlot = (category: string): LayerSlot => {
   switch (category) {
     case GarmentCategory.Tops:
       return LayerSlot.UpperBody;

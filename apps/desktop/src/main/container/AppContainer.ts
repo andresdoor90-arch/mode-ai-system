@@ -25,15 +25,32 @@ import {
   AddGarmentCommand,
   AddGarmentHandler,
   ADD_GARMENT,
+  AddPhotosHandler,
+  ADD_PHOTOS,
   AIOrchestrator,
   AIProviderRouter,
+  ArchiveGarmentHandler,
+  ARCHIVE_GARMENT,
   Color,
   CommandBus,
+  ConfirmGarmentTagsHandler,
+  CONFIRM_GARMENT_TAGS,
+  CreateCategoryHandler,
+  CREATE_CATEGORY,
   CreateCollectionHandler,
   CREATE_COLLECTION,
   CreateOutfitHandler,
   CREATE_OUTFIT,
+  DeferredVisionTagSuggester,
+  DeleteCategoryHandler,
+  DELETE_CATEGORY,
+  DuplicateGarmentHandler,
+  DUPLICATE_GARMENT,
   GarmentCategory,
+  GetCategoriesHandler,
+  GET_CATEGORIES,
+  GetCategoryTreeHandler,
+  GET_CATEGORY_TREE,
   GetColorPaletteHandler,
   GET_COLOR_PALETTE,
   GetGarmentsByCategoryHandler,
@@ -52,34 +69,63 @@ import {
   RATE_OUTFIT,
   RecommendOutfitsHandler,
   RECOMMEND_OUTFITS,
+  RemovePhotoHandler,
+  REMOVE_PHOTO,
   RemoveGarmentHandler,
   REMOVE_GARMENT,
+  ReorderCategoriesHandler,
+  REORDER_CATEGORIES,
+  ReorderPhotosHandler,
+  REORDER_PHOTOS,
+  RestoreGarmentHandler,
+  RESTORE_GARMENT,
   Season,
+  SearchGarmentsHandler,
+  SEARCH_GARMENTS,
+  SeedDefaultTaxonomyCommand,
+  SeedDefaultTaxonomyHandler,
+  SEED_DEFAULT_TAXONOMY,
+  SemanticIndexProjection,
   SequentialIdGenerator,
   SetPreferencesHandler,
   SET_PREFERENCES,
+  SuggestGarmentTagsHandler,
+  SUGGEST_GARMENT_TAGS,
   TopSubcategory,
   BottomSubcategory,
   OuterwearSubcategory,
   ShoeSubcategory,
   AccessorySubcategory,
   DressSubcategory,
+  TransformPhotoHandler,
+  TRANSFORM_PHOTO,
+  UpdateCategoryHandler,
+  UPDATE_CATEGORY,
   UpdateGarmentHandler,
   UPDATE_GARMENT,
   UpdateProfileHandler,
   UPDATE_PROFILE,
   unwrap,
+  WardrobeSyncCoordinator,
   type CreateGarmentInput,
+  type EmbeddingVectorResult,
+  type GarmentId,
+  type GarmentSnapshot,
+  type IEmbedder,
   type IdGenerator,
   type IPreferenceMemoryStore,
+  type WardrobeSyncSubsystems,
 } from '@mas/core';
 
 import {
   FilePreferenceMemoryStore,
+  InMemoryEventBus,
   InMemoryPreferenceMemoryStore,
+  InMemoryVectorStore,
 } from '@mas/infrastructure';
 
 import {
+  InMemoryCategoryRepository,
   InMemoryCollectionRepository,
   InMemoryGarmentRepository,
   InMemoryOutfitRepository,
@@ -91,6 +137,7 @@ export interface Repositories {
   readonly outfits: InMemoryOutfitRepository;
   readonly collections: InMemoryCollectionRepository;
   readonly profiles: InMemoryUserProfileRepository;
+  readonly categories: InMemoryCategoryRepository;
 }
 
 /** Options for assembling the container. */
@@ -109,9 +156,12 @@ export class AppContainer {
   public readonly repositories: Repositories;
   /** The provider-agnostic AI engine (offline-capable by default). */
   public readonly orchestrator: AIOrchestrator;
+  /** In-memory pub/sub bus driving the automatic, event-driven sync (Module 6). */
+  public readonly events: InMemoryEventBus;
   private readonly ids: IdGenerator;
   private readonly router: AIProviderRouter;
   private readonly memory: MemoryEngine;
+  private readonly sync: WardrobeSyncCoordinator;
 
   private constructor(options: AppContainerOptions = {}) {
     this.ids = new SequentialIdGenerator('mas');
@@ -120,7 +170,10 @@ export class AppContainer {
       outfits: new InMemoryOutfitRepository(),
       collections: new InMemoryCollectionRepository(),
       profiles: new InMemoryUserProfileRepository(),
+      categories: new InMemoryCategoryRepository(),
     };
+
+    this.events = new InMemoryEventBus();
 
     // Preference memory persists through an infrastructure store so the engine
     // genuinely learns across sessions; falls back to volatile memory when no
@@ -143,9 +196,52 @@ export class AppContainer {
       memory: this.memory,
     });
 
+    // Module 6: automatically keep the cognitive subsystems in sync with every
+    // wardrobe change. Decoupled — handlers publish events, subsystems react.
+    this.sync = new WardrobeSyncCoordinator(this.events, this.buildSyncSubsystems()).start();
+
     this.commands = new CommandBus();
     this.queries = new QueryBus();
     this.registerHandlers();
+  }
+
+  /** Tear down event subscriptions (used on shutdown / teardown). */
+  public dispose(): void {
+    this.sync.stop();
+  }
+
+  /**
+   * Wire the cognitive-engine subsystems behind their abstract ports. The
+   * semantic index reuses the same embedder + vector-store seams as the AI
+   * orchestrator; the others are lightweight in-process projections. All are
+   * offline-capable.
+   */
+  private buildSyncSubsystems(): WardrobeSyncSubsystems {
+    const embedder: IEmbedder = new HashingEmbedder(32);
+    const semanticIndex = new SemanticIndexProjection(embedder, new InMemoryVectorStore());
+    const inventoryCounts = new Map<string, GarmentSnapshot>();
+    return {
+      inventory: {
+        applyUpserted: (snapshot) => {
+          inventoryCounts.set(snapshot.id, snapshot);
+        },
+        applyRemoved: (id) => {
+          inventoryCounts.delete(id);
+        },
+      },
+      semanticIndex,
+      cache: {
+        // The recommendation result + visualisation scene caches are derived;
+        // invalidation is a no-op here (caches are rebuilt lazily on next query).
+        invalidateRecommendations: () => {},
+        invalidateVisualization: () => {},
+      },
+      history: {
+        record: () => {
+          /* History persistence is wired in a later phase; events are observed. */
+        },
+      },
+    };
   }
 
   /** Build the container and seed it with demonstration data. */
@@ -173,12 +269,27 @@ export class AppContainer {
   }
 
   private registerHandlers(): void {
-    const { garments, outfits, collections, profiles } = this.repositories;
+    const { garments, outfits, collections, profiles, categories } = this.repositories;
+    const events = this.events;
+    const suggester = new DeferredVisionTagSuggester();
 
     this.commands
-      .register(ADD_GARMENT, new AddGarmentHandler(garments, this.ids))
-      .register(UPDATE_GARMENT, new UpdateGarmentHandler(garments))
-      .register(REMOVE_GARMENT, new RemoveGarmentHandler(garments))
+      .register(ADD_GARMENT, new AddGarmentHandler(garments, this.ids, events))
+      .register(UPDATE_GARMENT, new UpdateGarmentHandler(garments, events))
+      .register(REMOVE_GARMENT, new RemoveGarmentHandler(garments, events))
+      .register(DUPLICATE_GARMENT, new DuplicateGarmentHandler(garments, this.ids, events))
+      .register(ARCHIVE_GARMENT, new ArchiveGarmentHandler(garments, events))
+      .register(RESTORE_GARMENT, new RestoreGarmentHandler(garments, events))
+      .register(ADD_PHOTOS, new AddPhotosHandler(garments, this.ids, events))
+      .register(REMOVE_PHOTO, new RemovePhotoHandler(garments, events))
+      .register(REORDER_PHOTOS, new ReorderPhotosHandler(garments, events))
+      .register(TRANSFORM_PHOTO, new TransformPhotoHandler(garments, events))
+      .register(CONFIRM_GARMENT_TAGS, new ConfirmGarmentTagsHandler(garments, events))
+      .register(CREATE_CATEGORY, new CreateCategoryHandler(categories, this.ids, events))
+      .register(UPDATE_CATEGORY, new UpdateCategoryHandler(categories, events))
+      .register(REORDER_CATEGORIES, new ReorderCategoriesHandler(categories, events))
+      .register(DELETE_CATEGORY, new DeleteCategoryHandler(categories, events))
+      .register(SEED_DEFAULT_TAXONOMY, new SeedDefaultTaxonomyHandler(categories, this.ids))
       .register(CREATE_OUTFIT, new CreateOutfitHandler(garments, outfits, this.ids))
       .register(RATE_OUTFIT, new RateOutfitHandler(outfits))
       .register(CREATE_COLLECTION, new CreateCollectionHandler(garments, collections, this.ids))
@@ -189,6 +300,10 @@ export class AppContainer {
       .register(GET_WARDROBE, new GetWardrobeHandler(garments, collections))
       .register(GET_GARMENTS_BY_CATEGORY, new GetGarmentsByCategoryHandler(garments))
       .register(GET_SEASONAL_WARDROBE, new GetSeasonalWardrobeHandler(garments))
+      .register(SEARCH_GARMENTS, new SearchGarmentsHandler(garments))
+      .register(GET_CATEGORIES, new GetCategoriesHandler(categories))
+      .register(GET_CATEGORY_TREE, new GetCategoryTreeHandler(categories))
+      .register(SUGGEST_GARMENT_TAGS, new SuggestGarmentTagsHandler(garments, suggester))
       .register(GET_STYLE_ANALYSIS, new GetStyleAnalysisHandler(garments))
       .register(GET_COLOR_PALETTE, new GetColorPaletteHandler(garments, profiles))
       .register(GET_OUTFIT_SUGGESTIONS, new GetOutfitSuggestionsHandler(garments, profiles))
@@ -201,6 +316,11 @@ export class AppContainer {
    * out of the box. This is sample content for the Phase 4 UI, not fixtures.
    */
   private async seed(): Promise<void> {
+    // Module 1: seed the default taxonomy as user-editable category DATA. This
+    // is the enum→data migration in action — nothing is hardcoded; the user can
+    // edit, regroup, reorder or delete any of it.
+    await this.commands.send(new SeedDefaultTaxonomyCommand());
+
     const c = (hex: string, name: string): Color => unwrap(Color.fromHex(hex, name));
 
     const samples: CreateGarmentInput[] = [
@@ -311,5 +431,34 @@ export class AppContainer {
     for (const input of samples) {
       await this.commands.send(new AddGarmentCommand(input));
     }
+  }
+}
+
+/**
+ * Deterministic, dependency-free embedder used to keep the semantic index in
+ * sync offline (mirrors the hashing embedder the AI tests use). Real embedding
+ * providers from `@mas/infrastructure` are assignable to the same port.
+ */
+class HashingEmbedder implements IEmbedder {
+  public readonly id = 'hashing-embedder';
+  public constructor(public readonly dimension = 32) {}
+
+  public async embed(inputs: readonly string[]): Promise<EmbeddingVectorResult> {
+    return {
+      vectors: inputs.map((text) => this.hash(text)),
+      model: this.id,
+      dimension: this.dimension,
+    };
+  }
+
+  private hash(text: string): number[] {
+    const v = new Array<number>(this.dimension).fill(0);
+    for (let i = 0; i < text.length; i += 1) {
+      const code = text.charCodeAt(i);
+      const slot = (code * 31 + i) % this.dimension;
+      v[slot] = (v[slot] ?? 0) + ((code % 13) - 6) / 6;
+    }
+    const mag = Math.sqrt(v.reduce((s, x) => s + x * x, 0));
+    return mag === 0 ? v : v.map((x) => x / mag);
   }
 }

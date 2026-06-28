@@ -13,12 +13,14 @@
  */
 import type {
   CalendarEvent,
+  Category,
+  CategoryId,
   CollectionId,
   Garment,
-  GarmentCategory,
   GarmentId,
   GarmentQuery,
   ICalendarEventRepository,
+  ICategoryRepository,
   ICollectionRepository,
   IGarmentRepository,
   IOutfitRepository,
@@ -58,10 +60,46 @@ export class InMemoryGarmentRepository implements IGarmentRepository {
       return true;
     });
   }
-  public async findByCategory(category: GarmentCategory): Promise<readonly Garment[]> {
+  public async findByCategory(category: string): Promise<readonly Garment[]> {
     return [...this.store.values()].filter((g) => g.category === category);
   }
   public async delete(id: GarmentId): Promise<void> {
+    this.store.delete(id);
+  }
+  public async count(): Promise<number> {
+    return this.store.size;
+  }
+}
+
+export class InMemoryCategoryRepository implements ICategoryRepository {
+  private readonly store = new Map<string, Category>();
+
+  public async save(category: Category): Promise<void> {
+    this.store.set(category.id, category);
+  }
+  public async saveMany(categories: readonly Category[]): Promise<void> {
+    for (const c of categories) {
+      this.store.set(c.id, c);
+    }
+  }
+  public async findById(id: CategoryId): Promise<Category | null> {
+    return this.store.get(id) ?? null;
+  }
+  public async findBySlug(slug: string): Promise<Category | null> {
+    return [...this.store.values()].find((c) => c.slug === slug) ?? null;
+  }
+  public async findAll(): Promise<readonly Category[]> {
+    return [...this.store.values()].sort(
+      (a, b) => a.order - b.order || a.name.localeCompare(b.name),
+    );
+  }
+  public async findRoots(): Promise<readonly Category[]> {
+    return (await this.findAll()).filter((c) => c.parentId === null);
+  }
+  public async findChildren(parentId: CategoryId): Promise<readonly Category[]> {
+    return (await this.findAll()).filter((c) => c.parentId === parentId);
+  }
+  public async delete(id: CategoryId): Promise<void> {
     this.store.delete(id);
   }
   public async count(): Promise<number> {

@@ -37,14 +37,71 @@ export interface GarmentDTO {
   readonly name: string;
   readonly category: string;
   readonly subcategory: string;
+  readonly categoryId: string | null;
   readonly color: ColorDTO;
+  readonly secondaryColors: readonly ColorDTO[];
   readonly brand: string | null;
+  readonly material: string | null;
   readonly seasons: readonly string[];
   readonly images: readonly string[];
+  readonly photos: readonly PhotoDTO[];
   readonly tags: readonly string[];
   readonly status: GarmentStatusDTO;
   readonly wearCount: number;
+  readonly formality: number;
   readonly lastWornAt: string | null;
+  readonly purchaseDate: string | null;
+  readonly notes: string | null;
+}
+
+/** A single garment photograph with its non-destructive transform metadata. */
+export interface PhotoDTO {
+  readonly id: string;
+  readonly storageKey: string;
+  readonly order: number;
+  readonly rotation: number;
+  readonly crop: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  readonly isPrimary: boolean;
+  readonly stage: string;
+}
+
+/** System metadata carried by a category (mirrors the domain VO). */
+export interface CategoryMetadataDTO {
+  readonly layerSlot: string;
+  readonly formality: number;
+  readonly comfort: number;
+  readonly heavyOuterwear: boolean;
+  readonly attributes: Readonly<Record<string, string>>;
+}
+
+/** A user-defined taxonomy node. */
+export interface CategoryDTO {
+  readonly id: string;
+  readonly name: string;
+  readonly slug: string;
+  readonly parentId: string | null;
+  readonly group: string | null;
+  readonly order: number;
+  readonly seeded: boolean;
+  readonly metadata: CategoryMetadataDTO;
+}
+
+/** A category and its direct subcategories, for the management tree. */
+export interface CategoryNodeDTO {
+  readonly category: CategoryDTO;
+  readonly children: readonly CategoryDTO[];
+}
+
+/** AI-tagging suggestion crossing the IPC boundary. */
+export interface TagSuggestionDTO {
+  readonly source: string;
+  readonly unavailable: boolean;
+  readonly category: string | null;
+  readonly subcategory: string | null;
+  readonly colors: readonly string[];
+  readonly season: string | null;
+  readonly material: string | null;
+  readonly formality: number | null;
 }
 
 export interface CollectionDTO {
@@ -151,10 +208,12 @@ export interface AddGarmentPayload {
   readonly name: string;
   readonly category: string;
   readonly subcategory: string;
+  readonly categoryId?: string;
   readonly colorHex: string;
   readonly colorName?: string;
   readonly seasons: readonly string[];
   readonly brand?: string;
+  readonly material?: string;
   readonly tags?: readonly string[];
 }
 
@@ -187,4 +246,67 @@ export interface CategoryPayload {
 
 export interface SeasonPayload {
   readonly season: string;
+}
+
+/* ----------------------------- Phase 6.5 payloads ------------------------- */
+
+export interface CategoryMetadataPayload {
+  readonly layerSlot?: string;
+  readonly formality?: number;
+  readonly comfort?: number;
+  readonly heavyOuterwear?: boolean;
+  readonly attributes?: Readonly<Record<string, string>>;
+}
+
+export interface CreateCategoryPayload {
+  readonly name: string;
+  readonly parentId?: string | null;
+  readonly group?: string | null;
+  readonly metadata?: CategoryMetadataPayload;
+}
+
+export interface UpdateCategoryPayload {
+  readonly id: string;
+  readonly name?: string;
+  readonly group?: string | null;
+  readonly parentId?: string | null;
+  readonly metadata?: CategoryMetadataPayload;
+}
+
+export interface ReorderPayload {
+  readonly orderedIds: readonly string[];
+}
+
+export interface GarmentSearchPayload {
+  readonly text?: string;
+  readonly category?: string;
+  readonly subcategory?: string;
+  readonly status?: GarmentStatusDTO;
+  readonly season?: string;
+  readonly tags?: readonly string[];
+  readonly includeArchived?: boolean;
+  readonly sortBy?: string;
+  readonly sortDirection?: 'asc' | 'desc';
+  readonly page?: number;
+  readonly pageSize?: number;
+}
+
+export interface PhotoTransformPayload {
+  readonly garmentId: string;
+  readonly photoId: string;
+  readonly rotation?: number;
+  readonly crop?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  readonly setPrimary?: boolean;
+}
+
+export interface ConfirmTagsPayload {
+  readonly garmentId: string;
+  readonly category?: string;
+  readonly subcategory?: string;
+  readonly categoryId?: string;
+  readonly primaryColorHex?: string;
+  readonly secondaryColorHexes?: readonly string[];
+  readonly material?: string;
+  readonly seasons?: readonly string[];
+  readonly tags?: readonly string[];
 }

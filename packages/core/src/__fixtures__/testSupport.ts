@@ -6,6 +6,7 @@
  * any infrastructure. The directory is excluded from the package build.
  */
 import { type GarmentId } from '../shared/Identifier';
+import { type CategoryId } from '../shared/Identifier';
 import { type IdGenerator } from '../shared/IdGenerator';
 import { unwrap } from '../shared/Result';
 import {
@@ -18,6 +19,7 @@ import { type UserProfile } from '../domain/entities/UserProfile';
 import { type StyleRule } from '../domain/entities/StyleRule';
 import { type WardrobeCollection } from '../domain/entities/WardrobeCollection';
 import { type CalendarEvent } from '../domain/entities/CalendarEvent';
+import { Category } from '../domain/entities/Category';
 import { Color } from '../domain/value-objects/Color';
 import { GarmentCategory } from '../domain/value-objects/GarmentCategory';
 import { TopSubcategory } from '../domain/value-objects/GarmentSubcategory';
@@ -35,6 +37,7 @@ import { type IUserProfileRepository } from '../domain/repositories/IUserProfile
 import { type IStyleRuleRepository } from '../domain/repositories/IStyleRuleRepository';
 import { type ICollectionRepository } from '../domain/repositories/ICollectionRepository';
 import { type ICalendarEventRepository } from '../domain/repositories/ICalendarEventRepository';
+import { type ICategoryRepository } from '../domain/repositories/ICategoryRepository';
 
 /** Convenience: build a {@link Color} from hex, throwing on invalid input. */
 export const color = (hex: string, name?: string): Color => unwrap(Color.fromHex(hex, name));
@@ -95,7 +98,7 @@ export class InMemoryGarmentRepository implements IGarmentRepository {
       return true;
     });
   }
-  public async findByCategory(category: GarmentCategory): Promise<readonly Garment[]> {
+  public async findByCategory(category: string): Promise<readonly Garment[]> {
     return [...this.store.values()].filter((g) => g.category === category);
   }
   public async delete(id: GarmentId): Promise<void> {
@@ -207,6 +210,42 @@ export class InMemoryCalendarEventRepository implements ICalendarEventRepository
   }
   public async delete(id: string): Promise<void> {
     this.store.delete(id);
+  }
+}
+
+export class InMemoryCategoryRepository implements ICategoryRepository {
+  private readonly store = new Map<string, Category>();
+
+  public async save(category: Category): Promise<void> {
+    this.store.set(category.id, category);
+  }
+  public async saveMany(categories: readonly Category[]): Promise<void> {
+    for (const c of categories) {
+      this.store.set(c.id, c);
+    }
+  }
+  public async findById(id: CategoryId): Promise<Category | null> {
+    return this.store.get(id) ?? null;
+  }
+  public async findBySlug(slug: string): Promise<Category | null> {
+    return [...this.store.values()].find((c) => c.slug === slug) ?? null;
+  }
+  public async findAll(): Promise<readonly Category[]> {
+    return [...this.store.values()].sort(
+      (a, b) => a.order - b.order || a.name.localeCompare(b.name),
+    );
+  }
+  public async findRoots(): Promise<readonly Category[]> {
+    return (await this.findAll()).filter((c) => c.parentId === null);
+  }
+  public async findChildren(parentId: CategoryId): Promise<readonly Category[]> {
+    return (await this.findAll()).filter((c) => c.parentId === parentId);
+  }
+  public async delete(id: CategoryId): Promise<void> {
+    this.store.delete(id);
+  }
+  public async count(): Promise<number> {
+    return this.store.size;
   }
 }
 

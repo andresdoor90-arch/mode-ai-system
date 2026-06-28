@@ -1,6 +1,5 @@
 import { type Garment } from '../entities/Garment';
 import { ColorHarmonyService } from './ColorHarmonyService';
-import { garmentFormality } from './formality';
 
 /** Result of evaluating how well two garments pair. */
 export interface PairCompatibility {
@@ -24,7 +23,7 @@ export class StyleCompatibilityService {
   public evaluatePair(a: Garment, b: Garment): PairCompatibility {
     const reasons: string[] = [];
 
-    const formalityGap = Math.abs(garmentFormality(a.subcategory) - garmentFormality(b.subcategory));
+    const formalityGap = Math.abs(a.formality - b.formality);
     const formalityScore = Math.max(0, 1 - formalityGap / 10);
     if (formalityGap > MAX_FORMALITY_GAP) {
       reasons.push(
@@ -66,7 +65,7 @@ export class StyleCompatibilityService {
     if (garments.length === 0) {
       return 0;
     }
-    const levels = garments.map((g) => garmentFormality(g.subcategory));
+    const levels = garments.map((g) => g.formality);
     return Math.max(...levels) - Math.min(...levels);
   }
 }

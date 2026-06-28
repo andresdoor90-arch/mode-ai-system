@@ -6,7 +6,7 @@
  * where the domain model is translated for transport; the renderer never sees
  * a domain class instance.
  */
-import type { Color, Garment, Outfit, WardrobeCollection } from '@mas/core';
+import type { Color, Garment, Outfit, WardrobeCollection, Category, Photograph } from '@mas/core';
 import type { RecommendationSet } from '@mas/core';
 
 import type {
@@ -16,6 +16,8 @@ import type {
   GarmentStatusDTO,
   OutfitDTO,
   CollectionDTO,
+  PhotoDTO,
+  CategoryDTO,
   RecommendationSetDTO,
 } from '../../shared/ipc';
 
@@ -28,20 +30,58 @@ export function colorToDto(color: Color): ColorDTO {
   };
 }
 
+export function photoToDto(photo: Photograph): PhotoDTO {
+  return {
+    id: photo.id,
+    storageKey: photo.storageKey,
+    order: photo.order,
+    rotation: photo.rotation,
+    crop: { ...photo.crop },
+    isPrimary: photo.isPrimary,
+    stage: photo.stage,
+  };
+}
+
+export function categoryToDto(category: Category): CategoryDTO {
+  return {
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    parentId: category.parentId,
+    group: category.group,
+    order: category.order,
+    seeded: category.seeded,
+    metadata: {
+      layerSlot: String(category.metadata.layerSlot),
+      formality: category.metadata.formality,
+      comfort: category.metadata.comfort,
+      heavyOuterwear: category.metadata.heavyOuterwear,
+      attributes: { ...category.metadata.attributes },
+    },
+  };
+}
+
 export function garmentToDto(garment: Garment): GarmentDTO {
   return {
     id: garment.id,
     name: garment.name,
     category: String(garment.category),
     subcategory: garment.subcategory,
+    categoryId: garment.categoryId ?? null,
     color: colorToDto(garment.color),
+    secondaryColors: garment.secondaryColors.map(colorToDto),
     brand: garment.brand ?? null,
+    material: garment.material ?? null,
     seasons: garment.seasons.map(String),
     images: [...garment.images],
+    photos: garment.photos.map(photoToDto),
     tags: [...garment.tags],
     status: garment.status as GarmentStatusDTO,
     wearCount: garment.wearCount,
+    formality: garment.formality,
     lastWornAt: garment.lastWornAt ?? null,
+    purchaseDate: garment.purchaseDate ?? null,
+    notes: garment.notes ?? null,
   };
 }
 

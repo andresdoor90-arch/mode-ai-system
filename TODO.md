@@ -308,6 +308,61 @@
 
 ---
 
+## Phase 6.5: Smart Wardrobe Management
+
+> ✅ Completed 2026-07-04 (Sprint 7). Approved roadmap extension (does NOT replace Phase 7). Fully dynamic, user-defined categories (no hardcoded categories), full garment + photo + metadata management, AI-assisted tagging (confirmation-gated), and automatic event-driven cognitive sync. Monorepo offline total 314 → 368 passed / 0 failed, no regressions. Awaiting approval before Phase 7.
+
+### P0 - Module 1: Dynamic categories (enum → data migration, ADR-017)
+- [x] `Category` aggregate (id, name, slug, parentId for unlimited subcategories, group, order, `CategoryMetadata`)
+- [x] `CategoryMetadata` value object (layer slot, formality, comfort, heavy-outerwear, extensible attributes)
+- [x] `ICategoryRepository` port + in-memory implementations (core test support + desktop)
+- [x] `buildDefaultTaxonomy` seed/migration reproducing the prior built-in taxonomy as editable data
+- [x] Repoint pure services to garment metadata getters (zero scoring change; 91 prior core tests green)
+- [x] CQRS use cases: Create / Update (rename/regroup/move) / Reorder / Delete / SeedDefaultTaxonomy + GetCategories / GetCategoryTree
+
+### P0 - Module 2: Garment lifecycle
+- [x] Duplicate / Archive / Restore use cases (create/edit/delete already existed) — stable persistent id
+- [x] Pure search / filter / sort + pagination (`searchGarments`, `SearchGarmentsQuery`)
+
+### P0 - Module 3: Photographs
+- [x] `Photograph` value object with non-destructive transforms (rotation, crop, order, primary, stage)
+- [x] Add / Remove / Reorder / Transform / Set-primary use cases
+- [x] `PhotoProcessingPipeline` + `IBackgroundRemover`/`IGarmentSegmenter`/`IImageEnhancer` ports as no-op stages (architecture only, ADR-018)
+
+### P0 - Module 4: Smart metadata
+- [x] Secondary colours, material, purchase date, notes + extensible `attributes` bag (formality from category metadata)
+
+### P0 - Module 5: AI-assisted tagging (never auto-applied, ADR-020)
+- [x] `IGarmentTagSuggester` port + `Suggestion`/`GarmentTagSuggestion` types
+- [x] `SuggestGarmentTagsQuery` (returns only) + `ConfirmGarmentTagsCommand` (applies only approved subset)
+- [x] `DeferredVisionTagSuggester` (vision deferred) + offline `BaselineColorExtractor`
+
+### P0 - Module 6: Event-driven cognitive sync (ADR-019)
+- [x] Wardrobe domain events + `IDomainEventPublisher`/`IDomainEventSubscriber` ports (IEventBus-compatible)
+- [x] `WardrobeSyncCoordinator` fanning out to inventory / semantic index + embeddings / cache / history / preference memory
+- [x] Use cases publish events; `AppContainer` wires the coordinator + seeds the taxonomy at startup
+
+### P1 - Module 7: UX (pure logic + dynamic categories page)
+- [x] Multi-select (incl. shift-range), select-all, bulk-action availability, management sort, status indicators
+- [x] Dynamic categories logic (tree, group, drag-reorder, name validation, delete guard) + `CategoriesPage` manager
+- [ ] Full media-grade grid/list with drag-and-drop upload, zoom/crop editor, side properties panel, quick view (React presentation — CI/runtime-deferred)
+
+### P1 - Module 8: Performance
+- [x] Pagination + list/grid virtualization windowing
+- [x] Thumbnail cache keys + bounded `LruCache`
+- [x] Bounded-concurrency `BackgroundJobQueue`
+
+### P0 - Module 9: Architecture
+- [x] New IPC channels + contract + DTOs + handlers + preload + client for categories/lifecycle/photos/tagging/search (React → IPC → Application → Domain → Infrastructure preserved)
+
+### P0 - Module 10: Quality
+- [x] 54 new offline tests; no regressions (314 → 368 passed / 0 failed)
+- [x] PROJECT_PROGRESS.md, TODO.md, CHANGELOG.md updated; ADR-017…020 recorded
+- [ ] `SqlCategoryRepository` + schema migration for category/photo/metadata columns (CI/native-SQLite-deferred)
+- [ ] Full `tsc` + `electron-vite` build + RTL component tests (CI/runtime-deferred)
+
+---
+
 ## Phase 7: Plugin System (`packages/plugin-sdk`)
 
 ### P1 - Plugin SDK
@@ -395,4 +450,4 @@
 
 ---
 
-*Last updated: 2026-07-03*
+*Last updated: 2026-07-04*

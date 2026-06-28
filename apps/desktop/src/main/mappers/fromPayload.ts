@@ -47,16 +47,23 @@ export function toColor(hex: string, name?: string): Color {
   return result.value;
 }
 
-/** Build a {@link CreateGarmentInput} from the add-garment IPC payload. */
+/** Build a {@link CreateGarmentInput} from the add-garment IPC payload.
+ *
+ * Phase 6.5: the category is a DYNAMIC string (a user-defined category slug),
+ * no longer validated against a fixed enum. When the garment references a
+ * user-defined category by id, the main handler resolves and attaches its
+ * {@link CategoryMetadata}; otherwise the domain falls back to the seed
+ * taxonomy keyed by category/subcategory. */
 export function toCreateGarmentInput(payload: AddGarmentPayload): CreateGarmentInput {
   const seasons = payload.seasons.map(toSeason);
   return {
     name: payload.name,
-    category: toGarmentCategory(payload.category),
+    category: payload.category,
     subcategory: payload.subcategory,
     color: toColor(payload.colorHex, payload.colorName),
     seasons,
     ...(payload.brand !== undefined ? { brand: payload.brand } : {}),
+    ...(payload.material !== undefined ? { material: payload.material } : {}),
     ...(payload.tags !== undefined ? { tags: [...payload.tags] } : {}),
   };
 }
