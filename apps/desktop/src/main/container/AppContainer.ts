@@ -12,14 +12,21 @@
  * can swap the implementations here without touching the use cases, the IPC
  * layer or the renderer.
  *
- * No AI engine, recommendation intelligence or embeddings are wired here — the
- * outfit-suggestion query uses the deterministic, rules-based scoring that
- * already lives in the domain layer.
+ * Phase 5 wires the provider-agnostic {@link AIOrchestrator} here: the cognitive
+ * engine lives in `@mas/core` and depends only on domain services + abstract
+ * ports. By default NO AI provider is configured, so the engine runs in its
+ * mandatory graceful-degradation mode — full recommendations from domain rules
+ * + scoring alone. Preference memory is persisted through a
+ * `@mas/infrastructure` store so learning survives restarts. Swapping in a real
+ * provider (Ollama/OpenAI/Anthropic via the LangChain adapters) is a matter of
+ * populating the {@link AIProviderRouter} here — the domain never changes.
  */
 import {
   AddGarmentCommand,
   AddGarmentHandler,
   ADD_GARMENT,
+  AIOrchestrator,
+  AIProviderRouter,
   Color,
   CommandBus,
   CreateCollectionHandler,
@@ -39,9 +46,12 @@ import {
   GET_STYLE_ANALYSIS,
   GetWardrobeHandler,
   GET_WARDROBE,
+  MemoryEngine,
   QueryBus,
   RateOutfitHandler,
   RATE_OUTFIT,
+  RecommendOutfitsHandler,
+  RECOMMEND_OUTFITS,
   RemoveGarmentHandler,
   REMOVE_GARMENT,
   Season,
@@ -61,7 +71,13 @@ import {
   unwrap,
   type CreateGarmentInput,
   type IdGenerator,
+  type IPreferenceMemoryStore,
 } from '@mas/core';
+
+import {
+  FilePreferenceMemoryStore,
+  InMemoryPreferenceMemoryStore,
+} from '@mas/infrastructure';
 
 import {
   InMemoryCollectionRepository,
@@ -77,6 +93,12 @@ export interface Repositories {
   readonly profiles: InMemoryUserProfileRepository;
 }
 
+/** Options for assembling the container. */
+export interface AppContainerOptions {
+  /** Directory for durable app data (preference memory, etc.). */
+  readonly dataDir?: string;
+}
+
 /**
  * Holds the wired application layer. Created once at startup and shared by all
  * IPC handlers for the lifetime of the process.
@@ -85,9 +107,13 @@ export class AppContainer {
   public readonly commands: CommandBus;
   public readonly queries: QueryBus;
   public readonly repositories: Repositories;
+  /** The provider-agnostic AI engine (offline-capable by default). */
+  public readonly orchestrator: AIOrchestrator;
   private readonly ids: IdGenerator;
+  private readonly router: AIProviderRouter;
+  private readonly memory: MemoryEngine;
 
-  private constructor() {
+  private constructor(options: AppContainerOptions = {}) {
     this.ids = new SequentialIdGenerator('mas');
     this.repositories = {
       garments: new InMemoryGarmentRepository(),
@@ -96,16 +122,54 @@ export class AppContainer {
       profiles: new InMemoryUserProfileRepository(),
     };
 
+    // Preference memory persists through an infrastructure store so the engine
+    // genuinely learns across sessions; falls back to volatile memory when no
+    // data directory is available (e.g. tests).
+    const memoryStore: IPreferenceMemoryStore =
+      options.dataDir !== undefined
+        ? new FilePreferenceMemoryStore(`${options.dataDir}/ai/preference-memory.json`)
+        : new InMemoryPreferenceMemoryStore();
+    this.memory = new MemoryEngine(memoryStore);
+
+    // No provider configured by default ⇒ graceful degradation (rules only).
+    // Real providers are registered here once the user configures them.
+    this.router = new AIProviderRouter([]);
+
+    this.orchestrator = new AIOrchestrator({
+      garments: this.repositories.garments,
+      outfits: this.repositories.outfits,
+      profiles: this.repositories.profiles,
+      router: this.router,
+      memory: this.memory,
+    });
+
     this.commands = new CommandBus();
     this.queries = new QueryBus();
     this.registerHandlers();
   }
 
   /** Build the container and seed it with demonstration data. */
-  public static async create(): Promise<AppContainer> {
-    const container = new AppContainer();
+  public static async create(options: AppContainerOptions = {}): Promise<AppContainer> {
+    const container = new AppContainer(options);
     await container.seed();
     return container;
+  }
+
+  /** Report the AI engine's current capability for the UI status indicator. */
+  public async aiStatus(): Promise<{
+    providerAvailable: boolean;
+    providerId: string | null;
+    recommendationsEnabled: boolean;
+    degraded: boolean;
+  }> {
+    const selection = await this.router.select();
+    return {
+      providerAvailable: selection.provider !== null,
+      providerId: selection.provider?.id ?? null,
+      // Recommendations always work — the domain rules need no provider.
+      recommendationsEnabled: true,
+      degraded: selection.provider === null,
+    };
   }
 
   private registerHandlers(): void {
@@ -127,7 +191,8 @@ export class AppContainer {
       .register(GET_SEASONAL_WARDROBE, new GetSeasonalWardrobeHandler(garments))
       .register(GET_STYLE_ANALYSIS, new GetStyleAnalysisHandler(garments))
       .register(GET_COLOR_PALETTE, new GetColorPaletteHandler(garments, profiles))
-      .register(GET_OUTFIT_SUGGESTIONS, new GetOutfitSuggestionsHandler(garments, profiles));
+      .register(GET_OUTFIT_SUGGESTIONS, new GetOutfitSuggestionsHandler(garments, profiles))
+      .register(RECOMMEND_OUTFITS, new RecommendOutfitsHandler(this.orchestrator));
   }
 
   /**

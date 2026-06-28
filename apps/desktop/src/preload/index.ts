@@ -16,11 +16,14 @@ import { contextBridge, ipcRenderer } from 'electron';
 import {
   IpcChannels,
   type AddGarmentPayload,
+  type AiStatusDTO,
   type AppInfoDTO,
   type ColorPaletteDTO,
   type GarmentDTO,
   type IpcResponse,
   type OutfitSuggestionDTO,
+  type RecommendationRequestPayload,
+  type RecommendationSetDTO,
   type StyleAnalysisDTO,
   type SuggestionsPayload,
   type UpdateGarmentPayload,
@@ -60,6 +63,12 @@ const api = {
       payload: SuggestionsPayload,
     ): Promise<IpcResponse<readonly OutfitSuggestionDTO[]>> =>
       invoke(IpcChannels.outfitSuggestions, payload),
+  },
+  ai: {
+    recommend: (
+      payload: RecommendationRequestPayload,
+    ): Promise<IpcResponse<RecommendationSetDTO>> => invoke(IpcChannels.aiRecommend, payload),
+    status: (): Promise<IpcResponse<AiStatusDTO>> => invoke(IpcChannels.aiStatus),
   },
   style: {
     analysis: (): Promise<IpcResponse<StyleAnalysisDTO>> => invoke(IpcChannels.styleAnalysis),

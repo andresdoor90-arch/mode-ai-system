@@ -26,6 +26,10 @@ export const IpcChannels = {
   /* ------------------------------- outfits ------------------------------- */
   outfitSuggestions: 'outfit:suggestions',
 
+  /* ----------------------------- ai / engine ----------------------------- */
+  aiRecommend: 'ai:recommend',
+  aiStatus: 'ai:status',
+
   /* -------------------------------- style -------------------------------- */
   styleAnalysis: 'style:analysis',
   styleColorPalette: 'style:colorPalette',

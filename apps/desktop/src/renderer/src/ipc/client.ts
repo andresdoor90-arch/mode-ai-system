@@ -10,11 +10,14 @@
  */
 import type {
   AddGarmentPayload,
+  AiStatusDTO,
   AppInfoDTO,
   ColorPaletteDTO,
   GarmentDTO,
   IpcResponse,
   OutfitSuggestionDTO,
+  RecommendationRequestPayload,
+  RecommendationSetDTO,
   StyleAnalysisDTO,
   SuggestionsPayload,
   UpdateGarmentPayload,
@@ -73,6 +76,11 @@ export const ipc = {
   getOutfitSuggestions: (
     payload: SuggestionsPayload,
   ): Promise<readonly OutfitSuggestionDTO[]> => unwrap(bridge().outfits.suggestions(payload)),
+
+  getRecommendations: (
+    payload: RecommendationRequestPayload,
+  ): Promise<RecommendationSetDTO> => unwrap(bridge().ai.recommend(payload)),
+  getAiStatus: (): Promise<AiStatusDTO> => unwrap(bridge().ai.status()),
 
   getStyleAnalysis: (): Promise<StyleAnalysisDTO> => unwrap(bridge().style.analysis()),
   getColorPalette: (): Promise<ColorPaletteDTO> => unwrap(bridge().style.colorPalette()),
