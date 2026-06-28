@@ -20,3 +20,4 @@ export type CalendarEventId = Id<'CalendarEvent'>;
 export type WardrobeId = Id<'Wardrobe'>;
 export type CategoryId = Id<'Category'>;
 export type PhotoId = Id<'Photo'>;
+export type OutfitHistoryEntryId = Id<'OutfitHistoryEntry'>;

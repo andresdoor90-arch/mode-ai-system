@@ -23,6 +23,7 @@
  */
 import { type Garment } from '../../domain/entities/Garment';
 import { type IGarmentRepository } from '../../domain/repositories/IGarmentRepository';
+import { type IOutfitHistoryRepository } from '../../domain/repositories/IOutfitHistoryRepository';
 import { type IOutfitRepository } from '../../domain/repositories/IOutfitRepository';
 import { type IUserProfileRepository } from '../../domain/repositories/IUserProfileRepository';
 import { garmentFormality } from '../../domain/services/formality';
@@ -56,6 +57,8 @@ export interface AIOrchestratorDeps {
   readonly garments: IGarmentRepository;
   readonly outfits: IOutfitRepository;
   readonly profiles: IUserProfileRepository;
+  /** Persisted outfit-usage history; when present it feeds freshness/repetition. */
+  readonly history?: IOutfitHistoryRepository;
   /** Router over text providers; absent/empty ⇒ offline, rules-only. */
   readonly router?: AIProviderRouter;
   /** Semantic embeddings manager; absent/unavailable ⇒ no semantic boost. */
@@ -81,7 +84,7 @@ export class AIOrchestrator {
   private readonly preferences = new PreferenceEngine();
 
   public constructor(private readonly deps: AIOrchestratorDeps) {
-    this.history = new HistoryAnalyzer(deps.outfits);
+    this.history = new HistoryAnalyzer(deps.outfits, deps.history);
     this.inventory = new InventoryAnalyzer(deps.garments);
     this.ranking = new OutfitRankingEngine(deps.scoring ?? new OutfitScoringService());
   }
