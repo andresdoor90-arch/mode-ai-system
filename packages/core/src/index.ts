@@ -44,6 +44,7 @@ export * from './domain/value-objects/ColorPalette';
 export * from './domain/entities/Garment';
 export * from './domain/entities/Category';
 export * from './domain/entities/Outfit';
+export * from './domain/entities/OutfitHistoryEntry';
 export * from './domain/entities/UserProfile';
 export * from './domain/entities/StyleRule';
 export * from './domain/entities/WardrobeCollection';
@@ -58,6 +59,7 @@ export * from './domain/repositories/IStyleRuleRepository';
 export * from './domain/repositories/ICollectionRepository';
 export * from './domain/repositories/ICalendarEventRepository';
 export * from './domain/repositories/ICategoryRepository';
+export * from './domain/repositories/IOutfitHistoryRepository';
 
 /* ------------------------------- taxonomy -------------------------------- */
 export * from './domain/taxonomy/defaultTaxonomy';
@@ -86,6 +88,7 @@ export * from './application/commands/categoryCommands';
 export * from './application/commands/outfitCommands';
 export * from './application/commands/profileCommands';
 export * from './application/commands/collectionCommands';
+export * from './application/commands/historyCommands';
 
 /* --------------------------------- queries -------------------------------- */
 export * from './application/queries/wardrobeQueries';
@@ -94,6 +97,10 @@ export * from './application/queries/categoryQueries';
 export * from './application/queries/styleQueries';
 export * from './application/queries/suggestionQueries';
 export * from './application/queries/recommendationQueries';
+export * from './application/queries/historyQueries';
+
+/* ----------------------------- outfit history ----------------------------- */
+export * from './application/history/OutfitHistoryService';
 
 /* ----------------------- AI orchestration (cognitive engine) -------------- */
 export * from './application/orchestration';

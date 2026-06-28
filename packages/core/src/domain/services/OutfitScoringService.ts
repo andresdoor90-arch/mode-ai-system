@@ -29,6 +29,15 @@ export const DEFAULT_SCORING_WEIGHTS = {
 
 export type ScoringWeights = typeof DEFAULT_SCORING_WEIGHTS;
 
+/**
+ * Stable, order-independent signature for a garment combination, keyed purely by
+ * garment ids. Shared by {@link OutfitScoringService.signatureOf} and by the
+ * persisted outfit-history layer so freshness / recent-repetition reasoning uses
+ * ONE canonical definition (no rule duplication).
+ */
+export const signatureOfIds = (ids: readonly string[]): string =>
+  [...ids].sort().join('|');
+
 /** Optional context that refines a score when available. */
 export interface ScoringContext {
   readonly weather?: WeatherCondition;
@@ -89,7 +98,7 @@ export class OutfitScoringService {
 
   /** Stable signature for a garment combination (order-independent). */
   public static signatureOf(garments: readonly Garment[]): string {
-    return [...garments.map((g) => g.id)].sort().join('|');
+    return signatureOfIds(garments.map((g) => g.id));
   }
 
   /** Score a fully-formed {@link Outfit}. */
