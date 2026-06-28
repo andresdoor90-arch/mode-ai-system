@@ -12,6 +12,7 @@ import {
   History,
   LayoutDashboard,
   LayoutGrid,
+  PersonStanding,
   Settings,
   Shirt,
   Sparkles,
@@ -58,6 +59,13 @@ export const NAV_ITEMS: readonly NavItem[] = [
     icon: Tag,
     group: 'library',
     description: 'Vista detallada de cada prenda',
+  },
+  {
+    path: '/try-on',
+    label: 'Probador',
+    icon: PersonStanding,
+    group: 'library',
+    description: 'Visualiza el conjunto recomendado sobre un avatar 3D',
   },
   {
     path: '/history',

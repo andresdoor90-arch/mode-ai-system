@@ -19,7 +19,7 @@
 | Avatar Rendering | Three.js + React Three Fiber |
 | Architecture | Clean Architecture + CQRS lite |
 | Plugin System | Sandboxed with Worker Threads |
-| Monorepo | apps/desktop + packages/ (core, infrastructure, plugin-sdk) |
+| Monorepo | apps/desktop + packages/ (core, infrastructure, rendering, plugin-sdk) |
 
 ## Current Status
 
@@ -34,7 +34,8 @@
 | AI Engine Integration | Complete | 100% | Provider-agnostic cognitive AI Orchestrator in `@mas/core` (Context Analyzer, Preference/Memory/History/Inventory analyzers, Candidate Generator, Ranking Engine, Explanation Generator, Provider Router, Embedding Manager); infra adapters (Static/LangChain providers, persistent preference-memory stores); graceful offline degradation, no business rule in any provider (Phase 5) |
 | Wardrobe Management | Not Started | 0% | CRUD, categorization, image storage |
 | Outfit Recommendation Engine | Complete | 100% | Full 10-step recommendation pipeline producing Principal / Más elegante / Más cómoda with explanations, built on the domain `OutfitScoringService` (0–100, 10 factors + smart rules); AI enrichment strictly additive (Phase 5) |
-| Virtual Try-On / Avatar | Not Started | 0% | Three.js, body model, garment fitting |
+| Rendering Layer (`@mas/rendering`) | Complete | 100% | Engine-agnostic virtual try-on core (Phase 6): Avatar/Clothing/Outfit/Camera/Lighting/Asset/Texture/Scene/Screenshot managers + Render Cache as pure TypeScript (no Three.js/React/DOM); a `SceneDescription` is the swappable-engine seam (`IRenderEngine`) |
+| Virtual Try-On / Avatar | Complete | 100% | Visualises the recommended outfit on a fictional parametric avatar via a Three.js/React-Three-Fiber adapter over `@mas/rendering`; 360° rotation, zoom, front/back/side presets, screenshots, automatic garment swap, consistent representation; decoupled from the AI engine (consumes only structured garment data) — Phase 6. WebGL render is runtime/CI-deferred |
 | Plugin SDK | Not Started | 0% | API surface, sandboxing, lifecycle |
 | Image Processing Pipeline | In Progress | 20% | Storage I/O + metadata wiring done (Phase 3); Sharp processing (resize, bg removal, colour extraction) deferred |
 | User Profile & Preferences | In Progress | 40% | Style profile + persistent preference-memory learning (accept/reject) wired via the AI engine (Phase 5); body measurements / full profile UI deferred |
@@ -116,7 +117,15 @@
 - **Rationale**: Lets the engine ship correct, realistic provider code while remaining fully type-checkable and runnable OFFLINE (the `INTEGRATIONS_ONLY` sandbox cannot install these packages). Nothing is evaluated unless a real provider is requested, so installation, type resolution and any model call are cleanly CI-deferred without affecting the rest of the system.
 - **Status**: Approved
 
-## Milestones
+### ADR-015: Engine-agnostic rendering seam (`@mas/rendering`) with a Three.js adapter
+- **Decision**: All virtual try-on logic lives in a new pure package `@mas/rendering` — the Avatar, Clothing, Outfit, Camera, Lighting, Asset, Texture, Scene and Screenshot managers plus the Render Cache — expressed entirely as plain data + interfaces (a `SceneDescription` snapshot, `CameraState`, `MaterialDescriptor`, `ClothingLayer`, `AvatarDescriptor`, view presets) with **no Three.js, React, DOM, Electron, domain or AI import**. A graphics engine implements the single `IRenderEngine` port; the concrete Three.js / React-Three-Fiber adapter lives in `apps/desktop/src/renderer/src/rendering/three`. The renderer consumes only structured garment data (a `RenderableOutfit`), never the AI orchestrator, providers or domain entity classes.
+- **Rationale**: Satisfies the mandate that the visual representation be fully replaceable without touching the domain, and that rendering stay decoupled from the AI engine. Because the abstraction has zero engine dependencies it is fully type-checkable AND unit-testable OFFLINE (garment→layer placement, camera/zoom/view-preset maths, render-cache keying & invalidation, screenshot plumbing via fakes), while the actual WebGL render is isolated in the adapter and deferred to CI/runtime. Swapping R3F for another engine means rewriting only the `three/` folder.
+- **Status**: Approved
+
+### ADR-016: Parametric avatar + pure primitive derivation (offline-testable adapter)
+- **Decision**: The fictional character is a parametric mannequin assembled from geometric primitives (no external model file). The mapping from `SceneDescription` to primitive descriptors (avatar body parts, per-garment geometry by body region, sRGB→linear material props) is a **pure** module (`rendering/primitives.ts`) with no Three.js import; the R3F components are thin declarative wrappers that instantiate `<mesh>`/`<meshStandardMaterial>` from those descriptors. The base avatar, body type, pose and accessory attachment points are encoded as data-only extension points.
+- **Rationale**: Pushes as much of the adapter as possible into pure, offline-tested code (placement maths, body-type silhouette, material mapping), leaving only the `<Canvas>`/WebGL render runtime-deferred. It also makes future enhancements — swapping the base model for a GLTF mesh, adding body types or accessories, improving materials/textures — local, data-driven changes that never reach the domain.
+- **Status**: Approved
 
 ### Milestone 1: Foundation (Project Setup) ✅ Complete
 - [x] Initialize monorepo with workspace configuration
@@ -161,7 +170,7 @@
 ### Milestone 6: Core Features
 - [ ] Wardrobe management (add, edit, categorize garments)
 - [ ] Outfit generation and recommendation
-- [ ] Virtual try-on with Three.js avatar
+- [x] Virtual try-on with Three.js avatar (Phase 6 — engine-agnostic `@mas/rendering` core + Three.js/R3F adapter; visualises the recommended outfit, 360° rotation, zoom, view presets, screenshots, automatic swap)
 - [ ] User profile and style preferences
 - [ ] Calendar and event integration
 - [ ] Weather-aware recommendations
@@ -267,6 +276,19 @@
 - **Type-check (offline vs CI-deferred)**: the pure `@mas/core` orchestration layer type-checks cleanly offline (`tsc --noEmit`, strict, no node types needed) — **0 errors**; the shared IPC contract/DTOs also type-check cleanly. CI-deferred (uninstallable in `INTEGRATIONS_ONLY`): anything needing `@types/node` or the `@langchain/*` SDKs (the infrastructure adapters + memory file store) and the Electron/React desktop build — all touched files were transpile-validated with Bun (0 errors). The LangChain SDKs are referenced only through lazy dynamic imports, so nothing breaks offline.
 - **Explicitly NOT started (per scope)**: 3D Avatar, Virtual Try-On, and the Plugin system — untouched.
 
+### Sprint 6 - Phase 6: Virtual Try-On & Avatar System
+- **Start Date**: 2026-07-03
+- **Goal**: Build M-A-S's outfit *visualisation* engine — NOT AI image generation, but a visual representation driven by the REAL garments of the recommended outfit, placed on a fictional avatar using their domain attributes (category → body slot, colour → material…). It must stay decoupled from the AI engine, consume only structured domain data, keep all business rules out of the renderer, and be fully replaceable in the future without touching the domain.
+- **Status**: Done (awaiting user approval before Phase 7)
+- **Architecture (where each component lives & why)**:
+  - **`@mas/rendering` (NEW pure package)** — the engine-agnostic core and the replaceability seam (ADR-015). Plain data + ports only (no Three.js/React/DOM/domain/AI imports): the abstraction (`math`, `color` incl. sRGB→linear, `slots` body-region/draw-order vocabulary, the `SceneDescription`/`CameraState`/`MaterialDescriptor`/`ClothingLayer`/`AvatarDescriptor` types, and the `IRenderEngine`/`IScreenshotSink` ports) plus the ten required managers — **Avatar Manager**, **Clothing Renderer**, **Outfit Renderer**, **Camera Controller**, **Lighting Manager**, **Asset Manager**, **Texture Manager**, **Scene Manager**, **Screenshot Manager** and **Render Cache**. Chosen as a package (not an app folder) so it is reusable, builds via project references and is fully type-checkable + unit-testable offline. It has ZERO dependencies — not even `@mas/core` — so it can never reach an AI code path.
+  - **`apps/desktop/src/renderer/src/rendering`** — the swappable Three.js / React-Three-Fiber adapter (ADR-016) + UI: a pure `primitives.ts` (offline-tested geometry/material derivation), the R3F components (`Primitive`, `AvatarView`, `ClothingLayers`, `SceneLights`, `CameraSync`, `TryOnCanvas`), a canvas-backed screenshot sink, the `useVirtualTryOn` hook, the `recommendationStore` (Zustand, fetches over the existing `ai:recommend` IPC), the DTO→renderable mapper, and the **Probador** screen (`VirtualTryOnPage`) wired into the nav/router at `/try-on`. React imports only the typed IPC client + `@mas/rendering`; it never imports infrastructure or domain classes.
+- **Functional requirements (all met)**: visualise the recommended outfit on a fictional character; automatically swap garments when the recommendation/selection changes (no hidden state — re-running `OutfitRenderer`); rotate 360° (`wrapDegrees` orbit); zoom in/out (clamped); front/back/left/right/three-quarter view presets; take screenshots (request plumbing pure, WebGL read-back in the adapter); consistent representation across recommendations (one persistent avatar + order-independent cache key).
+- **Decoupling & replaceability guarantees**: the render layer consumes only a `RenderableOutfit` (structured garment data — id/name/category/subcategory/colour); it never calls the orchestrator/providers and has no AI dependency. The Avatar Manager (and the whole layer) holds NO business rules — it only visualises already-decided outfits. All visual representation is behind the `SceneDescription`/`IRenderEngine` seam, so the graphics engine is replaceable without modifying the domain. Future-proofing is encoded as data-only extension points: swap the base avatar model, switch body types, add accessories (attachment points), improve materials/textures.
+- **Offline test method + results**: canonical tests authored against the Vitest API and executed offline through the gitignored, never-committed `vitest`→`bun:test` shim (no shim/`node_modules` committed). **`@mas/rendering`: 88 passed / 0 failed** (14 files, 191 assertions) covering colour/linear conversion, slot/region/draw-order mapping, the Texture Manager finish mapping + memoisation, Asset Manager resolution + custom-manifest model swap, Avatar Manager model/body-type/pose swaps, Camera Controller 360° rotation/clamped zoom/view presets, Lighting presets, Clothing/Outfit renderers (full-body suppression, exclusive-slot, deterministic order), Render Cache keying (order-independent) + LRU eviction + outfit invalidation, Screenshot Manager request plumbing via a fake sink, and the Scene Manager composition (dress/swap/consistent-avatar/cache-hit). **`apps/desktop` (new): 11 passed / 0 failed** for the pure DTO→renderable mapper and the primitive geometry/material derivation. Offline totals after Phase 6: `@mas/core` 91, `@mas/infrastructure` 82, `@mas/rendering` 88, `apps/desktop` 53 — **314 passed / 0 failed**.
+- **Type-check (offline vs CI/runtime-deferred)**: `@mas/rendering` type-checks AND emits cleanly offline (`tsc`, strict, no node types) — **0 errors**; the pure desktop adapter logic (`primitives.ts`, `dtoToRenderable.ts`) transpiles cleanly. CI/runtime-deferred (uninstallable in `INTEGRATIONS_ONLY`): `three`, `@react-three/fiber`, `@react-three/drei` (+`@types/three`), so the R3F components, the `electron-vite` build, the full `tsc --web` type-check, the jsdom + RTL component test (`VirtualTryOnPage.test.tsx`) and the actual WebGL render run in CI / at runtime — all 10 R3F/page/hook/store files were transpile-validated (0 syntax errors).
+- **Explicitly NOT started (per scope)**: the Plugin system, Marketplace and Cloud sync — untouched.
+
 ---
 
-*Last updated: 2026-07-02*
+*Last updated: 2026-07-03*
