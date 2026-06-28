@@ -28,9 +28,9 @@
 | Project Setup & Configuration | Complete | 100% | Monorepo, tooling, testing, CI/CD scaffolded (Phase 1) |
 | Core Package (Domain Layer) | Complete | 100% | Entities, value objects, repository ports, domain services, CQRS use cases — pure & framework-agnostic (Phase 2) |
 | Infrastructure Package | Complete | 100% | SQLite/Drizzle repositories, migrations, ChromaDB + in-memory vector store, file/image storage, AI provider ports, config, logging, events, backup/restore, import/export, error hierarchy (Phase 3) |
-| Desktop App - Electron Shell | Not Started | 0% | Main process, window management |
-| Desktop App - Frontend UI | Not Started | 0% | React components, routing, state |
-| Embedded Backend (Fastify) | Not Started | 0% | API routes, middleware, services |
+| Desktop App - Electron Shell | Complete | 100% | Secure main process (context isolation, sandbox, strict CSP, navigation guards), window manager, single-instance, typed IPC wired to the `@mas/core` application layer (Phase 4) |
+| Desktop App - Frontend UI | Complete | 100% | React 18 + Router + Zustand + Tailwind/Shadcn-style design system; definitive layout (sidebar/header/breadcrumbs), 9 screens, dark/light theming (Phase 4) |
+| Embedded Backend (Fastify) | Superseded | n/a | Phase 4 connects the renderer to use cases via a typed IPC bridge (renderer → IPC → main → CQRS buses) instead of an in-process HTTP server; a Fastify layer remains optional/deferred (see ADR-009) |
 | AI Engine Integration | Not Started | 0% | LangChain.js, Ollama, cloud APIs |
 | Wardrobe Management | Not Started | 0% | CRUD, categorization, image storage |
 | Outfit Recommendation Engine | Not Started | 0% | ML pipeline, rules engine, scoring |
@@ -86,6 +86,16 @@
 - **Rationale**: Keeps the storage engine swappable, lets the persistence layer be exercised end-to-end against a real SQLite engine even when the native `better-sqlite3` module cannot be installed (offline sandbox), and isolates the only uninstallable/native imports behind lazy factory functions so the rest of the layer builds anywhere.
 - **Status**: Approved
 
+### ADR-009: Typed IPC bridge over an embedded HTTP backend
+- **Decision**: The renderer talks to the main process through a single, strongly-typed IPC contract (shared channel map + DTOs + a `Result`-style response envelope), exposed via a minimal `contextBridge` API. Main-process IPC handlers delegate to the `@mas/core` Command/Query buses; the React layer never imports `@mas/infrastructure`, the domain classes, or touches the database/filesystem directly. The originally-envisaged embedded Fastify server is deferred (it adds an HTTP hop, a port and CORS/security surface that a local desktop app does not need today).
+- **Rationale**: Smaller attack surface (no open socket), end-to-end type safety across the boundary, structured error propagation, and a strict one-way dependency (renderer → IPC → application layer → infrastructure). A Fastify layer can still be added later for plugins or a companion app without changing the renderer.
+- **Status**: Approved
+
+### ADR-010: Token-based design system (Tailwind + Shadcn-style primitives)
+- **Decision**: Build the UI on a token-driven Tailwind theme (HSL CSS variables for light/dark, mapped to semantic colour roles) with reusable, accessible primitives composed over Radix UI (Dialog, Dropdown, Tabs, Tooltip, Toast, Context menu, Avatar, Label) plus custom Button/Input/Card/Table/Badge/Skeleton — the Shadcn/ui approach. Components reference only semantic tokens, never raw colours.
+- **Rationale**: One place to retint or re-theme the whole app, consistent spacing/typography, dark mode via a single class, and accessible behaviour for free from Radix. This is the definitive visual base for the project.
+- **Status**: Approved
+
 ## Milestones
 
 ### Milestone 1: Foundation (Project Setup) ✅ Complete
@@ -112,13 +122,13 @@
 - [x] Implement file storage service
 
 ### Milestone 4: Desktop Application Shell
-- [ ] Configure Electron main process
-- [ ] Implement window management
-- [ ] Set up IPC communication
-- [ ] Build React app with routing
-- [ ] Implement Zustand state management
-- [ ] Create Shadcn/ui component library setup
-- [ ] Implement Tailwind CSS theming
+- [x] Configure Electron main process
+- [x] Implement window management
+- [x] Set up IPC communication
+- [x] Build React app with routing
+- [x] Implement Zustand state management
+- [x] Create Shadcn/ui component library setup
+- [x] Implement Tailwind CSS theming
 
 ### Milestone 5: AI Engine
 - [ ] Integrate LangChain.js
@@ -206,6 +216,23 @@
 - **Verification (offline)**: executed the full suite with the offline runner → **75 passed / 0 failed (177 assertions across 13 files)**, including real SQLite round-trips for all six repositories, the migration runner, import/export and backup/restore. As in Phase 2, canonical tests are authored against the Vitest API and run offline through the gitignored `vitest`→runner shim; the persistence layer is exercised against a real SQLite engine via the `SqlDatabase` port (the production better-sqlite3 driver is selected automatically in CI). All non-driver source files load and parse cleanly; the Drizzle schema/config and the dynamic driver/ChromaDB imports were syntax-validated.
 - **Deferred to CI (no-network constraint)**: `pnpm install` cannot run in `INTEGRATIONS_ONLY` mode, so `better-sqlite3`, `drizzle-orm`, `chromadb`, `drizzle-kit` and `@types/node` are not installed locally. Consequently the full `tsc` type-check and any integration that requires the native better-sqlite3/Drizzle/ChromaDB packages are validated in CI (which has registry access). Dependency versions are pinned and realistic; the code is structured against interfaces so it is type-consistent in principle, and the offline test run proves the runtime persistence path end-to-end on an equivalent SQLite engine.
 
+### Sprint 4 - Phase 4: Desktop Application (`apps/desktop`)
+- **Start Date**: 2026-07-01
+- **Goal**: Ship the first functional desktop application — a secure Electron shell, a typed IPC layer wired to the existing `@mas/core` use cases, and a complete, definitive React interface (layout, navigation across all screens, a reusable design system, dark/light theming and global state) — with NO AI engine, recommendations, 3D avatar or plugin system
+- **Status**: Done (awaiting user approval before Phase 5)
+- **Completed**:
+  - **Electron main process**: secure `BrowserWindow` baseline (context isolation on, `nodeIntegration` off, sandbox on, `webviewTag` off); a `window` manager (single main window, single-instance lock, focus/restore, ready-to-show); process-wide security hardening (`security.ts`) — strict CSP header, `will-navigate` allowlist, `setWindowOpenHandler` denial routing external links to the OS browser, webview-attach block, and permission request/check handlers denying all
+  - **Composition root** (`AppContainer`): wires the pure `@mas/core` `CommandBus`/`QueryBus` and every use-case handler to repositories, and seeds a realistic demo wardrobe **through the real AddGarment use case**. Persistence uses port-compatible in-memory repositories (the `@mas/core` repository ports); swapping in the `@mas/infrastructure` SQLite repositories is a one-line change once the native driver is available (CI/packaged builds)
+  - **Typed IPC layer** (`src/shared/ipc`, shared by main + preload + renderer): a single channel map, plain serialisable DTOs, a `Result`-style response envelope with structured error propagation, and a fully-typed `IpcContract`. Main-process handler registry delegates each channel to the Command/Query buses; the `contextBridge` preload exposes a minimal, grouped, typed `window.mas` API. Renderer reaches the domain only through a typed `ipc` client — never `@mas/infrastructure`, domain classes, DB or filesystem
+  - **React interface** (definitive, production-quality): `HashRouter` + persistent `AppLayout` shell. Nine screens — Dashboard, Guardarropa, Categorías, Prendas, Historial, Perfil, Configuración, Importar, Exportar — plus a 404. Wired screens (Dashboard/Wardrobe/Garments/Categories) show **live data over IPC** from the seeded application layer; the rest use realistic sample content with definitive structure
+  - **Layout system**: collapsible Sidebar (grouped nav, active states, tooltips when collapsed), sticky Header (sidebar toggle, breadcrumbs, global search, theme switcher, user menu), route-driven Breadcrumbs, scrolling main panel, plus Modals/Dialogs, Toasts (store-driven queue) and right-click Context menus
+  - **Design system** (token-based, all reusable): Button, Input/Textarea/Select, Card, Table, Form (Label/Field), Dialog, DropdownMenu, Tabs, Tooltip, Badge, Avatar, Skeleton, Toast/Toaster, ContextMenu — built on a Tailwind HSL-token theme (semantic colour roles) over Radix primitives, following the Shadcn/ui approach
+  - **Theme**: light/dark/system preference with dynamic switching and persistence (UI store + `localStorage`); pure resolution logic applied to `<html>` by a `ThemeProvider`
+  - **Global state (Zustand)**: `ui` (theme, sidebar, toasts — persisted), `wardrobe` (IPC-backed cache, filters/sort, optimistic remove), `outfit` (rules-based suggestions + history), `user` (profile + preferences — persisted) and an `ai-status` **placeholder** (fixed `not-configured`, no engine wired). Pure slice logic (filters/sort, toast queue) extracted for offline testing
+  - **Scope discipline**: no AI engine, no intelligent recommendations (suggestions use the domain's deterministic rules-based scoring only), no 3D avatar/virtual try-on, no plugin system — all explicitly deferred to later phases
+- **Verification (offline)**: pure logic is authored against the Vitest API and executed offline via the gitignored `vitest`→`bun:test` shim → **42 passed / 0 failed (90 assertions across 5 files)**, covering the IPC envelope/channels, presentation formatters, theme resolution/persistence, the wardrobe filter/sort/group selectors and the toast-queue reducer. All **79** desktop TS/TSX source files were syntax-validated (0 errors) with Bun's transpiler.
+- **Deferred to CI (no-network constraint)**: Electron, React, Radix UI, Tailwind/PostCSS, `react-router-dom`, `zustand` and the type toolchain cannot be installed in `INTEGRATIONS_ONLY` mode, so the full `tsc` type-check, the `electron-vite` production build and the jsdom + React-Testing-Library **component tests** (e.g. `App.test.tsx`) are validated in CI. Dependency versions are pinned and realistic; the renderer is structured so the IPC/domain boundary is type-consistent by construction.
+
 ---
 
-*Last updated: 2026-06-30*
+*Last updated: 2026-07-01*

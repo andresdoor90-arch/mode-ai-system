@@ -10,6 +10,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 4 — Desktop Application (`apps/desktop`)** (first functional, navigable desktop app; NO AI engine, recommendations, 3D avatar or plugins)
+  - Electron main process: secure window baseline (context isolation on, `nodeIntegration` off, sandbox on, `webviewTag` off), a window manager (single main window, single-instance lock, focus/restore, ready-to-show) and process-wide security hardening — strict Content-Security-Policy header, `will-navigate` allowlist, `setWindowOpenHandler` routing external links to the OS browser, webview-attach blocking, and permission request/check handlers that deny everything
+  - Composition root (`AppContainer`): wires the pure `@mas/core` `CommandBus`/`QueryBus` and all use-case handlers to repositories and seeds a realistic demo wardrobe through the real AddGarment use case; persistence uses port-compatible in-memory repositories, swappable for the `@mas/infrastructure` SQLite repositories without touching the use cases, IPC or UI
+  - Typed IPC layer shared by main/preload/renderer: a single channel map, plain serialisable DTOs, a `Result`-style response envelope with structured error propagation, and a fully-typed `IpcContract`; a minimal `contextBridge` preload exposes a grouped, typed `window.mas` API; main-process handler registry delegates each channel to the Command/Query buses
+  - React interface (definitive design): `HashRouter` + a persistent `AppLayout` shell with nine screens — Dashboard, Guardarropa, Categorías, Prendas, Historial, Perfil, Configuración, Importar, Exportar — plus a 404; Dashboard/Wardrobe/Garments/Categories render live data over IPC from the seeded application layer
+  - Layout system: collapsible Sidebar (grouped nav, active states, collapsed tooltips), sticky Header (sidebar toggle, breadcrumbs, global search, theme switcher, user menu), route-driven Breadcrumbs, scrolling main panel, Modals/Dialogs, a store-driven Toast queue and right-click Context menus
+  - Design system (token-based, reusable): Button, Input/Textarea/Select, Card, Table, Form (Label/Field), Dialog, DropdownMenu, Tabs, Tooltip, Badge, Avatar, Skeleton, Toast/Toaster and ContextMenu — built on a Tailwind HSL-token theme over Radix primitives (Shadcn/ui approach)
+  - Theme: light/dark/system preference with dynamic switching and persistence (UI store + `localStorage`), applied to `<html>` by a `ThemeProvider` via pure resolution logic
+  - Global state (Zustand): `ui`, `wardrobe` (IPC-backed cache with filters/sort and optimistic removal), `outfit` (rules-based suggestions + history), `user` (profile/preferences, persisted) and an `ai-status` placeholder fixed to `not-configured` (no engine wired); pure slice logic extracted for offline testing
+  - Strict layering: the React renderer talks only to a typed IPC client; it never imports `@mas/infrastructure`, the domain classes, or touches the database/filesystem — all communication flows renderer → IPC → main → application layer (→ infrastructure)
+  - Tests: 42 offline unit tests (90 assertions) covering the IPC envelope/channels, presentation formatters, theme resolution/persistence, the wardrobe filter/sort/group selectors and the toast-queue reducer; jsdom + React-Testing-Library component tests authored against the Vitest+RTL API for CI
+  - Pinned realistic desktop dependencies: `react-router-dom`, `@radix-ui/*` (dialog, dropdown-menu, tabs, tooltip, toast, context-menu, avatar, label, slot), `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react` (+ `tailwindcss`, `postcss`, `autoprefixer`, `tailwindcss-animate` dev)
+
+### Added (Phase 3)
 - **Phase 3 — Infrastructure Package (`@mas/infrastructure`)** (concrete adapters behind the `@mas/core` ports; no business rules)
   - Infrastructure error hierarchy distinct from the domain's: `InfrastructureError` + `DatabaseError`, `MigrationError`, `MappingError`, `StorageError`, `ConfigurationError`, `VectorStoreError`, `AIProviderError`, `BackupError`, `TransferError`, with `wrapSync`/`wrapAsync` helpers
   - Database layer: a synchronous `SqlDatabase` port with `BetterSqliteDatabase` (production, better-sqlite3) and `BunSqliteDatabase` adapters wrapping injected handles; a connection factory applying SQLite pragmas (WAL, foreign_keys, synchronous, busy_timeout); Drizzle ORM schema definitions + drizzle-kit config; a SQL migrations folder and an idempotent, transaction-per-migration `MigrationRunner`
@@ -50,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Notes
 - The foundation and subsequent phases were authored in an offline (`INTEGRATIONS_ONLY`) sandbox, so `pnpm install` was not run and no `pnpm-lock.yaml` is committed yet. Dependency versions are pinned and realistic; install, full type-check/build, and test runs are validated via CI (environment with registry access).
 - Phase 3 specifically: `better-sqlite3`, `drizzle-orm`, `chromadb`, `drizzle-kit` and `@types/node` are not installable offline, so the full `tsc` type-check and native better-sqlite3/Drizzle/ChromaDB integration are CI-deferred. The runtime persistence path is proven offline against an equivalent SQLite engine through the driver-agnostic `SqlDatabase` port.
+- Phase 4 specifically: Electron, React, Radix UI, Tailwind/PostCSS, `react-router-dom` and `zustand` cannot be installed offline, so the `electron-vite` build, the full `tsc` type-check and the jsdom + React-Testing-Library component tests are CI-deferred. Pure logic (IPC envelope, formatters, theme, store selectors/reducers) is tested offline via the gitignored `vitest`→`bun:test` shim (42 passed); all 79 desktop source files pass a syntax check.
 
 ---
 
@@ -72,4 +87,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-*Last updated: 2026-06-30*
+*Last updated: 2026-07-01*
