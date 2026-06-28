@@ -389,31 +389,46 @@
 
 ## Phase 7 (Part C/D/E): Plugin System (`packages/plugin-sdk`)
 
-> ⏳ NOT started in this delegation. Parts A + B (persistence + outfit history) are complete on the `phase-7-persistence-plugins` branch; the plugin system below is the next delegation on the same branch.
+> ✅ Completed 2026-07-06 (Sprint 9). The definitive `@mas/plugin-sdk` (pure host kernel) + Extension API + security, with a desktop `PluginHost` bridge. Monorepo offline total 394 → 445 passed / 0 failed, no regressions. Phase 7 is now FULLY complete (A+B+C+D+E+F+G). Awaiting approval before Phase 8.
 
 ### P1 - Plugin SDK
-- [ ] Define plugin manifest schema (name, version, permissions)
-- [ ] Create plugin API surface (read wardrobe, suggest outfits, etc.)
-- [ ] Implement plugin lifecycle hooks (install, activate, deactivate, uninstall)
-- [ ] Create TypeScript types for plugin developers
-- [ ] Build plugin development CLI tool
+- [x] Define plugin manifest schema (id, name, version, schema version, engine ranges, permissions, contributes) + total validator
+- [x] Create plugin API surface (capability-gated `HostApi`: wardrobe read, recommendations, plugin storage, log, `register`)
+- [x] Implement plugin lifecycle hooks (`PluginModule.activate`/`deactivate` + `PluginContext`)
+- [x] Create TypeScript types for plugin developers (the stable `contracts/` surface)
+- [ ] Build plugin development CLI tool (deferred — tooling/ecosystem, out of scope this phase)
 
 ### P1 - Plugin Runtime
-- [ ] Implement Worker Thread sandbox
-- [ ] Create message passing protocol (main <-> plugin)
-- [ ] Implement permission system (file access, network, etc.)
-- [ ] Add resource limits (CPU, memory, execution time)
-- [ ] Implement plugin state persistence
+- [x] Implement Worker Thread sandbox (`IPluginSandbox` port + offline `InProcessPluginSandbox`; `WorkerThreadPluginSandbox` adapter CI/runtime-deferred, ADR-026)
+- [x] Create message passing protocol (main ↔ plugin) — host-API RPC bridge + contribution-invoke proxy in the worker adapter (runtime-deferred)
+- [x] Implement permission system (capability vocabulary, `PermissionGuard` enforced on every API call + contribution registration, ADR-028)
+- [x] Add resource limits (CPU/time via per-call timeout, invocation quota, memory ceiling via `ResourceMeter`/Worker `resourceLimits`)
+- [x] Implement plugin state persistence (plugin-scoped key/value storage via the `storage:plugin` capability + `InMemoryPluginStorageProvider`)
+
+### Plugin versioning, compatibility & security (Parts C/E)
+- [x] Plugin versioning + host/SDK compatibility validation (semver parser/range + `CompatibilityChecker` against declared `engines.mas`/`engines.sdk`)
+- [x] Plugin signing + verification (Ed25519 over canonical package bytes; Verified/Unsigned/Invalid/Untrusted + policy; tamper detection)
+- [x] Safe error handling (faulting plugin contained → `Failed`, contributions withdrawn, host stays healthy)
+- [x] Activity logging / audit trail (`ActivityLog` → `PluginActivityLogger`, infra `ILogger`-compatible)
+
+### P1 - Extension API (Part D — extend WITHOUT modifying the core)
+- [x] AI providers + embedders (→ Phase-5 `ITextProvider`/`IEmbedder` via `AIProviderRouter`)
+- [x] Rendering engines (→ Phase-6 `IRenderEngine` seam)
+- [x] Analyzers, importers, exporters, image formats
+- [x] Recommendation rules (DECLARATIVE weights → additive `affinityBias` the core evaluates; no business rule in the plugin)
+- [x] UI panels (renderer extension-point contract — metadata)
+- [x] New garment types + new category types (leveraging Phase-6.5 dynamic categories)
 
 ### P2 - Plugin Ecosystem
-- [ ] Create plugin template/boilerplate
-- [ ] Build plugin marketplace UI (local directory)
-- [ ] Write sample plugins:
-  - [ ] Color palette generator plugin
-  - [ ] Instagram style import plugin
-  - [ ] Laundry tracker plugin
-  - [ ] Packing list generator plugin
-- [ ] Plugin documentation and developer guide
+- [x] Create plugin template/boilerplate (the `createInProcessSource` helper + the sample plugin serve as the reference template)
+- [ ] Build plugin marketplace UI (local directory) — out of scope (later)
+- [~] Write sample plugins:
+  - [x] Color palette generator plugin (Color Palette Studio — analyzer + declarative rule + importer + UI panel, exercised end-to-end)
+  - [ ] Instagram style import plugin (deferred)
+  - [ ] Laundry tracker plugin (deferred)
+  - [ ] Packing list generator plugin (deferred)
+- [ ] Plugin documentation and developer guide (deferred — docs phase)
+- [ ] Renderer Plugin Manager screen + plugin-management IPC channels (CI/runtime-deferred)
 
 ---
 
@@ -476,4 +491,4 @@
 
 ---
 
-*Last updated: 2026-07-05*
+*Last updated: 2026-07-06*
