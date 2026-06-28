@@ -158,17 +158,20 @@
 
 ## Phase 4: Desktop Application (`apps/desktop`)
 
+> ✅ Core scope completed 2026-07-01 (Sprint 4). Secure Electron shell, typed IPC → application layer, and the definitive React UI (layout, navigation, design system, theming, global state). NO AI engine, recommendations, avatar or plugins. Awaiting approval before Phase 5.
+
 ### P0 - Electron Main Process
-- [ ] Configure Electron main entry point
-- [ ] Implement window creation and management
-- [ ] Set up IPC (Inter-Process Communication) channels
-- [ ] Implement app lifecycle (startup, shutdown, tray)
-- [ ] Configure auto-updater (electron-updater)
-- [ ] Set up native file dialogs (image import)
-- [ ] Implement deep linking / protocol handler
-- [ ] Configure app security (CSP, node integration)
+- [x] Configure Electron main entry point
+- [x] Implement window creation and management
+- [x] Set up IPC (Inter-Process Communication) channels
+- [~] Implement app lifecycle (startup, shutdown, tray) — startup/shutdown + single-instance done; system tray deferred
+- [ ] Configure auto-updater (electron-updater) — deferred (distribution phase)
+- [ ] Set up native file dialogs (image import) — deferred; import currently uses an in-renderer file picker
+- [ ] Implement deep linking / protocol handler — deferred
+- [x] Configure app security (CSP, node integration)
 
 ### P0 - Embedded Backend (Fastify)
+> Superseded for now by a typed IPC bridge (renderer → IPC → main → CQRS buses); see ADR-009. A Fastify layer remains optional/deferred.
 - [ ] Initialize Fastify server in main process
 - [ ] Define API route structure
 - [ ] Implement garment CRUD endpoints
@@ -181,48 +184,51 @@
 - [ ] Implement WebSocket for real-time updates
 
 ### P0 - Frontend Shell (React)
-- [ ] Set up React 18 with TypeScript
-- [ ] Configure React Router for navigation
-- [ ] Set up Zustand store architecture
-- [ ] Initialize Shadcn/ui component library
-- [ ] Configure Tailwind CSS with custom theme
-- [ ] Create app layout (sidebar, header, main content)
-- [ ] Implement responsive design system
-- [ ] Set up dark/light theme switching
+- [x] Set up React 18 with TypeScript
+- [x] Configure React Router for navigation
+- [x] Set up Zustand store architecture
+- [x] Initialize Shadcn/ui component library
+- [x] Configure Tailwind CSS with custom theme
+- [x] Create app layout (sidebar, header, main content)
+- [x] Implement responsive design system
+- [x] Set up dark/light theme switching
 
 ### P1 - Frontend Pages & Features
-- [ ] **Dashboard**: Overview, quick actions, recent outfits, weather widget
-- [ ] **Wardrobe**: Grid/list view, filters, search, bulk actions
-- [ ] **Garment Detail**: Image gallery, metadata editor, related items
-- [ ] **Add Garment**: Image upload, auto-categorization, manual entry
-- [ ] **Outfit Builder**: Drag-and-drop garment combination
-- [ ] **Outfit Suggestions**: AI-generated recommendations
-- [ ] **Virtual Try-On**: 3D avatar with garment overlay
-- [ ] **Profile/Settings**: User preferences, AI settings, storage
-- [ ] **Calendar**: Event management, outfit planning
-- [ ] **Analytics**: Wardrobe stats, style insights, usage patterns
-- [ ] **Plugin Manager**: Browse, install, configure plugins
+- [x] **Dashboard**: Overview, quick actions, recent outfits, rules-based suggestions (weather widget deferred)
+- [x] **Wardrobe**: Grid view, filters, search (bulk actions deferred)
+- [x] **Categorías**: Category overview with live counts and quick filtering
+- [x] **Prendas**: Detailed garment table view
+- [x] **Historial**: Outfit history with ratings (sample data; full query deferred)
+- [~] **Add Garment**: Modal manual entry via IPC (image upload / auto-categorization deferred)
+- [ ] **Outfit Builder**: Drag-and-drop garment combination — deferred
+- [ ] **Outfit Suggestions** (dedicated page): surfaced on Dashboard for now — deferred
+- [ ] **Virtual Try-On**: 3D avatar — out of scope (Phase 6)
+- [x] **Profile/Settings**: Perfil + Configuración (appearance, data, about)
+- [x] **Importar / Exportar**: Portable JSON bundle via the IPC transfer channel
+- [ ] **Calendar**: Event management, outfit planning — deferred
+- [ ] **Analytics**: Wardrobe stats, style insights — deferred
+- [ ] **Plugin Manager**: Browse, install, configure plugins — out of scope (Phase 7)
 
 ### P1 - State Management (Zustand)
-- [ ] Wardrobe store (garments, collections, filters)
-- [ ] Outfit store (outfits, suggestions, history)
-- [ ] User store (profile, preferences, settings)
-- [ ] UI store (theme, layout, notifications)
-- [ ] AI store (model status, generation state)
-- [ ] Implement store persistence (localStorage/SQLite)
-- [ ] Implement optimistic updates
+- [x] Wardrobe store (garments, collections, filters)
+- [x] Outfit store (outfits, suggestions, history)
+- [x] User store (profile, preferences, settings)
+- [x] UI store (theme, layout, notifications)
+- [x] AI store (model status, generation state) — placeholder only; no engine wired
+- [x] Implement store persistence (localStorage)
+- [x] Implement optimistic updates (optimistic garment removal; reconciled over IPC)
 
 ### P2 - UI Components (Shadcn/ui + Custom)
-- [ ] GarmentCard component (thumbnail, info, actions)
-- [ ] OutfitPreview component (layered garment display)
-- [ ] ColorSwatch component (interactive color picker)
-- [ ] ImageUploader component (drag-drop, crop, preview)
-- [ ] FilterPanel component (multi-criteria filtering)
-- [ ] TagInput component (autocomplete, create new)
-- [ ] WeatherWidget component
-- [ ] NotificationToast component
-- [ ] LoadingSkeleton components
-- [ ] EmptyState components
+- [x] GarmentCard component (thumbnail, info, actions, context menu)
+- [ ] OutfitPreview component (layered garment display) — deferred
+- [x] ColorSwatch component (ColorDot + color picker in the add-garment form)
+- [ ] ImageUploader component (drag-drop, crop, preview) — deferred (needs Sharp pipeline)
+- [x] FilterPanel (wardrobe filter/sort toolbar)
+- [ ] TagInput component (autocomplete, create new) — deferred
+- [ ] WeatherWidget component — deferred
+- [x] NotificationToast component (store-driven Toaster)
+- [x] LoadingSkeleton components
+- [x] EmptyState components
 
 ---
 
@@ -378,4 +384,4 @@
 
 ---
 
-*Last updated: 2026-06-30*
+*Last updated: 2026-07-01*

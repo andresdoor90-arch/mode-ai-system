@@ -11,6 +11,7 @@
     "baseUrl": ".",
     "paths": {
       "@renderer/*": ["src/renderer/src/*"],
+      "@shared/*": ["src/shared/*"],
       "@mas/core": ["../../packages/core/src/index.ts"],
       "@mas/core/*": ["../../packages/core/src/*"],
       "@mas/infrastructure": ["../../packages/infrastructure/src/index.ts"],
@@ -24,5 +25,5 @@
     { "path": "../../packages/infrastructure" },
     { "path": "../../packages/plugin-sdk" }
   ],
-  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"]
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "src/shared/**/*.ts", "tests/**/*.ts", "tests/**/*.tsx"]
 }

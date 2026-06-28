@@ -1,69 +1,56 @@
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { app, BrowserWindow, shell } from 'electron';
-
-const isDev = !app.isPackaged;
-const RENDERER_DEV_SERVER = process.env.ELECTRON_RENDERER_URL;
-
 /**
- * Create the application's main window.
+ * Electron main-process entry point.
  *
- * Security baseline: context isolation on, node integration off, sandbox on.
- * Real IPC channels, the embedded Fastify backend and window management are
- * implemented in Phase 4 — this is the Phase 1 scaffold entry point only.
+ * Orchestrates application startup in the correct, secure order:
+ *   1. enforce a single instance,
+ *   2. install process-wide security policies (CSP, navigation guards),
+ *   3. build the application container (wires `@mas/core` use cases to repos),
+ *   4. register the typed IPC handlers against that container,
+ *   5. create the main window.
+ *
+ * The renderer never talks to the domain or infrastructure directly: every
+ * request flows through the IPC handlers registered here.
  */
-function createMainWindow(): BrowserWindow {
-  const preloadPath = fileURLToPath(new URL('../preload/index.mjs', import.meta.url));
+import { app, BrowserWindow } from 'electron';
 
-  const window = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 940,
-    minHeight: 600,
-    show: false,
-    autoHideMenuBar: true,
-    title: 'Mode AI System',
-    webPreferences: {
-      preload: preloadPath,
-      sandbox: true,
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+import { AppContainer } from './container/AppContainer';
+import { registerIpcHandlers, unregisterIpcHandlers } from './ipc/registerIpcHandlers';
+import { installSecurityPolicies } from './security';
+import { createMainWindow, focusMainWindow } from './window';
+
+// Enforce a single running instance; focus the existing window otherwise.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    focusMainWindow();
   });
 
-  window.on('ready-to-show', () => {
-    window.show();
+  void app.whenReady().then(async () => {
+    installSecurityPolicies();
+
+    const container = await AppContainer.create();
+    registerIpcHandlers(container);
+
+    createMainWindow();
+
+    app.on('activate', () => {
+      // macOS: re-create a window when the dock icon is clicked and none exist.
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createMainWindow();
+      }
+    });
   });
 
-  // Open external links in the user's default browser, never in-app.
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  if (isDev && RENDERER_DEV_SERVER) {
-    void window.loadURL(RENDERER_DEV_SERVER);
-  } else {
-    void window.loadFile(join(__dirname, '../renderer/index.html'));
-  }
-
-  return window;
-}
-
-void app.whenReady().then(() => {
-  createMainWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
+  app.on('window-all-closed', () => {
+    // On macOS apps typically stay active until the user quits explicitly.
+    if (process.platform !== 'darwin') {
+      app.quit();
     }
   });
-});
 
-app.on('window-all-closed', () => {
-  // On macOS apps typically stay active until the user quits explicitly.
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+  app.on('before-quit', () => {
+    unregisterIpcHandlers();
+  });
+}
