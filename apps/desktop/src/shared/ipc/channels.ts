@@ -52,6 +52,16 @@ export const IpcChannels = {
   aiRecommend: 'ai:recommend',
   aiStatus: 'ai:status',
 
+  /* --------------------------- outfit history ---------------------------- */
+  historySearch: 'history:search',
+  historyStatistics: 'history:statistics',
+  historyRecentRepetitions: 'history:recentRepetitions',
+  historyGarment: 'history:garment',
+  historyRecordUsage: 'history:recordUsage',
+  historyRecordFeedback: 'history:recordFeedback',
+  historyRepeat: 'history:repeat',
+  historyAnnotate: 'history:annotate',
+
   /* -------------------------------- style -------------------------------- */
   styleAnalysis: 'style:analysis',
   styleColorPalette: 'style:colorPalette',

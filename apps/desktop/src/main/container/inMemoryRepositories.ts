@@ -23,11 +23,14 @@ import type {
   ICategoryRepository,
   ICollectionRepository,
   IGarmentRepository,
+  IOutfitHistoryRepository,
   IOutfitRepository,
   IStyleRuleRepository,
   IUserProfileRepository,
   Occasion,
   Outfit,
+  OutfitHistoryEntry,
+  OutfitHistoryEntryId,
   OutfitId,
   OutfitQuery,
   StyleRule,
@@ -193,8 +196,7 @@ export class InMemoryStyleRuleRepository implements IStyleRuleRepository {
   }
 }
 
-export class InMemoryCalendarEventRepository implements ICalendarEventRepository {
-  private readonly store = new Map<string, CalendarEvent>();
+export class InMemoryCalendarEventRepository implements ICalendarEventRepository {  private readonly store = new Map<string, CalendarEvent>();
 
   public async save(event: CalendarEvent): Promise<void> {
     this.store.set(event.id, event);
@@ -210,5 +212,31 @@ export class InMemoryCalendarEventRepository implements ICalendarEventRepository
   }
   public async delete(id: string): Promise<void> {
     this.store.delete(id);
+  }
+}
+
+
+export class InMemoryOutfitHistoryRepository implements IOutfitHistoryRepository {
+  private readonly store = new Map<string, OutfitHistoryEntry>();
+
+  public async save(entry: OutfitHistoryEntry): Promise<void> {
+    this.store.set(entry.id, entry);
+  }
+  public async findById(id: OutfitHistoryEntryId): Promise<OutfitHistoryEntry | null> {
+    return this.store.get(id) ?? null;
+  }
+  public async findAll(): Promise<readonly OutfitHistoryEntry[]> {
+    return [...this.store.values()].sort((a, b) =>
+      a.wornOn === b.wornOn ? b.createdAt.localeCompare(a.createdAt) : b.wornOn.localeCompare(a.wornOn),
+    );
+  }
+  public async findByGarment(garmentId: GarmentId): Promise<readonly OutfitHistoryEntry[]> {
+    return (await this.findAll()).filter((e) => e.garmentIds.includes(garmentId));
+  }
+  public async delete(id: OutfitHistoryEntryId): Promise<void> {
+    this.store.delete(id);
+  }
+  public async count(): Promise<number> {
+    return this.store.size;
   }
 }

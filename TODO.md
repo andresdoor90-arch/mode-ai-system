@@ -358,12 +358,38 @@
 ### P0 - Module 10: Quality
 - [x] 54 new offline tests; no regressions (314 → 368 passed / 0 failed)
 - [x] PROJECT_PROGRESS.md, TODO.md, CHANGELOG.md updated; ADR-017…020 recorded
-- [ ] `SqlCategoryRepository` + schema migration for category/photo/metadata columns (CI/native-SQLite-deferred)
+- [x] `SqlCategoryRepository` + schema migration for category/photo/metadata columns (delivered in Phase 7 Part A — ADR-021/023)
 - [ ] Full `tsc` + `electron-vite` build + RTL component tests (CI/runtime-deferred)
 
 ---
 
-## Phase 7: Plugin System (`packages/plugin-sdk`)
+## Phase 7 (Part A + B): Wardrobe Persistence & Intelligent Outfit History
+
+> ✅ Completed 2026-07-05 (Sprint 8). Definitive SQL persistence for the dynamic wardrobe + the intelligent outfit history. Monorepo offline total 368 → 394 passed / 0 failed, no regressions. The plugin system (Parts C/D/E) is a separate later delegation and was NOT started. Awaiting approval.
+
+### P0 - Part A: Definitive wardrobe persistence
+- [x] Migration `0001_wardrobe_persistence.sql` (tracked + idempotent): dynamic categories, unlimited subcategories (self-referential `parent_id`), garment photographs, extended metadata, garment↔photo relation, modification/audit history, basic versioning
+- [x] Extend the Drizzle `schema.ts` to match (categories, photographs, garment_history, outfit_history, extended garments)
+- [x] `SqlCategoryRepository` (implements `ICategoryRepository`: CRUD, slug lookup, root/children trees, reorder, cascade delete)
+- [x] `SqlGarmentRepository` rewritten: extended metadata + 1:N photographs + per-save versioning + `garment_history` audit trail (mappers: `categoryMapper`, `photographMapper`, extended `garmentMapper`)
+- [x] Existing data migrates automatically; default taxonomy seeded as editable rows on first run (idempotent); demo seeded only on an empty store
+- [x] `AppContainer` wired to the SQL repositories as the real backing via a swappable `Persistence` port (`persistence.ts`); in-memory retained for tests; opens + migrates `userData/mas.db` in production
+- [x] Offline verification: create/edit/delete category, subcategories, add photographs, edit metadata, versioning/audit, **restart-persistence simulation** (reopen DB, data survives)
+
+### P0 - Part B: Intelligent outfit history
+- [x] `OutfitHistoryEntry` domain entity (outfit + date/time/place/event/occasion/weather/temperature/free-text role/comments/satisfaction + extension bag) + `IOutfitHistoryRepository` port (SQL + in-memory)
+- [x] Every ACCEPTED recommendation auto-recorded via the unified `RecordOutfitFeedbackCommand` (also feeds the Phase 5 preference Memory Engine); `RecordOutfitUsage`, `RepeatOutfit`, `AnnotateOutfitHistory`
+- [x] Pure `OutfitHistoryService`: search, filter, sort, pagination, usage statistics, recent-repetition detection
+- [x] Persisted history feeds the cognitive engine — `HistoryAnalyzer` consumes it as a freshness/recent-repetition source (reuses the canonical signature; no duplicated rule)
+- [x] Exposed via CQRS queries (`SearchOutfitHistory`, `GetOutfitHistoryStatistics`, `GetRecentRepetitions`, `GetGarmentUsageHistory`) + `history:*` IPC channels (contract + DTOs + handlers + preload)
+- [x] Offline tests for history CRUD, auto-record on acceptance, search/filter/sort, repeat, recent-repetition, statistics, and that persisted history affects freshness
+- [ ] Full `tsc` + `electron-vite` build + a light History-screen UI hook-up + RTL component tests (CI/runtime-deferred)
+
+---
+
+## Phase 7 (Part C/D/E): Plugin System (`packages/plugin-sdk`)
+
+> ⏳ NOT started in this delegation. Parts A + B (persistence + outfit history) are complete on the `phase-7-persistence-plugins` branch; the plugin system below is the next delegation on the same branch.
 
 ### P1 - Plugin SDK
 - [ ] Define plugin manifest schema (name, version, permissions)
@@ -444,10 +470,10 @@
 - [ ] Sustainability scoring (ethical fashion)
 - [ ] Garment care reminders (washing, dry cleaning)
 - [ ] Seasonal wardrobe rotation reminders
-- [ ] Outfit history and repeat detection
+- [x] Outfit history and repeat detection (delivered in Phase 7 Part B)
 - [ ] Multi-user support (family wardrobes)
 - [ ] Voice assistant integration
 
 ---
 
-*Last updated: 2026-07-04*
+*Last updated: 2026-07-05*

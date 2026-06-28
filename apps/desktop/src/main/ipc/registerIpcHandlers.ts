@@ -15,6 +15,7 @@ import { app, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import {
   AddGarmentCommand,
   AddPhotosCommand,
+  AnnotateOutfitHistoryCommand,
   ArchiveGarmentCommand,
   ConfirmGarmentTagsCommand,
   CreateCategoryCommand,
@@ -25,22 +26,30 @@ import {
   GetCategoryTreeQuery,
   GetColorPaletteQuery,
   GetGarmentsByCategoryQuery,
+  GetGarmentUsageHistoryQuery,
+  GetOutfitHistoryStatisticsQuery,
   GetOutfitSuggestionsQuery,
+  GetRecentRepetitionsQuery,
   GetStyleAnalysisQuery,
   GetWardrobeQuery,
   RecommendOutfitsQuery,
+  RecordOutfitFeedbackCommand,
+  RecordOutfitUsageCommand,
   RemovePhotoCommand,
   RemoveGarmentCommand,
+  RepeatOutfitCommand,
   ReorderCategoriesCommand,
   ReorderPhotosCommand,
   RestoreGarmentCommand,
   SearchGarmentsQuery,
+  SearchOutfitHistoryQuery,
   SuggestGarmentTagsQuery,
   TransformPhotoCommand,
   UpdateCategoryCommand,
   UpdateGarmentCommand,
   toId,
   type CategoryId,
+  type OutfitUsageContext,
 } from '@mas/core';
 
 import {
@@ -60,7 +69,10 @@ import {
   colorsToPaletteDto,
   collectionToDto,
   garmentToDto,
+  outfitHistoryPageToDto,
+  outfitHistoryStatisticsToDto,
   recommendationSetToDto,
+  repetitionGroupToDto,
 } from '../mappers/toDto';
 
 /** Wrap an async handler so any thrown error becomes a failure envelope. */
@@ -481,6 +493,177 @@ export function registerIpcHandlers(container: AppContainer): void {
   });
 
   handle(IpcChannels.aiStatus, async () => ipcSuccess(await container.aiStatus()));
+
+  /* ------------------------------ outfit history -------------------------- */
+
+  /** Build a domain usage context from the optional IPC context payload. */
+  const toUsageContext = (raw?: {
+    wornOn?: string;
+    time?: string;
+    place?: string;
+    event?: string;
+    occasion?: string;
+    weather?: string;
+    temperatureC?: number;
+    role?: string;
+    comments?: string;
+    satisfaction?: number;
+    label?: string;
+  }): OutfitUsageContext => {
+    const c = raw ?? {};
+    return {
+      ...(c.wornOn !== undefined ? { wornOn: c.wornOn } : {}),
+      ...(c.time !== undefined ? { time: c.time } : {}),
+      ...(c.place !== undefined ? { place: c.place } : {}),
+      ...(c.event !== undefined ? { event: c.event } : {}),
+      ...(c.occasion !== undefined ? { occasion: toOccasion(c.occasion) } : {}),
+      ...(c.weather !== undefined ? { weather: c.weather } : {}),
+      ...(c.temperatureC !== undefined ? { temperatureC: c.temperatureC } : {}),
+      ...(c.role !== undefined ? { role: c.role } : {}),
+      ...(c.comments !== undefined ? { comments: c.comments } : {}),
+      ...(c.satisfaction !== undefined ? { satisfaction: c.satisfaction } : {}),
+      ...(c.label !== undefined ? { label: c.label } : {}),
+    };
+  };
+
+  handle(IpcChannels.historySearch, async (_event, payload) => {
+    const p = (payload ?? {}) as Record<string, unknown>;
+    const result = await queries.ask(
+      new SearchOutfitHistoryQuery({
+        filter: {
+          ...(typeof p.text === 'string' ? { text: p.text } : {}),
+          ...(typeof p.role === 'string' ? { role: p.role } : {}),
+          ...(typeof p.event === 'string' ? { event: p.event } : {}),
+          ...(typeof p.place === 'string' ? { place: p.place } : {}),
+          ...(typeof p.occasion === 'string' ? { occasion: toOccasion(p.occasion) } : {}),
+          ...(typeof p.source === 'string' ? { source: p.source as never } : {}),
+          ...(typeof p.minSatisfaction === 'number' ? { minSatisfaction: p.minSatisfaction } : {}),
+          ...(typeof p.from === 'string' ? { from: p.from } : {}),
+          ...(typeof p.to === 'string' ? { to: p.to } : {}),
+        },
+        ...(typeof p.sortBy === 'string'
+          ? {
+              sort: {
+                by: p.sortBy as never,
+                direction: (p.sortDirection as 'asc' | 'desc') ?? 'desc',
+              },
+            }
+          : {}),
+        ...(typeof p.page === 'number' ? { page: p.page } : {}),
+        ...(typeof p.pageSize === 'number' ? { pageSize: p.pageSize } : {}),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess(outfitHistoryPageToDto(result.value));
+  });
+
+  handle(IpcChannels.historyStatistics, async () => {
+    const result = await queries.ask(new GetOutfitHistoryStatisticsQuery());
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess(outfitHistoryStatisticsToDto(result.value));
+  });
+
+  handle(IpcChannels.historyRecentRepetitions, async (_event, payload) => {
+    const { window } = (payload ?? {}) as { window?: number };
+    const result = await queries.ask(new GetRecentRepetitionsQuery(window));
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess(result.value.map(repetitionGroupToDto));
+  });
+
+  handle(IpcChannels.historyGarment, async (_event, payload) => {
+    const { garmentId } = payload as { garmentId: string };
+    const result = await queries.ask(new GetGarmentUsageHistoryQuery(toId<'Garment'>(garmentId)));
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess(outfitHistoryPageToDto(result.value));
+  });
+
+  handle(IpcChannels.historyRecordUsage, async (_event, payload) => {
+    const p = payload as { garmentIds: readonly string[]; context?: Record<string, unknown> };
+    const result = await commands.send(
+      new RecordOutfitUsageCommand(
+        p.garmentIds.map((id) => toId<'Garment'>(id)),
+        toUsageContext(p.context as never),
+      ),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id: String(result.value) });
+  });
+
+  handle(IpcChannels.historyRecordFeedback, async (_event, payload) => {
+    const p = payload as {
+      garmentIds: readonly string[];
+      accepted: boolean;
+      context?: Record<string, unknown>;
+    };
+    const result = await commands.send(
+      new RecordOutfitFeedbackCommand({
+        garmentIds: p.garmentIds.map((id) => toId<'Garment'>(id)),
+        accepted: p.accepted,
+        context: toUsageContext(p.context as never),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({
+      historyEntryId: result.value.historyEntryId ? String(result.value.historyEntryId) : null,
+      accepted: result.value.accepted,
+    });
+  });
+
+  handle(IpcChannels.historyRepeat, async (_event, payload) => {
+    const p = payload as { entryId: string; context?: Record<string, unknown> };
+    const result = await commands.send(
+      new RepeatOutfitCommand({
+        entryId: toId<'OutfitHistoryEntry'>(p.entryId),
+        context: toUsageContext(p.context as never),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({
+      historyEntryId: String(result.value.historyEntryId),
+      garmentIds: result.value.garmentIds.map(String),
+    });
+  });
+
+  handle(IpcChannels.historyAnnotate, async (_event, payload) => {
+    const p = payload as {
+      entryId: string;
+      place?: string | null;
+      event?: string | null;
+      role?: string | null;
+      comments?: string | null;
+      label?: string | null;
+      satisfaction?: number | null;
+    };
+    const result = await commands.send(
+      new AnnotateOutfitHistoryCommand({
+        entryId: toId<'OutfitHistoryEntry'>(p.entryId),
+        ...(p.place !== undefined ? { place: p.place } : {}),
+        ...(p.event !== undefined ? { event: p.event } : {}),
+        ...(p.role !== undefined ? { role: p.role } : {}),
+        ...(p.comments !== undefined ? { comments: p.comments } : {}),
+        ...(p.label !== undefined ? { label: p.label } : {}),
+        ...(p.satisfaction !== undefined ? { satisfaction: p.satisfaction } : {}),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id: p.entryId });
+  });
 
   /* --------------------------------- style -------------------------------- */
   handle(IpcChannels.styleAnalysis, async () => {

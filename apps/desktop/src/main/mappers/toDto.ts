@@ -7,7 +7,13 @@
  * a domain class instance.
  */
 import type { Color, Garment, Outfit, WardrobeCollection, Category, Photograph } from '@mas/core';
-import type { RecommendationSet } from '@mas/core';
+import type {
+  OutfitHistoryEntry,
+  OutfitHistoryPage,
+  OutfitHistoryStatistics,
+  RecommendationSet,
+  RepetitionGroup,
+} from '@mas/core';
 
 import type {
   ColorDTO,
@@ -16,9 +22,13 @@ import type {
   GarmentStatusDTO,
   OutfitDTO,
   CollectionDTO,
+  OutfitHistoryEntryDTO,
+  OutfitHistoryPageDTO,
+  OutfitHistoryStatisticsDTO,
   PhotoDTO,
   CategoryDTO,
   RecommendationSetDTO,
+  RepetitionGroupDTO,
 } from '../../shared/ipc';
 
 export function colorToDto(color: Color): ColorDTO {
@@ -126,5 +136,64 @@ export function recommendationSetToDto(set: RecommendationSet): RecommendationSe
     providerId: set.providerId,
     degraded: set.degraded,
     notes: [...set.notes],
+  };
+}
+
+/** Map a persisted outfit-usage record to its serialisable DTO. */
+export function outfitHistoryEntryToDto(entry: OutfitHistoryEntry): OutfitHistoryEntryDTO {
+  return {
+    id: entry.id,
+    garmentIds: [...entry.garmentIds],
+    signature: entry.signature,
+    outfitId: entry.outfitId ?? null,
+    label: entry.label ?? null,
+    wornOn: entry.wornOn,
+    time: entry.time ?? null,
+    place: entry.place ?? null,
+    event: entry.event ?? null,
+    occasion: entry.occasion ? String(entry.occasion) : null,
+    weather: entry.weather ?? null,
+    temperatureC: entry.temperatureC ?? null,
+    role: entry.role ?? null,
+    comments: entry.comments ?? null,
+    satisfaction: entry.satisfaction ?? null,
+    source: entry.source,
+    createdAt: entry.createdAt,
+  };
+}
+
+/** Map a paginated history result to its DTO. */
+export function outfitHistoryPageToDto(page: OutfitHistoryPage): OutfitHistoryPageDTO {
+  return {
+    items: page.items.map(outfitHistoryEntryToDto),
+    total: page.total,
+    page: page.page,
+    totalPages: page.totalPages,
+  };
+}
+
+/** Map usage statistics to their DTO. */
+export function outfitHistoryStatisticsToDto(
+  stats: OutfitHistoryStatistics,
+): OutfitHistoryStatisticsDTO {
+  return {
+    totalUses: stats.totalUses,
+    uniqueOutfits: stats.uniqueOutfits,
+    byRole: { ...stats.byRole },
+    byEvent: { ...stats.byEvent },
+    byOccasion: { ...stats.byOccasion },
+    averageSatisfaction: stats.averageSatisfaction,
+    garmentUsage: stats.garmentUsage.map(([id, n]) => [String(id), n] as const),
+    lastWornOn: stats.lastWornOn,
+  };
+}
+
+/** Map a recent-repetition group to its DTO. */
+export function repetitionGroupToDto(group: RepetitionGroup): RepetitionGroupDTO {
+  return {
+    signature: group.signature,
+    count: group.count,
+    garmentIds: [...group.garmentIds],
+    wornOn: [...group.wornOn],
   };
 }
