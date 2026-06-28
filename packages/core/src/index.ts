@@ -1,15 +1,82 @@
 /**
- * @mas/core — Domain layer entry point.
+ * @mas/core — Domain layer public API.
  *
- * This package holds the framework-agnostic domain model for M-A-S:
- * entities, value objects, repository interfaces, domain services and the
- * application use cases (CQRS-lite commands and queries).
+ * Framework-agnostic domain model for M-A-S, following Clean Architecture +
+ * CQRS-lite. Nothing here imports Electron, React, SQLite, HTTP or any AI
+ * library: the package is pure TypeScript and can run anywhere.
  *
- * Phase 1 ships only the package scaffold; domain logic is added in Phase 2.
+ * Layers:
+ *  - `shared`      — Result/error primitives, Entity/ValueObject bases, ids.
+ *  - `domain`      — entities, value objects, repository contracts, services.
+ *  - `application` — CQRS commands, queries, handlers and the in-memory bus.
  */
 
 /** Package name, useful for diagnostics and logging. */
 export const CORE_PACKAGE_NAME = '@mas/core' as const;
 
 /** Semantic version of the core package. */
-export const CORE_VERSION = '0.1.0' as const;
+export const CORE_VERSION = '0.2.0' as const;
+
+/* ----------------------------- shared kernel ----------------------------- */
+export * from './shared/errors';
+export * from './shared/Result';
+export * from './shared/Guard';
+export * from './shared/Identifier';
+export * from './shared/IdGenerator';
+export * from './shared/Entity';
+export * from './shared/ValueObject';
+
+/* ------------------------------ value objects ----------------------------- */
+export * from './domain/value-objects/Season';
+export * from './domain/value-objects/Occasion';
+export * from './domain/value-objects/GarmentCategory';
+export * from './domain/value-objects/GarmentSubcategory';
+export * from './domain/value-objects/Color';
+export * from './domain/value-objects/Size';
+export * from './domain/value-objects/BodyMeasurements';
+export * from './domain/value-objects/StylePreference';
+export * from './domain/value-objects/WeatherCondition';
+export * from './domain/value-objects/ColorPalette';
+
+/* -------------------------------- entities -------------------------------- */
+export * from './domain/entities/Garment';
+export * from './domain/entities/Outfit';
+export * from './domain/entities/UserProfile';
+export * from './domain/entities/StyleRule';
+export * from './domain/entities/WardrobeCollection';
+export * from './domain/entities/CalendarEvent';
+export * from './domain/entities/Wardrobe';
+
+/* ----------------------------- repository ports --------------------------- */
+export * from './domain/repositories/IGarmentRepository';
+export * from './domain/repositories/IOutfitRepository';
+export * from './domain/repositories/IUserProfileRepository';
+export * from './domain/repositories/IStyleRuleRepository';
+export * from './domain/repositories/ICollectionRepository';
+export * from './domain/repositories/ICalendarEventRepository';
+
+/* ----------------------------- domain services ---------------------------- */
+export * from './domain/services/formality';
+export * from './domain/services/ColorHarmonyService';
+export * from './domain/services/StyleCompatibilityService';
+export * from './domain/services/SeasonalRecommendationService';
+export * from './domain/services/OccasionMatchingService';
+export * from './domain/services/OutfitScoringService';
+
+/* ------------------------------ application bus --------------------------- */
+export * from './application/bus/types';
+export * from './application/bus/MessageBus';
+export * from './application/bus/CommandBus';
+export * from './application/bus/QueryBus';
+export * from './application/bus/ValidationMiddleware';
+
+/* -------------------------------- commands -------------------------------- */
+export * from './application/commands/garmentCommands';
+export * from './application/commands/outfitCommands';
+export * from './application/commands/profileCommands';
+export * from './application/commands/collectionCommands';
+
+/* --------------------------------- queries -------------------------------- */
+export * from './application/queries/wardrobeQueries';
+export * from './application/queries/styleQueries';
+export * from './application/queries/suggestionQueries';

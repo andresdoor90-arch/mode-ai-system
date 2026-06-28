@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 2 — Core Domain Package (`@mas/core`)** (pure, framework-agnostic domain)
+  - Shared kernel: railway-style `Result`/`ok`/`err`, a `DomainError` hierarchy (`ValidationError`, `InvariantViolationError`, `NotFoundError`, `HandlerNotFoundError`), `Guard` validators, base `Entity`/`AggregateRoot`/`ValueObject`, branded `Id` types and an injectable `IdGenerator` port
+  - Value objects: `Color` (hex/rgb/hsl conversions, warm/cool/neutral classification, seasonal mapping, hue distance), `Size`, `Season`, `Occasion`, `GarmentCategory` (+ layer slots), `GarmentSubcategory` (per-category enums + membership validation), `BodyMeasurements`, `StylePreference`, `WeatherCondition`, `ColorPalette`
+  - Entities & aggregates: `Garment`, `Outfit` (composition invariants), `UserProfile` (root), `StyleRule`, `WardrobeCollection`, `CalendarEvent`, and the `Wardrobe` aggregate root
+  - Repository contracts (interfaces only): `IGarmentRepository`, `IOutfitRepository`, `IUserProfileRepository`, `IStyleRuleRepository`, `ICollectionRepository`, `ICalendarEventRepository`
+  - Domain services (pure business rules): `ColorHarmonyService` (complementary/analogous/triadic), `StyleCompatibilityService`, `SeasonalRecommendationService`, `OccasionMatchingService`, and `OutfitScoringService` — a 0–100 score over ten documented weighted factors plus hard "smart rules" (no damaged/in-laundry/archived garments, no heavy coat when hot, no tie at informal events, no clashing colours, no recently-repeated combinations)
+  - Application layer (CQRS-lite): pure in-memory `MessageBus`/`CommandBus`/`QueryBus` and `ValidationMiddleware`; commands (AddGarment, UpdateGarment, RemoveGarment, CreateOutfit, RateOutfit, UpdateProfile, SetPreferences, CreateCollection) and queries (GetWardrobe, GetOutfitSuggestions, GetGarmentsByCategory, GetStyleAnalysis, GetColorPalette, GetSeasonalWardrobe)
+  - Tests: 76 unit/integration tests covering value objects, entity/aggregate invariants, all domain services (incl. smart rules) and the full command/query flow over in-memory repository fakes
+  - No external technology in the domain: no Electron, React, SQLite, HTTP/APIs or AI libraries; anything that touches the outside world is expressed as an interface only
+
+### Added (Phase 1)
 - **Phase 1 — Project Foundation & Setup** (monorepo scaffolding)
   - Monorepo & build config: `pnpm-workspace.yaml`, root `package.json` workspace scripts, `tsconfig.base.json` + root solution `tsconfig.json`, `@mas/*` path aliases, `.npmrc`, `.nvmrc`
   - Packages scaffolded with placeholder entry points and unit tests: `@mas/core`, `@mas/infrastructure`, `@mas/plugin-sdk` (TypeScript project references wiring core → infrastructure/plugin-sdk)
@@ -47,4 +58,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-*Last updated: 2026-06-28*
+*Last updated: 2026-06-29*
