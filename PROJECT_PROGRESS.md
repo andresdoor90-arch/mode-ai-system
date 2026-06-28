@@ -26,7 +26,7 @@
 | Module | Status | Progress | Notes |
 |--------|--------|----------|-------|
 | Project Setup & Configuration | Complete | 100% | Monorepo, tooling, testing, CI/CD scaffolded (Phase 1) |
-| Core Package (Domain Layer) | Not Started | 0% | Entities, value objects, interfaces |
+| Core Package (Domain Layer) | Complete | 100% | Entities, value objects, repository ports, domain services, CQRS use cases — pure & framework-agnostic (Phase 2) |
 | Infrastructure Package | Not Started | 0% | DB, AI services, file system |
 | Desktop App - Electron Shell | Not Started | 0% | Main process, window management |
 | Desktop App - Frontend UI | Not Started | 0% | React components, routing, state |
@@ -92,12 +92,12 @@
 - [x] Configure testing framework (Vitest)
 - [x] Set up CI/CD pipeline
 
-### Milestone 2: Core Domain
-- [ ] Define domain entities (Garment, Outfit, UserProfile, etc.)
-- [ ] Implement value objects (Color, Size, Season, Occasion)
-- [ ] Define repository interfaces
-- [ ] Implement domain services
-- [ ] Define application use cases (commands/queries)
+### Milestone 2: Core Domain ✅ Complete
+- [x] Define domain entities (Garment, Outfit, UserProfile, etc.)
+- [x] Implement value objects (Color, Size, Season, Occasion)
+- [x] Define repository interfaces
+- [x] Implement domain services
+- [x] Define application use cases (commands/queries)
 
 ### Milestone 3: Infrastructure & Data
 - [ ] Implement SQLite database with Drizzle ORM
@@ -171,6 +171,20 @@
   - **Environment handling**: root + desktop `.env.example` committed; `.env`/`.env.local` gitignored
 - **Known environment limitation**: The build sandbox runs in `INTEGRATIONS_ONLY` network mode (no public registry access), so `pnpm install` cannot be executed here and no `pnpm-lock.yaml` is generated yet. All manifests use pinned, realistic versions; dependency installation, the full type-check/build, and test execution should be validated in an environment with registry access (e.g., CI). File contents were validated offline: all JSON/TS configs parse cleanly and all 22 TS/TSX source files parse without syntax errors.
 
+### Sprint 2 - Phase 2: Core Domain Package (`@mas/core`)
+- **Start Date**: 2026-06-29
+- **Goal**: Design and implement the pure, framework-agnostic domain: entities, value objects, aggregates, repository contracts, domain services (business rules) and the CQRS application layer — with no database, infrastructure, AI or GUI
+- **Status**: Done (awaiting user approval before Phase 3)
+- **Completed**:
+  - **Shared kernel**: `Result`/`ok`/`err` railway-style error handling, a `DomainError` hierarchy (`ValidationError`, `InvariantViolationError`, `NotFoundError`, `HandlerNotFoundError`), `Guard` validators, base `Entity`/`AggregateRoot`/`ValueObject`, branded `Id` types and an injectable `IdGenerator` port
+  - **Value objects**: `Color` (hex/rgb/hsl + warm/cool/neutral category + seasonal mapping + hue maths), `Size`, `Season` (+ helpers), `Occasion` (+ formality), `GarmentCategory` (+ layer slots), `GarmentSubcategory` (per-category enums + membership validation + heavy-outerwear set), `BodyMeasurements`, `StylePreference`, `WeatherCondition`, `ColorPalette`
+  - **Entities & aggregates**: `Garment` (status/wear-tracking invariants), `Outfit` (composition invariants — no duplicates, exclusive slots, dress vs separates), `UserProfile` (aggregate root), `StyleRule` (rule engine), `WardrobeCollection`, `CalendarEvent`, and the `Wardrobe` aggregate root (unique garments, no dangling collection references)
+  - **Repository ports (interfaces only)**: `IGarmentRepository`, `IOutfitRepository`, `IUserProfileRepository`, `IStyleRuleRepository`, `ICollectionRepository`, `ICalendarEventRepository`
+  - **Domain services (pure business rules)**: `ColorHarmonyService` (complementary/analogous/triadic), `StyleCompatibilityService` (formality + colour pairing), `SeasonalRecommendationService` (thermal adequacy), `OccasionMatchingService`, and `OutfitScoringService` — a 0–100 score across ten documented, weighted factors (colour, formality coherence, thermal adequacy, event adequacy, comfort/mobility, freshness, visual balance, accessories, user preference, seasonality) plus the hard "smart rules" (no damaged/in-laundry/archived items, no heavy coat when hot, no tie at informal events, no clashing colours, no recently-repeated combinations)
+  - **Application layer (CQRS-lite)**: a pure in-memory `MessageBus` with `CommandBus`/`QueryBus` specialisations and registry-backed `ValidationMiddleware`; commands `AddGarment`, `UpdateGarment`, `RemoveGarment`, `CreateOutfit`, `RateOutfit`, `UpdateProfile`, `SetPreferences`, `CreateCollection`; queries `GetWardrobe`, `GetOutfitSuggestions`, `GetGarmentsByCategory`, `GetStyleAnalysis`, `GetColorPalette`, `GetSeasonalWardrobe`
+  - **Tests**: 76 unit/integration tests across 6 files covering value objects, entities/aggregate invariants, every domain service (incl. all smart rules and the scoring breakdown) and the full command/query flow over in-memory repository fakes
+- **Verification (offline)**: type-checked the whole package with `tsc --noEmit` (strict, pure-domain config) → **0 errors**; executed the full suite with the runtime available in the offline sandbox → **76 passed / 0 failed (154 assertions)**. The canonical tests are authored against the Vitest API (the project's configured runner for CI); because `INTEGRATIONS_ONLY` mode blocks installing Vitest from the registry, they were executed offline through a gitignored `vitest`→runner shim. No production code depends on the shim; CI runs the same files under Vitest unchanged.
+
 ---
 
-*Last updated: 2026-06-28*
+*Last updated: 2026-06-29*

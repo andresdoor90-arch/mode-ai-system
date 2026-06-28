@@ -47,48 +47,51 @@
 
 ## Phase 2: Core Domain Package (`packages/core`)
 
+> ✅ Completed 2026-06-29 (Sprint 2). Pure, framework-agnostic domain. Awaiting approval before Phase 3.
+
 ### P0 - Domain Entities
-- [ ] `Garment` entity (id, name, category, subcategory, color, brand, size, season, images, tags, metadata)
-- [ ] `Outfit` entity (id, name, garments, occasion, season, rating, notes, createdAt)
-- [ ] `UserProfile` entity (id, name, bodyMeasurements, stylePreferences, colorPalette)
-- [ ] `StyleRule` entity (id, name, conditions, recommendations, priority)
-- [ ] `WardrobeCollection` entity (id, name, garments, description)
-- [ ] `CalendarEvent` entity (id, title, date, occasion, dressCode, suggestedOutfits)
+- [x] `Garment` entity (id, name, category, subcategory, color, brand, size, season, images, tags, metadata)
+- [x] `Outfit` entity (id, name, garments, occasion, season, rating, notes, createdAt)
+- [x] `UserProfile` entity (id, name, bodyMeasurements, stylePreferences, colorPalette)
+- [x] `StyleRule` entity (id, name, conditions, recommendations, priority)
+- [x] `WardrobeCollection` entity (id, name, garments, description)
+- [x] `CalendarEvent` entity (id, title, date, occasion, dressCode, suggestedOutfits)
+- [x] `Wardrobe` aggregate root (unique garments, no dangling collection references)
 
 ### P0 - Value Objects
-- [ ] `Color` value object (hex, rgb, hsl, name, category, season)
-- [ ] `Size` value object (system, value, measurements)
-- [ ] `Season` enum (Spring, Summer, Autumn, Winter, AllSeason)
-- [ ] `Occasion` enum (Casual, Business, Formal, Sport, Party, Date, etc.)
-- [ ] `GarmentCategory` enum (Tops, Bottoms, Dresses, Outerwear, Shoes, Accessories)
-- [ ] `GarmentSubcategory` enums per category
-- [ ] `BodyMeasurements` value object
-- [ ] `StylePreference` value object
-- [ ] `WeatherCondition` value object
-- [ ] `ColorPalette` value object (primary, secondary, accent, neutral)
+- [x] `Color` value object (hex, rgb, hsl, name, category, season)
+- [x] `Size` value object (system, value, measurements)
+- [x] `Season` enum (Spring, Summer, Autumn, Winter, AllSeason)
+- [x] `Occasion` enum (Casual, Business, Formal, Sport, Party, Date, etc.)
+- [x] `GarmentCategory` enum (Tops, Bottoms, Dresses, Outerwear, Shoes, Accessories)
+- [x] `GarmentSubcategory` enums per category
+- [x] `BodyMeasurements` value object
+- [x] `StylePreference` value object
+- [x] `WeatherCondition` value object
+- [x] `ColorPalette` value object (primary, secondary, accent, neutral)
 
 ### P0 - Repository Interfaces
-- [ ] `IGarmentRepository` (CRUD + query methods)
-- [ ] `IOutfitRepository` (CRUD + query methods)
-- [ ] `IUserProfileRepository`
-- [ ] `IStyleRuleRepository`
-- [ ] `ICollectionRepository`
-- [ ] `ICalendarEventRepository`
+- [x] `IGarmentRepository` (CRUD + query methods)
+- [x] `IOutfitRepository` (CRUD + query methods)
+- [x] `IUserProfileRepository`
+- [x] `IStyleRuleRepository`
+- [x] `ICollectionRepository`
+- [x] `ICalendarEventRepository`
 
 ### P1 - Domain Services
-- [ ] `ColorHarmonyService` (complementary, analogous, triadic analysis)
-- [ ] `StyleCompatibilityService` (garment pairing rules)
-- [ ] `SeasonalRecommendationService`
-- [ ] `OccasionMatchingService`
-- [ ] `OutfitScoringService` (rate outfit combinations)
+- [x] `ColorHarmonyService` (complementary, analogous, triadic analysis)
+- [x] `StyleCompatibilityService` (garment pairing rules)
+- [x] `SeasonalRecommendationService`
+- [x] `OccasionMatchingService`
+- [x] `OutfitScoringService` (rate outfit combinations 0–100 across ten weighted factors + smart rules)
 
 ### P1 - Application Layer (Use Cases / CQRS)
-- [ ] **Commands**: AddGarment, UpdateGarment, RemoveGarment, CreateOutfit, RateOutfit
-- [ ] **Commands**: UpdateProfile, SetPreferences, CreateCollection
-- [ ] **Queries**: GetWardrobe, GetOutfitSuggestions, GetGarmentsByCategory
-- [ ] **Queries**: GetStyleAnalysis, GetColorPalette, GetSeasonalWardrobe
-- [ ] Command/Query bus implementation
-- [ ] Use case validation middleware
+- [x] **Commands**: AddGarment, UpdateGarment, RemoveGarment, CreateOutfit, RateOutfit
+- [x] **Commands**: UpdateProfile, SetPreferences, CreateCollection
+- [x] **Queries**: GetWardrobe, GetOutfitSuggestions, GetGarmentsByCategory
+- [x] **Queries**: GetStyleAnalysis, GetColorPalette, GetSeasonalWardrobe
+- [x] Command/Query bus implementation (pure in-memory `MessageBus`/`CommandBus`/`QueryBus`)
+- [x] Use case validation middleware
 
 ---
 
@@ -356,4 +359,4 @@
 
 ---
 
-*Last updated: 2026-06-28*
+*Last updated: 2026-06-29*
