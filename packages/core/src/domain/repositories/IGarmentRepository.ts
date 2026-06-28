@@ -1,11 +1,11 @@
 import { type GarmentId } from '../../shared/Identifier';
 import { type Garment, type GarmentStatus } from '../entities/Garment';
-import { type GarmentCategory } from '../value-objects/GarmentCategory';
 import { type Season } from '../value-objects/Season';
 
 /** Filter criteria for querying garments. Omitted fields are not constrained. */
 export interface GarmentQuery {
-  readonly category?: GarmentCategory;
+  /** Dynamic category reference (slug/value). */
+  readonly category?: string;
   readonly subcategory?: string;
   readonly season?: Season;
   readonly status?: GarmentStatus;
@@ -22,7 +22,7 @@ export interface IGarmentRepository {
   findById(id: GarmentId): Promise<Garment | null>;
   findAll(): Promise<readonly Garment[]>;
   query(criteria: GarmentQuery): Promise<readonly Garment[]>;
-  findByCategory(category: GarmentCategory): Promise<readonly Garment[]>;
+  findByCategory(category: string): Promise<readonly Garment[]>;
   delete(id: GarmentId): Promise<void>;
   count(): Promise<number>;
 }

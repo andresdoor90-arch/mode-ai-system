@@ -1,7 +1,6 @@
 import { type Garment } from '../entities/Garment';
 import { type Outfit } from '../entities/Outfit';
-import { categoryLayerSlot, LayerSlot } from '../value-objects/GarmentCategory';
-import { HEAVY_OUTERWEAR } from '../value-objects/GarmentSubcategory';
+import { LayerSlot } from '../value-objects/GarmentCategory';
 import { type Occasion } from '../value-objects/Occasion';
 import { type Season } from '../value-objects/Season';
 import { type StylePreference } from '../value-objects/StylePreference';
@@ -59,42 +58,6 @@ export interface OutfitScore {
 }
 
 /** Comfort/mobility rating (0–1) per subcategory; unknown items default to 0.8. */
-const COMFORT_BY_SUBCATEGORY: Readonly<Record<string, number>> = {
-  sneakers: 1,
-  sandals: 0.9,
-  flats: 0.8,
-  loafers: 0.7,
-  boots: 0.6,
-  'dress-shoes': 0.5,
-  heels: 0.2,
-  't-shirt': 1,
-  'tank-top': 1,
-  hoodie: 1,
-  sweater: 0.9,
-  polo: 0.8,
-  shirt: 0.6,
-  blouse: 0.6,
-  leggings: 1,
-  shorts: 1,
-  jeans: 0.7,
-  chinos: 0.8,
-  trousers: 0.7,
-  skirt: 0.7,
-  sundress: 0.9,
-  'casual-dress': 0.8,
-  jumpsuit: 0.6,
-  'cocktail-dress': 0.5,
-  'evening-gown': 0.3,
-  cardigan: 0.9,
-  vest: 0.8,
-  jacket: 0.7,
-  raincoat: 0.7,
-  coat: 0.6,
-  parka: 0.6,
-  blazer: 0.5,
-  tie: 0.3,
-};
-
 const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));
 
 const daysBetween = (a: string, b: string): number => {
@@ -169,7 +132,7 @@ export class OutfitScoringService {
 
     // 2. No heavy coat when it is hot.
     if (context.weather?.isHot === true) {
-      const heavy = garments.filter((g) => HEAVY_OUTERWEAR.includes(g.subcategory));
+      const heavy = garments.filter((g) => g.isHeavyOuterwear);
       for (const g of heavy) {
         violations.push(`Heavy outerwear "${g.name}" is inappropriate for hot weather.`);
       }
@@ -227,7 +190,7 @@ export class OutfitScoringService {
       return 0;
     }
     const total = garments.reduce(
-      (sum, g) => sum + (COMFORT_BY_SUBCATEGORY[g.subcategory] ?? 0.8),
+      (sum, g) => sum + g.comfort,
       0,
     );
     return total / garments.length;
@@ -253,9 +216,9 @@ export class OutfitScoringService {
   }
 
   private visualBalanceScore(garments: readonly Garment[]): number {
-    const slots = new Set(garments.map((g) => categoryLayerSlot(g.category)));
+    const slots = new Set(garments.map((g) => g.layerSlot));
     const accessoryCount = garments.filter(
-      (g) => categoryLayerSlot(g.category) === LayerSlot.Accessory,
+      (g) => g.layerSlot === LayerSlot.Accessory,
     ).length;
 
     let score = 1;
@@ -276,7 +239,7 @@ export class OutfitScoringService {
 
   private accessoriesScore(garments: readonly Garment[]): number {
     const count = garments.filter(
-      (g) => categoryLayerSlot(g.category) === LayerSlot.Accessory,
+      (g) => g.layerSlot === LayerSlot.Accessory,
     ).length;
     if (count === 1 || count === 2) {
       return 1;

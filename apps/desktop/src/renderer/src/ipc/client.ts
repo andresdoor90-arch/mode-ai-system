@@ -12,14 +12,23 @@ import type {
   AddGarmentPayload,
   AiStatusDTO,
   AppInfoDTO,
+  CategoryDTO,
+  CategoryNodeDTO,
   ColorPaletteDTO,
+  CreateCategoryPayload,
+  ConfirmTagsPayload,
   GarmentDTO,
+  GarmentSearchPayload,
   IpcResponse,
   OutfitSuggestionDTO,
+  PhotoTransformPayload,
   RecommendationRequestPayload,
   RecommendationSetDTO,
+  ReorderPayload,
   StyleAnalysisDTO,
   SuggestionsPayload,
+  TagSuggestionDTO,
+  UpdateCategoryPayload,
   UpdateGarmentPayload,
   WardrobeViewDTO,
 } from '@shared/ipc';
@@ -72,6 +81,47 @@ export const ipc = {
   updateGarment: (payload: UpdateGarmentPayload): Promise<{ id: string }> =>
     unwrap(bridge().garments.update(payload)),
   removeGarment: (id: string): Promise<{ id: string }> => unwrap(bridge().garments.remove(id)),
+  duplicateGarment: (id: string, name?: string): Promise<{ id: string }> =>
+    unwrap(bridge().garments.duplicate(id, name)),
+  archiveGarment: (id: string): Promise<{ id: string }> => unwrap(bridge().garments.archive(id)),
+  restoreGarment: (id: string): Promise<{ id: string }> => unwrap(bridge().garments.restore(id)),
+
+  searchGarments: (
+    payload: GarmentSearchPayload,
+  ): Promise<{ items: readonly GarmentDTO[]; total: number; page: number; totalPages: number }> =>
+    unwrap(bridge().wardrobe.search(payload)),
+
+  /* ------------------------------ categories ----------------------------- */
+  listCategories: (): Promise<readonly CategoryDTO[]> => unwrap(bridge().categories.list()),
+  getCategoryTree: (): Promise<readonly CategoryNodeDTO[]> => unwrap(bridge().categories.tree()),
+  createCategory: (payload: CreateCategoryPayload): Promise<{ id: string }> =>
+    unwrap(bridge().categories.create(payload)),
+  updateCategory: (payload: UpdateCategoryPayload): Promise<{ id: string }> =>
+    unwrap(bridge().categories.update(payload)),
+  reorderCategories: (payload: ReorderPayload): Promise<{ ok: true }> =>
+    unwrap(bridge().categories.reorder(payload)),
+  removeCategory: (id: string): Promise<{ id: string }> =>
+    unwrap(bridge().categories.remove(id)),
+
+  /* -------------------------------- photos ------------------------------- */
+  addPhotos: (
+    garmentId: string,
+    photos: readonly { storageKey: string }[],
+  ): Promise<{ photoIds: readonly string[] }> => unwrap(bridge().photos.add(garmentId, photos)),
+  removePhoto: (garmentId: string, photoId: string): Promise<{ ok: true }> =>
+    unwrap(bridge().photos.remove(garmentId, photoId)),
+  reorderPhotos: (garmentId: string, orderedPhotoIds: readonly string[]): Promise<{ ok: true }> =>
+    unwrap(bridge().photos.reorder(garmentId, orderedPhotoIds)),
+  transformPhoto: (payload: PhotoTransformPayload): Promise<{ ok: true }> =>
+    unwrap(bridge().photos.transform(payload)),
+
+  /* ------------------------------- tagging ------------------------------- */
+  suggestTags: (
+    garmentId: string,
+    colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[],
+  ): Promise<TagSuggestionDTO> => unwrap(bridge().tags.suggest(garmentId, colorSamples)),
+  confirmTags: (payload: ConfirmTagsPayload): Promise<{ id: string }> =>
+    unwrap(bridge().tags.confirm(payload)),
 
   getOutfitSuggestions: (
     payload: SuggestionsPayload,

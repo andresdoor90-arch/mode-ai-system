@@ -1,5 +1,4 @@
 import { type Garment } from '../entities/Garment';
-import { HEAVY_OUTERWEAR } from '../value-objects/GarmentSubcategory';
 import { Season } from '../value-objects/Season';
 import { type WeatherCondition, TEMPERATURE_THRESHOLDS } from '../value-objects/WeatherCondition';
 
@@ -32,9 +31,9 @@ export class SeasonalRecommendationService {
    * scoring service's rule violations).
    */
   public thermalAdequacy(garments: readonly Garment[], weather: WeatherCondition): number {
-    const hasHeavyOuterwear = garments.some((g) => HEAVY_OUTERWEAR.includes(g.subcategory));
+    const hasHeavyOuterwear = garments.some((g) => g.isHeavyOuterwear);
     const layerCount = garments.filter(
-      (g) => g.supportsSeason(Season.Winter) || HEAVY_OUTERWEAR.includes(g.subcategory),
+      (g) => g.supportsSeason(Season.Winter) || g.isHeavyOuterwear,
     ).length;
 
     if (weather.temperatureC >= TEMPERATURE_THRESHOLDS.hot) {

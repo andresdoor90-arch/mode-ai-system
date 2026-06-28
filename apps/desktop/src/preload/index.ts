@@ -18,14 +18,23 @@ import {
   type AddGarmentPayload,
   type AiStatusDTO,
   type AppInfoDTO,
+  type CategoryDTO,
+  type CategoryNodeDTO,
   type ColorPaletteDTO,
+  type CreateCategoryPayload,
+  type ConfirmTagsPayload,
   type GarmentDTO,
+  type GarmentSearchPayload,
   type IpcResponse,
   type OutfitSuggestionDTO,
+  type PhotoTransformPayload,
   type RecommendationRequestPayload,
   type RecommendationSetDTO,
+  type ReorderPayload,
   type StyleAnalysisDTO,
   type SuggestionsPayload,
+  type TagSuggestionDTO,
+  type UpdateCategoryPayload,
   type UpdateGarmentPayload,
   type WardrobeViewDTO,
 } from '../shared/ipc';
@@ -49,6 +58,23 @@ const api = {
       invoke(IpcChannels.wardrobeGarmentsByCategory, { category }),
     seasonal: (season: string): Promise<IpcResponse<readonly GarmentDTO[]>> =>
       invoke(IpcChannels.wardrobeSeasonal, { season }),
+    search: (
+      payload: GarmentSearchPayload,
+    ): Promise<
+      IpcResponse<{ items: readonly GarmentDTO[]; total: number; page: number; totalPages: number }>
+    > => invoke(IpcChannels.wardrobeSearch, payload),
+  },
+  categories: {
+    list: (): Promise<IpcResponse<readonly CategoryDTO[]>> => invoke(IpcChannels.categoryList),
+    tree: (): Promise<IpcResponse<readonly CategoryNodeDTO[]>> => invoke(IpcChannels.categoryTree),
+    create: (payload: CreateCategoryPayload): Promise<IpcResponse<{ id: string }>> =>
+      invoke(IpcChannels.categoryCreate, payload),
+    update: (payload: UpdateCategoryPayload): Promise<IpcResponse<{ id: string }>> =>
+      invoke(IpcChannels.categoryUpdate, payload),
+    reorder: (payload: ReorderPayload): Promise<IpcResponse<{ ok: true }>> =>
+      invoke(IpcChannels.categoryReorder, payload),
+    remove: (id: string): Promise<IpcResponse<{ id: string }>> =>
+      invoke(IpcChannels.categoryDelete, { id }),
   },
   garments: {
     add: (payload: AddGarmentPayload): Promise<IpcResponse<{ id: string }>> =>
@@ -57,6 +83,37 @@ const api = {
       invoke(IpcChannels.garmentUpdate, payload),
     remove: (id: string): Promise<IpcResponse<{ id: string }>> =>
       invoke(IpcChannels.garmentRemove, { id }),
+    duplicate: (id: string, name?: string): Promise<IpcResponse<{ id: string }>> =>
+      invoke(IpcChannels.garmentDuplicate, { id, name }),
+    archive: (id: string): Promise<IpcResponse<{ id: string }>> =>
+      invoke(IpcChannels.garmentArchive, { id }),
+    restore: (id: string): Promise<IpcResponse<{ id: string }>> =>
+      invoke(IpcChannels.garmentRestore, { id }),
+  },
+  photos: {
+    add: (
+      garmentId: string,
+      photos: readonly { storageKey: string }[],
+    ): Promise<IpcResponse<{ photoIds: readonly string[] }>> =>
+      invoke(IpcChannels.photosAdd, { garmentId, photos }),
+    remove: (garmentId: string, photoId: string): Promise<IpcResponse<{ ok: true }>> =>
+      invoke(IpcChannels.photoRemove, { garmentId, photoId }),
+    reorder: (
+      garmentId: string,
+      orderedPhotoIds: readonly string[],
+    ): Promise<IpcResponse<{ ok: true }>> =>
+      invoke(IpcChannels.photosReorder, { garmentId, orderedPhotoIds }),
+    transform: (payload: PhotoTransformPayload): Promise<IpcResponse<{ ok: true }>> =>
+      invoke(IpcChannels.photoTransform, payload),
+  },
+  tags: {
+    suggest: (
+      garmentId: string,
+      colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[],
+    ): Promise<IpcResponse<TagSuggestionDTO>> =>
+      invoke(IpcChannels.tagsSuggest, { garmentId, colorSamples }),
+    confirm: (payload: ConfirmTagsPayload): Promise<IpcResponse<{ id: string }>> =>
+      invoke(IpcChannels.tagsConfirm, payload),
   },
   outfits: {
     suggestions: (

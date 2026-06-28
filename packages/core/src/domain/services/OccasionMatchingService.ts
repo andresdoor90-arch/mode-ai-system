@@ -1,7 +1,6 @@
 import { type Garment } from '../entities/Garment';
 import { AccessorySubcategory } from '../value-objects/GarmentSubcategory';
 import { Occasion, occasionFormality, isInformalOccasion } from '../value-objects/Occasion';
-import { garmentFormality } from './formality';
 
 /**
  * Pure service evaluating how well garments/outfits fit an occasion. The core
@@ -19,7 +18,7 @@ export class OccasionMatchingService {
     if (garments.length === 0) {
       return 0;
     }
-    const total = garments.reduce((sum, g) => sum + garmentFormality(g.subcategory), 0);
+    const total = garments.reduce((sum, g) => sum + g.formality, 0);
     return total / garments.length;
   }
 

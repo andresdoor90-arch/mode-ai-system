@@ -14,15 +14,33 @@ import { app, ipcMain, type IpcMainInvokeEvent } from 'electron';
 
 import {
   AddGarmentCommand,
+  AddPhotosCommand,
+  ArchiveGarmentCommand,
+  ConfirmGarmentTagsCommand,
+  CreateCategoryCommand,
+  Color,
+  DeleteCategoryCommand,
+  DuplicateGarmentCommand,
+  GetCategoriesQuery,
+  GetCategoryTreeQuery,
   GetColorPaletteQuery,
   GetGarmentsByCategoryQuery,
   GetOutfitSuggestionsQuery,
   GetStyleAnalysisQuery,
   GetWardrobeQuery,
   RecommendOutfitsQuery,
+  RemovePhotoCommand,
   RemoveGarmentCommand,
+  ReorderCategoriesCommand,
+  ReorderPhotosCommand,
+  RestoreGarmentCommand,
+  SearchGarmentsQuery,
+  SuggestGarmentTagsQuery,
+  TransformPhotoCommand,
+  UpdateCategoryCommand,
   UpdateGarmentCommand,
   toId,
+  type CategoryId,
 } from '@mas/core';
 
 import {
@@ -36,8 +54,9 @@ import {
   type IpcChannel,
 } from '../../shared/ipc';
 import type { AppContainer } from '../container/AppContainer';
-import { toCreateGarmentInput, toGarmentCategory, toOccasion, toSeason } from '../mappers/fromPayload';
+import { toCreateGarmentInput, toOccasion, toSeason } from '../mappers/fromPayload';
 import {
+  categoryToDto,
   colorsToPaletteDto,
   collectionToDto,
   garmentToDto,
@@ -93,9 +112,7 @@ export function registerIpcHandlers(container: AppContainer): void {
 
   handle(IpcChannels.wardrobeGarmentsByCategory, async (_event, payload) => {
     const { category } = payload as { category: string };
-    const result = await queries.ask(
-      new GetGarmentsByCategoryQuery(toGarmentCategory(category)),
-    );
+    const result = await queries.ask(new GetGarmentsByCategoryQuery(category));
     if (!result.ok) {
       return ipcFailure(toIpcError(result.error));
     }
@@ -152,6 +169,275 @@ export function registerIpcHandlers(container: AppContainer): void {
       return ipcFailure(toIpcError(result.error));
     }
     return ipcSuccess({ id });
+  });
+
+  handle(IpcChannels.garmentDuplicate, async (_event, payload) => {
+    const { id, name } = payload as { id: string; name?: string };
+    const result = await commands.send(
+      new DuplicateGarmentCommand(toId<'Garment'>(id), name),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id: String(result.value) });
+  });
+
+  handle(IpcChannels.garmentArchive, async (_event, payload) => {
+    const { id } = payload as { id: string };
+    const result = await commands.send(new ArchiveGarmentCommand(toId<'Garment'>(id)));
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id });
+  });
+
+  handle(IpcChannels.garmentRestore, async (_event, payload) => {
+    const { id } = payload as { id: string };
+    const result = await commands.send(new RestoreGarmentCommand(toId<'Garment'>(id)));
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id });
+  });
+
+  handle(IpcChannels.wardrobeSearch, async (_event, payload) => {
+    const p = (payload ?? {}) as Record<string, unknown>;
+    const result = await queries.ask(
+      new SearchGarmentsQuery({
+        ...(typeof p.text === 'string' ? { text: p.text } : {}),
+        ...(typeof p.category === 'string' ? { category: p.category } : {}),
+        ...(typeof p.subcategory === 'string' ? { subcategory: p.subcategory } : {}),
+        ...(typeof p.status === 'string' ? { status: p.status as never } : {}),
+        ...(typeof p.season === 'string' ? { season: toSeason(p.season) } : {}),
+        ...(Array.isArray(p.tags) ? { tags: p.tags as string[] } : {}),
+        ...(typeof p.includeArchived === 'boolean' ? { includeArchived: p.includeArchived } : {}),
+        ...(typeof p.sortBy === 'string' ? { sortBy: p.sortBy as never } : {}),
+        ...(typeof p.sortDirection === 'string' ? { sortDirection: p.sortDirection as never } : {}),
+        ...(typeof p.page === 'number' ? { page: p.page } : {}),
+        ...(typeof p.pageSize === 'number' ? { pageSize: p.pageSize } : {}),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({
+      items: result.value.items.map(garmentToDto),
+      total: result.value.total,
+      page: result.value.page,
+      totalPages: result.value.totalPages,
+    });
+  });
+
+  /* ------------------------------ categories ------------------------------ */
+  handle(IpcChannels.categoryList, async () => {
+    const result = await queries.ask(new GetCategoriesQuery());
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess(result.value.map(categoryToDto));
+  });
+
+  handle(IpcChannels.categoryTree, async () => {
+    const result = await queries.ask(new GetCategoryTreeQuery());
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess(
+      result.value.map((node) => ({
+        category: categoryToDto(node.category),
+        children: node.children.map(categoryToDto),
+      })),
+    );
+  });
+
+  handle(IpcChannels.categoryCreate, async (_event, payload) => {
+    const p = payload as {
+      name: string;
+      parentId?: string | null;
+      group?: string | null;
+      metadata?: Record<string, unknown>;
+    };
+    const result = await commands.send(
+      new CreateCategoryCommand({
+        name: p.name,
+        ...(p.parentId != null ? { parentId: toId<'Category'>(p.parentId) } : {}),
+        ...(p.group !== undefined ? { group: p.group } : {}),
+        ...(p.metadata !== undefined ? { metadata: p.metadata as never } : {}),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id: String(result.value) });
+  });
+
+  handle(IpcChannels.categoryUpdate, async (_event, payload) => {
+    const p = payload as {
+      id: string;
+      name?: string;
+      group?: string | null;
+      parentId?: string | null;
+      metadata?: Record<string, unknown>;
+    };
+    const result = await commands.send(
+      new UpdateCategoryCommand({
+        id: toId<'Category'>(p.id),
+        ...(p.name !== undefined ? { name: p.name } : {}),
+        ...(p.group !== undefined ? { group: p.group } : {}),
+        ...(p.parentId !== undefined
+          ? { parentId: p.parentId === null ? null : toId<'Category'>(p.parentId) }
+          : {}),
+        ...(p.metadata !== undefined ? { metadata: p.metadata as never } : {}),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id: p.id });
+  });
+
+  handle(IpcChannels.categoryReorder, async (_event, payload) => {
+    const { orderedIds } = payload as { orderedIds: readonly string[] };
+    const result = await commands.send(
+      new ReorderCategoriesCommand(orderedIds.map((id) => toId<'Category'>(id))),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ ok: true as const });
+  });
+
+  handle(IpcChannels.categoryDelete, async (_event, payload) => {
+    const { id } = payload as { id: string };
+    const result = await commands.send(new DeleteCategoryCommand(toId<'Category'>(id)));
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id });
+  });
+
+  /* -------------------------------- photos -------------------------------- */
+  handle(IpcChannels.photosAdd, async (_event, payload) => {
+    const p = payload as { garmentId: string; photos: readonly { storageKey: string }[] };
+    const result = await commands.send(
+      new AddPhotosCommand(toId<'Garment'>(p.garmentId), p.photos.map((ph) => ({ storageKey: ph.storageKey }))),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ photoIds: result.value.map(String) });
+  });
+
+  handle(IpcChannels.photoRemove, async (_event, payload) => {
+    const p = payload as { garmentId: string; photoId: string };
+    const result = await commands.send(
+      new RemovePhotoCommand(toId<'Garment'>(p.garmentId), toId<'Photo'>(p.photoId)),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ ok: true as const });
+  });
+
+  handle(IpcChannels.photosReorder, async (_event, payload) => {
+    const p = payload as { garmentId: string; orderedPhotoIds: readonly string[] };
+    const result = await commands.send(
+      new ReorderPhotosCommand(
+        toId<'Garment'>(p.garmentId),
+        p.orderedPhotoIds.map((id) => toId<'Photo'>(id)),
+      ),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ ok: true as const });
+  });
+
+  handle(IpcChannels.photoTransform, async (_event, payload) => {
+    const p = payload as {
+      garmentId: string;
+      photoId: string;
+      rotation?: number;
+      crop?: { x: number; y: number; width: number; height: number };
+      setPrimary?: boolean;
+    };
+    const result = await commands.send(
+      new TransformPhotoCommand({
+        garmentId: toId<'Garment'>(p.garmentId),
+        photoId: toId<'Photo'>(p.photoId),
+        ...(p.rotation !== undefined ? { rotation: p.rotation as never } : {}),
+        ...(p.crop !== undefined ? { crop: p.crop } : {}),
+        ...(p.setPrimary !== undefined ? { setPrimary: p.setPrimary } : {}),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ ok: true as const });
+  });
+
+  /* ------------------------------- tagging -------------------------------- */
+  handle(IpcChannels.tagsSuggest, async (_event, payload) => {
+    const p = payload as {
+      garmentId: string;
+      colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[];
+    };
+    const result = await queries.ask(
+      new SuggestGarmentTagsQuery(toId<'Garment'>(p.garmentId), p.colorSamples),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    const s = result.value;
+    return ipcSuccess({
+      source: s.source,
+      unavailable: s.unavailable,
+      category: s.category?.value ?? null,
+      subcategory: s.subcategory?.value ?? null,
+      colors: s.colors?.value ?? [],
+      season: s.season?.value ?? null,
+      material: s.material?.value ?? null,
+      formality: s.formality?.value ?? null,
+    });
+  });
+
+  handle(IpcChannels.tagsConfirm, async (_event, payload) => {
+    const p = payload as {
+      garmentId: string;
+      category?: string;
+      subcategory?: string;
+      categoryId?: string;
+      primaryColorHex?: string;
+      secondaryColorHexes?: readonly string[];
+      material?: string;
+      seasons?: readonly string[];
+      tags?: readonly string[];
+    };
+    const primary = p.primaryColorHex !== undefined ? Color.fromHex(p.primaryColorHex) : undefined;
+    if (primary !== undefined && !primary.ok) {
+      return ipcFailure(toIpcError(primary.error));
+    }
+    const secondaries = (p.secondaryColorHexes ?? [])
+      .map((hex) => Color.fromHex(hex))
+      .filter((r): r is Extract<typeof r, { ok: true }> => r.ok)
+      .map((r) => r.value);
+    const result = await commands.send(
+      new ConfirmGarmentTagsCommand({
+        garmentId: toId<'Garment'>(p.garmentId),
+        ...(p.category !== undefined ? { category: p.category } : {}),
+        ...(p.subcategory !== undefined ? { subcategory: p.subcategory } : {}),
+        ...(p.categoryId !== undefined ? { categoryId: p.categoryId as CategoryId } : {}),
+        ...(primary !== undefined && primary.ok ? { primaryColor: primary.value } : {}),
+        ...(secondaries.length > 0 ? { secondaryColors: secondaries } : {}),
+        ...(p.material !== undefined ? { material: p.material } : {}),
+        ...(p.seasons !== undefined ? { seasons: p.seasons.map(toSeason) } : {}),
+        ...(p.tags !== undefined ? { tags: p.tags } : {}),
+      }),
+    );
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id: p.garmentId });
   });
 
   /* -------------------------------- outfits ------------------------------- */

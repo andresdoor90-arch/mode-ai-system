@@ -2,7 +2,7 @@ import { Entity } from '../../shared/Entity';
 import { type OutfitId } from '../../shared/Identifier';
 import { type Result, ok, err } from '../../shared/Result';
 import { ValidationError, InvariantViolationError } from '../../shared/errors';
-import { categoryLayerSlot, LayerSlot } from '../value-objects/GarmentCategory';
+import { LayerSlot } from '../value-objects/GarmentCategory';
 import { type Occasion } from '../value-objects/Occasion';
 import { type Season } from '../value-objects/Season';
 import { type Garment } from './Garment';
@@ -115,7 +115,7 @@ export class Outfit extends Entity<'Outfit'> {
 
     const slotCounts = new Map<LayerSlot, number>();
     for (const garment of garments) {
-      const slot = categoryLayerSlot(garment.category);
+      const slot = garment.layerSlot;
       slotCounts.set(slot, (slotCounts.get(slot) ?? 0) + 1);
     }
     // Exclusive slots: only one item allowed.

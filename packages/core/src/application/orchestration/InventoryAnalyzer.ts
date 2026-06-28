@@ -10,7 +10,6 @@
  */
 import { type Garment } from '../../domain/entities/Garment';
 import { GarmentCategory } from '../../domain/value-objects/GarmentCategory';
-import { HEAVY_OUTERWEAR } from '../../domain/value-objects/GarmentSubcategory';
 import { type IGarmentRepository } from '../../domain/repositories/IGarmentRepository';
 import { type RecommendationContext } from './types';
 
@@ -40,7 +39,7 @@ export class InventoryAnalyzer {
       if (!garment.supportsSeason(context.season)) {
         return false;
       }
-      if (isHot && HEAVY_OUTERWEAR.includes(garment.subcategory)) {
+      if (isHot && garment.isHeavyOuterwear) {
         return false;
       }
       return true;

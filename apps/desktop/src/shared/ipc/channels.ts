@@ -17,11 +17,33 @@ export const IpcChannels = {
   wardrobeGet: 'wardrobe:get',
   wardrobeGarmentsByCategory: 'wardrobe:garmentsByCategory',
   wardrobeSeasonal: 'wardrobe:seasonal',
+  wardrobeSearch: 'wardrobe:search',
+
+  /* ------------------------------ categories ----------------------------- */
+  categoryList: 'category:list',
+  categoryTree: 'category:tree',
+  categoryCreate: 'category:create',
+  categoryUpdate: 'category:update',
+  categoryReorder: 'category:reorder',
+  categoryDelete: 'category:delete',
 
   /* ------------------------------- garments ------------------------------ */
   garmentAdd: 'garment:add',
   garmentUpdate: 'garment:update',
   garmentRemove: 'garment:remove',
+  garmentDuplicate: 'garment:duplicate',
+  garmentArchive: 'garment:archive',
+  garmentRestore: 'garment:restore',
+
+  /* -------------------------------- photos ------------------------------- */
+  photosAdd: 'garment:photos:add',
+  photoRemove: 'garment:photos:remove',
+  photosReorder: 'garment:photos:reorder',
+  photoTransform: 'garment:photos:transform',
+
+  /* ------------------------------- tagging ------------------------------- */
+  tagsSuggest: 'garment:tags:suggest',
+  tagsConfirm: 'garment:tags:confirm',
 
   /* ------------------------------- outfits ------------------------------- */
   outfitSuggestions: 'outfit:suggestions',
