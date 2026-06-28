@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./out",
+    "tsBuildInfoFile": "./out/.tsbuildinfo-node",
+    "lib": ["ES2022"],
+    "types": ["node", "electron-vite/node"],
+    "noEmit": true
+  },
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/infrastructure" },
+    { "path": "../../packages/plugin-sdk" }
+  ],
+  "include": [
+    "src/main/**/*.ts",
+    "src/preload/**/*.ts",
+    "electron.vite.config.ts",
+    "vitest.config.ts"
+  ]
+}

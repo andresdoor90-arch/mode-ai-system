@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./out",
+    "tsBuildInfoFile": "./out/.tsbuildinfo-web",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["node", "vite/client"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@renderer/*": ["src/renderer/src/*"],
+      "@mas/core": ["../../packages/core/src/index.ts"],
+      "@mas/core/*": ["../../packages/core/src/*"],
+      "@mas/infrastructure": ["../../packages/infrastructure/src/index.ts"],
+      "@mas/infrastructure/*": ["../../packages/infrastructure/src/*"],
+      "@mas/plugin-sdk": ["../../packages/plugin-sdk/src/index.ts"],
+      "@mas/plugin-sdk/*": ["../../packages/plugin-sdk/src/*"]
+    }
+  },
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/infrastructure" },
+    { "path": "../../packages/plugin-sdk" }
+  ],
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"]
+}

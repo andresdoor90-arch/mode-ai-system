@@ -25,7 +25,7 @@
 
 | Module | Status | Progress | Notes |
 |--------|--------|----------|-------|
-| Project Setup & Configuration | Not Started | 0% | Monorepo, tooling, CI/CD |
+| Project Setup & Configuration | Complete | 100% | Monorepo, tooling, testing, CI/CD scaffolded (Phase 1) |
 | Core Package (Domain Layer) | Not Started | 0% | Entities, value objects, interfaces |
 | Infrastructure Package | Not Started | 0% | DB, AI services, file system |
 | Desktop App - Electron Shell | Not Started | 0% | Main process, window management |
@@ -71,16 +71,26 @@
 - **Rationale**: Security, stability, prevent plugins from crashing main app
 - **Status**: Approved
 
+### ADR-006: electron-vite as the Build Orchestrator
+- **Decision**: Use `electron-vite` to drive the three Electron build targets (main, preload, renderer) from a single config, with Vite + `@vitejs/plugin-react` for the renderer
+- **Rationale**: Unified config, fast HMR for the renderer, sensible defaults for context isolation and dependency externalization
+- **Status**: Approved
+
+### ADR-007: pnpm Workspaces + TypeScript Project References
+- **Decision**: Manage the monorepo with pnpm workspaces and wire cross-package builds via TypeScript project references and `@mas/*` path aliases
+- **Rationale**: Incremental builds, enforced layer boundaries (core → infrastructure/plugin-sdk → desktop), and `workspace:*` linking without publishing
+- **Status**: Approved
+
 ## Milestones
 
-### Milestone 1: Foundation (Project Setup)
-- [ ] Initialize monorepo with workspace configuration
-- [ ] Set up TypeScript configuration (base + per-package)
-- [ ] Configure Electron + Vite build pipeline
-- [ ] Set up ESLint, Prettier, Husky
-- [ ] Initialize package structure (core, infrastructure, plugin-sdk)
-- [ ] Configure testing framework (Vitest)
-- [ ] Set up CI/CD pipeline
+### Milestone 1: Foundation (Project Setup) ✅ Complete
+- [x] Initialize monorepo with workspace configuration
+- [x] Set up TypeScript configuration (base + per-package)
+- [x] Configure Electron + Vite build pipeline
+- [x] Set up ESLint, Prettier, Husky
+- [x] Initialize package structure (core, infrastructure, plugin-sdk)
+- [x] Configure testing framework (Vitest)
+- [x] Set up CI/CD pipeline
 
 ### Milestone 2: Core Domain
 - [ ] Define domain entities (Garment, Outfit, UserProfile, etc.)
@@ -141,12 +151,26 @@
 ### Sprint 0 - Project Initialization
 - **Start Date**: 2025-01-20
 - **Goal**: Set up project management and documentation structure
-- **Status**: In Progress
+- **Status**: Done
 - **Completed**:
   - Created PROJECT_PROGRESS.md
   - Created TODO.md
   - Created CHANGELOG.md
 
+### Sprint 1 - Phase 1: Project Foundation & Setup
+- **Start Date**: 2026-06-28
+- **Goal**: Scaffold the monorepo foundation — build configuration, code quality tooling, testing infrastructure and CI/CD pipeline
+- **Status**: Done (awaiting user approval before Phase 2)
+- **Completed**:
+  - **Monorepo & build config**: `pnpm-workspace.yaml`, root `package.json` with workspace scripts, `tsconfig.base.json` + root solution `tsconfig.json`, `@mas/*` path aliases, `.npmrc`, `.nvmrc`
+  - **Packages scaffolded**: `@mas/core`, `@mas/infrastructure`, `@mas/plugin-sdk` (each with `package.json`, `tsconfig.json` using project references, `vitest.config.ts`, placeholder `src/index.ts` + unit test)
+  - **Desktop app scaffolded**: `apps/desktop` with `electron-vite` config (main/preload/renderer), minimal Electron `main`/`preload`, minimal React 18 renderer, split `tsconfig` (node/web)
+  - **Code quality**: ESLint (TS + React rules), Prettier, `.editorconfig`, Husky `pre-commit` (lint-staged) + `commit-msg` (commitlint/conventional commits)
+  - **Testing**: Vitest workspace + shared coverage config (v8, thresholds), React Testing Library setup, test fixtures/factories scaffold, Playwright config for Electron E2E
+  - **CI/CD**: GitHub Actions workflow (`.github/workflows/ci.yml`) — install, lint, format-check, type-check, build, test+coverage, artifact upload, with pnpm caching
+  - **Environment handling**: root + desktop `.env.example` committed; `.env`/`.env.local` gitignored
+- **Known environment limitation**: The build sandbox runs in `INTEGRATIONS_ONLY` network mode (no public registry access), so `pnpm install` cannot be executed here and no `pnpm-lock.yaml` is generated yet. All manifests use pinned, realistic versions; dependency installation, the full type-check/build, and test execution should be validated in an environment with registry access (e.g., CI). File contents were validated offline: all JSON/TS configs parse cleanly and all 22 TS/TSX source files parse without syntax errors.
+
 ---
 
-*Last updated: 2025-01-20*
+*Last updated: 2026-06-28*

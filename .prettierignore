@@ -1,0 +1,9 @@
+node_modules
+dist
+out
+coverage
+pnpm-lock.yaml
+*.min.js
+.husky
+test-results
+playwright-report
