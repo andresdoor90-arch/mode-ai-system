@@ -18,12 +18,12 @@ import { type SqlDatabase } from '../database/SqlDatabase';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCtor = new (path: string) => any;
 
-export const createTestSqlDatabase = async (): Promise<SqlDatabase> => {
+export const createTestSqlDatabase = async (filename = ':memory:'): Promise<SqlDatabase> => {
   // Prefer the production driver (present in CI).
   try {
     const spec = 'better-sqlite3';
     const mod = (await import(spec)) as { default: AnyCtor };
-    return new BetterSqliteDatabase(new mod.default(':memory:'));
+    return new BetterSqliteDatabase(new mod.default(filename));
   } catch {
     // Not installed (offline sandbox) — fall through to Bun's engine.
   }
@@ -32,7 +32,7 @@ export const createTestSqlDatabase = async (): Promise<SqlDatabase> => {
   if (isBun) {
     const spec = 'bun:sqlite';
     const mod = (await import(spec)) as { Database: AnyCtor };
-    return new BunSqliteDatabase(new mod.Database(':memory:'));
+    return new BunSqliteDatabase(new mod.Database(filename));
   }
 
   throw new Error('No SQLite driver available for tests (need better-sqlite3 or Bun).');
