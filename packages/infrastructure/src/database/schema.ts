@@ -23,25 +23,117 @@ export const garments = sqliteTable(
     name: text('name').notNull(),
     category: text('category').notNull(),
     subcategory: text('subcategory').notNull(),
+    categoryId: text('category_id'),
+    categoryMetadata: text('category_metadata'),
     colorHex: text('color_hex').notNull(),
     colorName: text('color_name'),
+    secondaryColors: text('secondary_colors').notNull().default('[]'),
     brand: text('brand'),
     sizeSystem: text('size_system'),
     sizeValue: text('size_value'),
     sizeMeasurements: text('size_measurements'),
+    material: text('material'),
     seasons: text('seasons').notNull(),
     images: text('images').notNull().default('[]'),
     tags: text('tags').notNull().default('[]'),
     status: text('status').notNull(),
     wearCount: integer('wear_count').notNull().default(0),
     lastWornAt: text('last_worn_at'),
+    purchaseDate: text('purchase_date'),
+    notes: text('notes'),
     metadata: text('metadata').notNull().default('{}'),
+    version: integer('version').notNull().default(1),
     createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
     categoryIdx: index('idx_garments_category').on(table.category),
     statusIdx: index('idx_garments_status').on(table.status),
+    categoryIdIdx: index('idx_garments_category_id').on(table.categoryId),
+  }),
+);
+
+export const categories = sqliteTable(
+  'categories',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    parentId: text('parent_id'),
+    group: text('group'),
+    order: integer('order').notNull().default(0),
+    seeded: integer('seeded').notNull().default(0),
+    metadata: text('metadata').notNull().default('{}'),
+    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    parentIdx: index('idx_categories_parent').on(table.parentId),
+    slugIdx: index('idx_categories_slug').on(table.slug),
+  }),
+);
+
+export const photographs = sqliteTable(
+  'photographs',
+  {
+    id: text('id').primaryKey(),
+    garmentId: text('garment_id')
+      .notNull()
+      .references(() => garments.id, { onDelete: 'cascade' }),
+    storageKey: text('storage_key').notNull(),
+    order: integer('order').notNull().default(0),
+    rotation: integer('rotation').notNull().default(0),
+    crop: text('crop').notNull().default('{"x":0,"y":0,"width":1,"height":1}'),
+    isPrimary: integer('is_primary').notNull().default(0),
+    stage: text('stage').notNull().default('original'),
+    attributes: text('attributes').notNull().default('{}'),
+  },
+  (table) => ({
+    garmentIdx: index('idx_photographs_garment').on(table.garmentId),
+  }),
+);
+
+export const garmentHistory = sqliteTable(
+  'garment_history',
+  {
+    seq: integer('seq').primaryKey({ autoIncrement: true }),
+    garmentId: text('garment_id').notNull(),
+    version: integer('version').notNull(),
+    changeType: text('change_type').notNull(),
+    changedAt: text('changed_at').notNull(),
+    snapshot: text('snapshot').notNull(),
+  },
+  (table) => ({
+    garmentIdx: index('idx_garment_history_garment').on(table.garmentId),
+  }),
+);
+
+export const outfitHistory = sqliteTable(
+  'outfit_history',
+  {
+    id: text('id').primaryKey(),
+    outfitId: text('outfit_id'),
+    garmentIds: text('garment_ids').notNull().default('[]'),
+    signature: text('signature').notNull(),
+    label: text('label'),
+    wornOn: text('worn_on').notNull(),
+    wornTime: text('worn_time'),
+    place: text('place'),
+    event: text('event'),
+    occasion: text('occasion'),
+    weather: text('weather'),
+    temperatureC: real('temperature_c'),
+    role: text('role'),
+    comments: text('comments'),
+    satisfaction: integer('satisfaction'),
+    source: text('source').notNull().default('manual'),
+    attributes: text('attributes').notNull().default('{}'),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => ({
+    wornOnIdx: index('idx_outfit_history_worn_on').on(table.wornOn),
+    signatureIdx: index('idx_outfit_history_signature').on(table.signature),
+    roleIdx: index('idx_outfit_history_role').on(table.role),
   }),
 );
 
@@ -141,8 +233,12 @@ export const calendarEvents = sqliteTable(
 /** Convenience union of every table, used by drizzle client typings. */
 export const schema = {
   garments,
+  categories,
+  photographs,
+  garmentHistory,
   outfits,
   outfitGarments,
+  outfitHistory,
   userProfiles,
   styleRules,
   collections,
