@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Phase 3 — Infrastructure Package (`@mas/infrastructure`)** (concrete adapters behind the `@mas/core` ports; no business rules)
+  - Infrastructure error hierarchy distinct from the domain's: `InfrastructureError` + `DatabaseError`, `MigrationError`, `MappingError`, `StorageError`, `ConfigurationError`, `VectorStoreError`, `AIProviderError`, `BackupError`, `TransferError`, with `wrapSync`/`wrapAsync` helpers
+  - Database layer: a synchronous `SqlDatabase` port with `BetterSqliteDatabase` (production, better-sqlite3) and `BunSqliteDatabase` adapters wrapping injected handles; a connection factory applying SQLite pragmas (WAL, foreign_keys, synchronous, busy_timeout); Drizzle ORM schema definitions + drizzle-kit config; a SQL migrations folder and an idempotent, transaction-per-migration `MigrationRunner`
+  - Repository implementations: SQLite-backed `Sql{Garment,Outfit,UserProfile,StyleRule,Collection,CalendarEvent}Repository`, each implementing its domain port, with row↔domain mappers, join tables for outfit/collection membership, current-profile tracking and demo `seedDemoData`
+  - Vector store (storage/search plumbing only, no recommendation logic): provider-agnostic `IVectorStore`, a `ChromaVectorStore` adapter, a brute-force `InMemoryVectorStore` (cosine) and the garment embedding collection schema
+  - File storage: `IFileStorage` + path-traversal-safe `LocalFileStorage` (sharded keys) and `ImageStorageService` (save/retrieve/delete, validation, orphan GC) — storage I/O only, no image processing
+  - AI provider abstractions: `IAITextProvider`/`IEmbeddingProvider` ports, `BaseAIProvider` scaffolding, Ollama/OpenAI/Anthropic adapter stubs (no model calls), and a deterministic `HashingEmbeddingProvider`
+  - Cross-cutting services: typed persistent `AppConfig` (defaults + validation) with a JSON `ConfigStore`; structured logging (`ILogger` + `ConsoleLogger` + sinks); an event bus (`IEventBus` + `InMemoryEventBus`); a `BackupService` (database + images + config snapshots with manifest and restore); an `ImportExportService` (portable JSON bundle, optional gzip) working purely through repository ports; and a UUID-backed `IdGenerator`
+  - Decoupling: every external technology sits behind a port and is constructor-injected, so SQLite, ChromaDB or an AI provider can be replaced without modifying the domain
+  - Tests: 75 unit/integration tests (177 assertions) covering the error helpers, logging, events, config persistence, file/image storage, the SQL adapter + migration runner, all six repositories' round-trips against a real SQLite engine, the in-memory vector store, AI provider scaffolding, import/export and backup/restore
+  - Pinned realistic dependencies for the infrastructure package: `better-sqlite3`, `drizzle-orm`, `chromadb` (+ `drizzle-kit`, `@types/better-sqlite3` dev)
+
+### Added (Phase 2)
 - **Phase 2 — Core Domain Package (`@mas/core`)** (pure, framework-agnostic domain)
   - Shared kernel: railway-style `Result`/`ok`/`err`, a `DomainError` hierarchy (`ValidationError`, `InvariantViolationError`, `NotFoundError`, `HandlerNotFoundError`), `Guard` validators, base `Entity`/`AggregateRoot`/`ValueObject`, branded `Id` types and an injectable `IdGenerator` port
   - Value objects: `Color` (hex/rgb/hsl conversions, warm/cool/neutral classification, seasonal mapping, hue distance), `Size`, `Season`, `Occasion`, `GarmentCategory` (+ layer slots), `GarmentSubcategory` (per-category enums + membership validation), `BodyMeasurements`, `StylePreference`, `WeatherCondition`, `ColorPalette`
@@ -35,7 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `CHANGELOG.md` - Change log following Keep a Changelog format
 
 ### Notes
-- The foundation was authored in an offline (`INTEGRATIONS_ONLY`) sandbox, so `pnpm install` was not run and no `pnpm-lock.yaml` is committed yet. Dependency versions are pinned and realistic; install, full type-check/build, and test runs are validated via CI (environment with registry access).
+- The foundation and subsequent phases were authored in an offline (`INTEGRATIONS_ONLY`) sandbox, so `pnpm install` was not run and no `pnpm-lock.yaml` is committed yet. Dependency versions are pinned and realistic; install, full type-check/build, and test runs are validated via CI (environment with registry access).
+- Phase 3 specifically: `better-sqlite3`, `drizzle-orm`, `chromadb`, `drizzle-kit` and `@types/node` are not installable offline, so the full `tsc` type-check and native better-sqlite3/Drizzle/ChromaDB integration are CI-deferred. The runtime persistence path is proven offline against an equivalent SQLite engine through the driver-agnostic `SqlDatabase` port.
 
 ---
 
@@ -58,4 +72,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-06-30*

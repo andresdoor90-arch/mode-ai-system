@@ -97,43 +97,62 @@
 
 ## Phase 3: Infrastructure Package (`packages/infrastructure`)
 
-### P0 - Database Layer
-- [ ] Set up SQLite with better-sqlite3
-- [ ] Configure Drizzle ORM schema definitions
-- [ ] Create migration system
-- [ ] Implement `GarmentRepository` (SQLite)
-- [ ] Implement `OutfitRepository` (SQLite)
-- [ ] Implement `UserProfileRepository` (SQLite)
-- [ ] Implement `StyleRuleRepository` (SQLite)
-- [ ] Implement `CollectionRepository` (SQLite)
-- [ ] Create database seeding scripts (demo data)
+> ✅ Completed 2026-06-30 (Sprint 3). Concrete adapters behind `@mas/core` ports; no business rules. Awaiting approval before Phase 4.
 
-### P0 - Vector Database
-- [ ] Set up ChromaDB embedded instance
-- [ ] Define embedding schemas for garments
-- [ ] Implement vector search for similar items
-- [ ] Implement style embedding generation
-- [ ] Create vector indexing pipeline
+### P0 - Database Layer
+- [x] Set up SQLite with better-sqlite3 (connection factory + pragmas: WAL, foreign_keys, synchronous, busy_timeout)
+- [x] Configure Drizzle ORM schema definitions (typed source of truth + drizzle-kit config)
+- [x] Create migration system (SQL migrations folder + idempotent `MigrationRunner` over the SQL port)
+- [x] Implement `GarmentRepository` (SQLite)
+- [x] Implement `OutfitRepository` (SQLite)
+- [x] Implement `UserProfileRepository` (SQLite)
+- [x] Implement `StyleRuleRepository` (SQLite)
+- [x] Implement `CollectionRepository` (SQLite)
+- [x] Implement `CalendarEventRepository` (SQLite)
+- [x] Persistence mappers (row ↔ domain) for every aggregate
+- [x] Create database seeding scripts (demo data)
+
+### P0 - Vector Database (infrastructure plumbing only — no recommendation logic)
+- [x] Provider-agnostic `IVectorStore` port (upsert / query / delete / count)
+- [x] ChromaDB embedded client configuration + adapter (`ChromaVectorStore`)
+- [x] Define embedding collection schema for garments
+- [x] In-memory vector store (cosine) for offline/test use
+- [ ] Implement style embedding generation (deferred — AI engine phase)
+- [ ] Create vector indexing pipeline (deferred — higher-level phase)
 
 ### P1 - Image Processing
-- [ ] Implement Sharp-based image pipeline
-- [ ] Background removal service
-- [ ] Color extraction from garment images
-- [ ] Image resizing and thumbnail generation
-- [ ] Image metadata extraction (EXIF)
-- [ ] Garment category detection preprocessing
+- [ ] Implement Sharp-based image pipeline (deferred — later phase)
+- [ ] Background removal service (deferred)
+- [ ] Color extraction from garment images (deferred)
+- [ ] Image resizing and thumbnail generation (deferred)
+- [ ] Image metadata extraction (EXIF) (deferred)
+- [ ] Garment category detection preprocessing (deferred)
 
 ### P1 - File Storage
-- [ ] Implement local file storage service
-- [ ] Image file management (save, retrieve, delete)
-- [ ] Storage path configuration
-- [ ] File naming and organization strategy
-- [ ] Storage cleanup and garbage collection
+- [x] Implement local file storage service (`IFileStorage` + `LocalFileStorage`)
+- [x] Image file management (save, retrieve, delete) — `ImageStorageService` (storage I/O only)
+- [x] Storage path configuration
+- [x] File naming and organization strategy (sharded, sanitised keys)
+- [x] Storage cleanup and garbage collection (`pruneOrphans`)
+
+### P1 - AI Provider Abstractions (interfaces + base adapters only)
+- [x] Provider-agnostic `IAITextProvider` and `IEmbeddingProvider` ports
+- [x] `BaseAIProvider` scaffolding + Ollama/OpenAI/Anthropic adapter stubs (no model calls)
+- [x] Deterministic hashing embedding provider (test/offline plumbing)
+
+### P1 - Cross-Cutting Infrastructure Services
+- [x] Persistent configuration system (typed `AppConfig` + defaults + validation + `ConfigStore`)
+- [x] Logging system (`ILogger` port + structured `ConsoleLogger` + sinks)
+- [x] Event system (`IEventBus` + `InMemoryEventBus` pub/sub)
+- [x] Backup & restore system (DB + images + config snapshots with manifest)
+- [x] Import/export services (portable JSON bundle, optional gzip, via repository ports)
+- [x] Infrastructure error hierarchy (distinct from domain errors; I/O/DB/external wrapping)
+- [x] UUID-backed `IdGenerator` implementation
 
 ### P2 - External Service Adapters
-- [ ] Weather API adapter (OpenWeatherMap or similar)
-- [ ] Calendar sync adapter (Google Calendar, Outlook)
-- [ ] Cloud storage adapter (optional backup)
+- [ ] Weather API adapter (OpenWeatherMap or similar) (deferred — P2)
+- [ ] Calendar sync adapter (Google Calendar, Outlook) (deferred — P2)
+- [ ] Cloud storage adapter (optional backup) (deferred — P2)
 
 ---
 
@@ -359,4 +378,4 @@
 
 ---
 
-*Last updated: 2026-06-29*
+*Last updated: 2026-06-30*
