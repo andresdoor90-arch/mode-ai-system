@@ -276,26 +276,35 @@
 
 ## Phase 6: Virtual Try-On (Three.js)
 
+> ✅ Completed 2026-07-03 (Sprint 6). Engine-agnostic visualisation core in the new `@mas/rendering` package (ten managers + abstraction, no Three.js/React/AI import) with a swappable Three.js/React-Three-Fiber adapter in `apps/desktop`. Driven by the REAL garments of the recommended outfit; decoupled from the AI engine; no business rules in the renderer; fully replaceable graphics engine. Awaiting approval before Phase 7.
+
 ### P1 - 3D Avatar System
-- [ ] Set up React Three Fiber renderer
-- [ ] Create parametric body model
-- [ ] Implement body measurement customization
-- [ ] Add pose presets (standing, walking, sitting)
-- [ ] Implement camera controls (orbit, zoom)
+- [x] Set up React Three Fiber renderer (Three.js/R3F adapter over `@mas/rendering`; WebGL render runtime/CI-deferred)
+- [x] Create parametric body model (primitive-based mannequin via the pure `Avatar Manager` + `primitives.ts`; GLTF base model is a data-only extension point)
+- [~] Implement body measurement customization (body-type switching — neutral/feminine/masculine/athletic/plus — done; precise measurement-driven morphs deferred)
+- [~] Add pose presets (standing, walking, sitting) (pose is a data-only extension point on the `AvatarDescriptor`; animated poses deferred)
+- [x] Implement camera controls (orbit, zoom) (`Camera Controller`: 360° orbit, clamped zoom, front/back/side view presets)
 
 ### P1 - Garment Rendering
-- [ ] 2D garment overlay on 3D model
-- [ ] Garment positioning and scaling
-- [ ] Layer ordering (underwear -> outer)
-- [ ] Color/texture mapping
-- [ ] Basic physics simulation (draping)
+- [x] 2D garment overlay on 3D model (per-garment primitive layers placed by body region over the avatar)
+- [x] Garment positioning and scaling (region-based geometry, scales with avatar)
+- [x] Layer ordering (underwear -> outer) (`Outfit Renderer` draw-order: full-body → lower → upper → feet → outer → accessory; full-body suppresses separates)
+- [x] Color/texture mapping (`Texture Manager`: garment colour → material, subcategory/tags → finish/roughness/metalness; sRGB→linear)
+- [ ] Basic physics simulation (draping) (deferred — needs cloth sim)
 
 ### P2 - Advanced Features
-- [ ] Multiple angle views
-- [ ] Screenshot/export functionality
-- [ ] Animation (turntable rotation)
-- [ ] Light/shadow for realism
-- [ ] AR preview (future - mobile companion)
+- [x] Multiple angle views (front/back/left/right/three-quarter presets)
+- [x] Screenshot/export functionality (`Screenshot Manager` + canvas read-back; downloads a timestamped PNG/JPEG)
+- [~] Animation (turntable rotation) (manual 360° rotation done; auto-turntable animation deferred)
+- [x] Light/shadow for realism (`Lighting Manager` studio/soft/dramatic presets with shadow-casting key lights; contact shadow in the adapter)
+- [ ] AR preview (future - mobile companion) (deferred)
+
+### Supporting work (Phase 6)
+- [x] New `@mas/rendering` workspace package (pure, engine-agnostic; wired into tsconfig paths, project references and the Vitest workspace)
+- [x] `IRenderEngine`/`IScreenshotSink` ports + `SceneDescription` as the replaceable-engine seam (ADR-015)
+- [x] `Render Cache` (order-independent keying, LRU eviction, per-outfit invalidation on recommendation change)
+- [x] `recommendationStore` (Zustand) + DTO→renderable mapper wiring the existing `ai:recommend` IPC flow into the **Probador** screen (`/try-on`)
+- [x] Offline tests (99 new) + transpile validation of the CI/runtime-deferred R3F adapter
 
 ---
 
@@ -386,4 +395,4 @@
 
 ---
 
-*Last updated: 2026-07-02*
+*Last updated: 2026-07-03*

@@ -11,6 +11,7 @@ export { useWardrobeStore } from './wardrobeStore';
 export { useOutfitStore } from './outfitStore';
 export { useUserStore } from './userStore';
 export { useAiStatusStore } from './aiStatusStore';
+export { useRecommendationStore } from './recommendationStore';
 
 export type { ToastVariant, Toast, ToastInput } from './logic/uiLogic';
 export type { WardrobeFilters, WardrobeSort } from './logic/wardrobeLogic';

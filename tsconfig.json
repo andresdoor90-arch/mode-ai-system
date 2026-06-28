@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/core" },
     { "path": "./packages/infrastructure" },
+    { "path": "./packages/rendering" },
     { "path": "./packages/plugin-sdk" },
     { "path": "./apps/desktop" }
   ]

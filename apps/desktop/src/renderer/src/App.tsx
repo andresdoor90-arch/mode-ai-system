@@ -19,6 +19,7 @@ import {
   NotFoundPage,
   ProfilePage,
   SettingsPage,
+  VirtualTryOnPage,
   WardrobePage,
 } from './pages';
 import { ThemeProvider } from './theme/ThemeProvider';
@@ -33,6 +34,7 @@ export function App(): JSX.Element {
             <Route path="/wardrobe" element={<WardrobePage />} />
             <Route path="/categories" element={<CategoriesPage />} />
             <Route path="/garments" element={<GarmentsPage />} />
+            <Route path="/try-on" element={<VirtualTryOnPage />} />
             <Route path="/history" element={<HistoryPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
