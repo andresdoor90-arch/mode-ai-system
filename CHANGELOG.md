@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+- **Phase 8 — Polish, Testing & Distribution (in progress) — packaging pipeline + production-defect fixes (`apps/desktop`, `@mas/infrastructure`, CI)**
+  - **Distribution (Build & Distribution 0% → 80%)**: `apps/desktop/electron-builder.yml` packaging the electron-vite output into a Windows NSIS installer + portable `.exe`, a macOS `.dmg` (x64 + arm64) and a Linux AppImage, with `asarUnpack` for the native `better-sqlite3` binary, `npmRebuild`, and a GitHub Releases `publish` feed. `electron-updater` auto-update is wired into the main process (`src/main/updater.ts`) — lazy-loaded, guarded (no-op in dev / when `MAS_DISABLE_AUTO_UPDATE=1`), and incapable of blocking or crashing startup. `electron.vite.config.ts` now bundles the workspace `@mas/*` packages into the main/preload bundles so packaging doesn't depend on pnpm symlinks at runtime. New `package:*` (desktop) and `dist:*` (root) scripts, a `.github/workflows/release.yml` matrix release workflow (windows/macOS/Linux → GitHub Release on a `v*` tag), macOS entitlements, a build-resources README and `docs/DISTRIBUTION.md`.
+  - **Fixed — packaged-startup crash**: migrations were loaded by reading `.sql` files from disk (`import.meta.url`); since `tsc`/Vite don't copy raw `.sql` into `dist/` and `fs` reads inside a packaged asar are unreliable, the packaged app would throw on first launch. Now applies **embedded migrations** (`embeddedMigrations.ts`, SQL as string constants) with a drift-guard test ensuring they never diverge from the on-disk `.sql` source of truth.
+  - **Fixed — stuck AI-status indicator**: `aiStatusStore.refresh()` was never called, so the sidebar AI-engine status was frozen at "Sin configurar". Now refreshed on shell mount (`AppLayout`) and rendered live (label + colour + detail tooltip) in the `Sidebar`.
+  - **Fixed — broken CI install**: relaxed `pnpm install --frozen-lockfile` (no lockfile committed ⇒ always failed) to `--no-frozen-lockfile`.
+  - **Optimization**: migration `0002_performance_indexes.sql` adds composite indexes for the wardrobe/recommendation/history hot paths.
+  - **Tests**: +3 offline tests (embedded-migration drift/apply/index-existence); monorepo offline total **445 → 448 passed / 0 failed**; the 2 React-runtime component tests remain CI-deferred.
+
 - **Phase 7 (Part C/D/E + F/G) — Plugin System, Extension API & Security (`@mas/plugin-sdk` + `apps/desktop` plugin host)** — the definitive M-A-S extensibility system. Completes Phase 7 (Parts A + B shipped earlier on this branch); Phase 8, the plugin Marketplace and Cloud sync were NOT started.
   - **Part C — Plugin System (`@mas/plugin-sdk`, pure & engine-agnostic; imports only `@mas/core` + Node `crypto`, ADR-025)**: the definitive SDK + reference host kernel — `PluginManager` (orchestrates the lifecycle), `PluginLoader` (manifest → compatibility → signature gauntlet, never runs code), `PluginRegistry` (duplicate-id/not-found), `PluginLifecycleMachine` (declarative state table: Discovered → Installed → Validated → Active ⇄ Inactive → Uninstalled, plus a contained `Failed` state recoverable via reset; illegal transitions rejected), `ExtensionRegistry`, `PermissionGuard`, `ResourceMeter`, `ActivityLog`, `SignatureVerifier`, `InProcessPluginSandbox`, `InMemoryPluginStorageProvider`, the capability-gated `HostApi` factory, manifest schema + total validator, and a dependency-free semver + `CompatibilityChecker` (plugin versioning + host/SDK compatibility against the declared `engines.mas`/`engines.sdk` ranges). Plugins can NEVER reach the domain or infrastructure directly — all access is through the controlled, capability-gated `HostApi`.
   - **Part D — Extension API (stable, additive; extend WITHOUT modifying the core, ADR-027)**: a closed, versioned catalog of extension points — AI providers + embedders (→ the Phase-5 `ITextProvider`/`IEmbedder` ports via the `AIProviderRouter`), rendering engines (→ the Phase-6 `IRenderEngine` seam), analyzers, importers, exporters, image formats, recommendation rules, UI panels, new garment types and new category types (→ the Phase-6.5 dynamic categories). Each point maps to a REQUIRED capability; contributions are registered through the gated `host.register`, indexed by the `ExtensionRegistry` and withdrawn atomically on deactivate/uninstall. Recommendation rules are intentionally DECLARATIVE (weights, not code): the CORE evaluates them as the capped, additive `affinityBias` the `OutfitRankingEngine` already applies (`buildAffinityBiasFromRules`), so a rule can never revive a disqualified outfit and no business rule moves into a plugin.
@@ -47,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Tests**: 54 new offline tests — `@mas/core` 91 → 133 (dynamic categories/metadata/seed/tree, garment dynamic-metadata + lifecycle + photos + extensible metadata + `Photograph`, category/lifecycle/photo command flows, AI-tagging suggest+confirm with the deferred stub, search/filter/sort, pagination/virtualization/LRU/background-queue, the event-sync coordinator asserting each subsystem is notified) and `apps/desktop` 53 → 65 (wardrobe-management selection/bulk/sort/status + dynamic categories tree/group/reorder/validation). No regressions: `@mas/infrastructure` 82 and `@mas/rendering` 88 unchanged. **Monorepo offline total: 314 → 368 passed / 0 failed**; the 2 pre-existing desktop React-runtime tests stay CI-deferred. Run offline via the gitignored, never-committed `vitest`→`bun:test` shim.
   - **CI/runtime-deferred**: native SQLite persistence of the new category/photo/metadata columns (`SqlCategoryRepository` + schema migration is the next infra step), the `electron-vite` build, full strict `tsc` across the desktop app, the real vision tagging model and the photo-processing algorithms (background removal / segmentation / enhancement), and React component rendering (RTL/jsdom).
   - **Scope discipline**: Phase 7 (plugin system), Marketplace and Cloud sync were NOT started.
-- **Phase 6 — Virtual Try-On & Avatar System (new `@mas/rendering` package + Three.js/R3F adapter in `apps/desktop`)** — M-A-S's outfit *visualisation* engine. NOT AI image generation: a visual representation driven by the REAL garments of the recommended outfit, placed on a fictional avatar using their domain attributes (category → body slot, colour → material). Decoupled from the AI engine, consuming only structured garment data; no business rules in the renderer; the graphics engine is fully replaceable without touching the domain.
+- **Phase 6 — Virtual Try-On & Avatar System (new `@mas/rendering` package + Three.js/R3F adapter in `apps/desktop`)** — M-A-S's outfit _visualisation_ engine. NOT AI image generation: a visual representation driven by the REAL garments of the recommended outfit, placed on a fictional avatar using their domain attributes (category → body slot, colour → material). Decoupled from the AI engine, consuming only structured garment data; no business rules in the renderer; the graphics engine is fully replaceable without touching the domain.
   - New pure, engine-agnostic package `@mas/rendering` (no Three.js/React/DOM/domain/AI import) with the ten required, clearly-separated components: **Avatar Manager**, **Clothing Renderer**, **Outfit Renderer**, **Camera Controller**, **Lighting Manager**, **Asset Manager**, **Texture Manager**, **Scene Manager**, **Screenshot Manager** and **Render Cache**, plus the abstraction (colour incl. sRGB→linear, body-region/draw-order slot vocabulary, `SceneDescription`/`CameraState`/`MaterialDescriptor`/`ClothingLayer`/`AvatarDescriptor` plain types) and the `IRenderEngine`/`IScreenshotSink` ports
   - The replaceable-graphics-engine seam: a declarative `SceneDescription` is the only thing an engine consumes; a Three.js / React-Three-Fiber adapter in `apps/desktop/src/renderer/src/rendering/three` implements it (ADR-015), so swapping the engine rewrites only that folder
   - Parametric primitive avatar with pure, offline-tested placement maths (`primitives.ts`); R3F components (`AvatarView`, `ClothingLayers`, `SceneLights`, `CameraSync`, `TryOnCanvas`) are thin declarative wrappers (ADR-016)
@@ -73,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Scope discipline: 3D Avatar, Virtual Try-On and the Plugin system were NOT started
 
 ### Added (Phase 4)
+
 - **Phase 4 — Desktop Application (`apps/desktop`)** (first functional, navigable desktop app; NO AI engine, recommendations, 3D avatar or plugins)
   - Electron main process: secure window baseline (context isolation on, `nodeIntegration` off, sandbox on, `webviewTag` off), a window manager (single main window, single-instance lock, focus/restore, ready-to-show) and process-wide security hardening — strict Content-Security-Policy header, `will-navigate` allowlist, `setWindowOpenHandler` routing external links to the OS browser, webview-attach blocking, and permission request/check handlers that deny everything
   - Composition root (`AppContainer`): wires the pure `@mas/core` `CommandBus`/`QueryBus` and all use-case handlers to repositories and seeds a realistic demo wardrobe through the real AddGarment use case; persistence uses port-compatible in-memory repositories, swappable for the `@mas/infrastructure` SQLite repositories without touching the use cases, IPC or UI
@@ -87,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pinned realistic desktop dependencies: `react-router-dom`, `@radix-ui/*` (dialog, dropdown-menu, tabs, tooltip, toast, context-menu, avatar, label, slot), `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react` (+ `tailwindcss`, `postcss`, `autoprefixer`, `tailwindcss-animate` dev)
 
 ### Added (Phase 3)
+
 - **Phase 3 — Infrastructure Package (`@mas/infrastructure`)** (concrete adapters behind the `@mas/core` ports; no business rules)
   - Infrastructure error hierarchy distinct from the domain's: `InfrastructureError` + `DatabaseError`, `MigrationError`, `MappingError`, `StorageError`, `ConfigurationError`, `VectorStoreError`, `AIProviderError`, `BackupError`, `TransferError`, with `wrapSync`/`wrapAsync` helpers
   - Database layer: a synchronous `SqlDatabase` port with `BetterSqliteDatabase` (production, better-sqlite3) and `BunSqliteDatabase` adapters wrapping injected handles; a connection factory applying SQLite pragmas (WAL, foreign_keys, synchronous, busy_timeout); Drizzle ORM schema definitions + drizzle-kit config; a SQL migrations folder and an idempotent, transaction-per-migration `MigrationRunner`
@@ -100,6 +111,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pinned realistic dependencies for the infrastructure package: `better-sqlite3`, `drizzle-orm`, `chromadb` (+ `drizzle-kit`, `@types/better-sqlite3` dev)
 
 ### Added (Phase 2)
+
 - **Phase 2 — Core Domain Package (`@mas/core`)** (pure, framework-agnostic domain)
   - Shared kernel: railway-style `Result`/`ok`/`err`, a `DomainError` hierarchy (`ValidationError`, `InvariantViolationError`, `NotFoundError`, `HandlerNotFoundError`), `Guard` validators, base `Entity`/`AggregateRoot`/`ValueObject`, branded `Id` types and an injectable `IdGenerator` port
   - Value objects: `Color` (hex/rgb/hsl conversions, warm/cool/neutral classification, seasonal mapping, hue distance), `Size`, `Season`, `Occasion`, `GarmentCategory` (+ layer slots), `GarmentSubcategory` (per-category enums + membership validation), `BodyMeasurements`, `StylePreference`, `WeatherCondition`, `ColorPalette`
@@ -111,6 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No external technology in the domain: no Electron, React, SQLite, HTTP/APIs or AI libraries; anything that touches the outside world is expressed as an interface only
 
 ### Added (Phase 1)
+
 - **Phase 1 — Project Foundation & Setup** (monorepo scaffolding)
   - Monorepo & build config: `pnpm-workspace.yaml`, root `package.json` workspace scripts, `tsconfig.base.json` + root solution `tsconfig.json`, `@mas/*` path aliases, `.npmrc`, `.nvmrc`
   - Packages scaffolded with placeholder entry points and unit tests: `@mas/core`, `@mas/infrastructure`, `@mas/plugin-sdk` (TypeScript project references wiring core → infrastructure/plugin-sdk)
@@ -125,6 +138,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `CHANGELOG.md` - Change log following Keep a Changelog format
 
 ### Notes
+
 - The foundation and subsequent phases were authored in an offline (`INTEGRATIONS_ONLY`) sandbox, so `pnpm install` was not run and no `pnpm-lock.yaml` is committed yet. Dependency versions are pinned and realistic; install, full type-check/build, and test runs are validated via CI (environment with registry access).
 - Phase 3 specifically: `better-sqlite3`, `drizzle-orm`, `chromadb`, `drizzle-kit` and `@types/node` are not installable offline, so the full `tsc` type-check and native better-sqlite3/Drizzle/ChromaDB integration are CI-deferred. The runtime persistence path is proven offline against an equivalent SQLite engine through the driver-agnostic `SqlDatabase` port.
 - Phase 4 specifically: Electron, React, Radix UI, Tailwind/PostCSS, `react-router-dom` and `zustand` cannot be installed offline, so the `electron-vite` build, the full `tsc` type-check and the jsdom + React-Testing-Library component tests are CI-deferred. Pure logic (IPC envelope, formatters, theme, store selectors/reducers) is tested offline via the gitignored `vitest`→`bun:test` shim (42 passed); all 79 desktop source files pass a syntax check.
@@ -152,4 +166,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-*Last updated: 2026-07-03*
+_Last updated: 2026-07-03_

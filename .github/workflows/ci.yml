@@ -35,7 +35,12 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        # A pnpm-lock.yaml is not committed yet (the project was authored in an
+        # offline sandbox without registry access). Until one is generated and
+        # committed from a networked environment, do not require a frozen
+        # lockfile — otherwise CI cannot install. Once committed, switch this
+        # back to `--frozen-lockfile`.
+        run: pnpm install --no-frozen-lockfile
 
       - name: Lint
         run: pnpm lint
