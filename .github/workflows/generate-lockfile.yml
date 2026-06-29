@@ -9,6 +9,12 @@ name: Generate pnpm lockfile
 # can use it.
 on:
   workflow_dispatch: {}
+  push:
+    branches: [phase-8-polish-distribution]
+    paths:
+      - '**/package.json'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/generate-lockfile.yml'
 
 permissions:
   contents: write

@@ -1,14 +1,16 @@
 name: Release
 
-# Builds and publishes the desktop installers (Windows/macOS/Linux) when a
-# version tag is pushed (e.g. `v1.0.0`), and uploads them to a GitHub Release.
-# This is the canonical path to a distributable executable: GitHub-hosted
-# runners have registry/network access, so `pnpm install` and the Electron
-# binary download work here (unlike the offline authoring sandbox).
+# Builds the desktop installers (Windows/macOS/Linux) and uploads them as
+# downloadable workflow artifacts. Triggers:
+#   - push to the phase-8 branch  -> immediate, automatic build (no manual step)
+#   - a version tag `v*`          -> the canonical release build
+#   - manual dispatch             -> on demand for any branch
+# GitHub-hosted runners have registry/network access, so `pnpm install` and the
+# Electron binary download work here (unlike the offline authoring sandbox).
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [phase-8-polish-distribution]
+    tags: ['v*']
   workflow_dispatch: {}
 
 permissions:
@@ -40,8 +42,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      # Cache pnpm's store manually (keyed on package.json) so caching does NOT
-      # require a committed pnpm-lock.yaml. `cache: pnpm` on setup-node was
+      # Cache the pnpm store manually (keyed on package.json) so caching does
+      # NOT require a committed pnpm-lock.yaml. `cache: pnpm` on setup-node was
       # removed because it hard-fails ("Dependencies lock file is not found")
       # when the lockfile is absent.
       - name: Get pnpm store directory
@@ -57,30 +59,29 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        # `pnpm install` writes pnpm-lock.yaml during this step on the networked
-        # runner (no committed lockfile required).
+        # `pnpm install` writes pnpm-lock.yaml during this step on the runner
+        # (no committed lockfile required).
         run: pnpm install --no-frozen-lockfile
 
       - name: Build workspace packages
         run: pnpm build:packages
 
-      - name: Package (Windows)
+      - name: Build desktop bundle (electron-vite)
+        run: pnpm --filter @mas/desktop run build
+
+      # `--publish never` guarantees a build artifact without needing signing
+      # certificates or a release/tag. The installer is uploaded below.
+      - name: Package Windows installer (.exe)
         if: matrix.os == 'windows-latest'
-        run: pnpm --filter @mas/desktop package:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter @mas/desktop exec electron-builder --win --publish never
 
-      - name: Package (macOS)
+      - name: Package macOS installer (.dmg)
         if: matrix.os == 'macos-latest'
-        run: pnpm --filter @mas/desktop package:mac
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter @mas/desktop exec electron-builder --mac --publish never
 
-      - name: Package (Linux)
+      - name: Package Linux installer (AppImage)
         if: matrix.os == 'ubuntu-latest'
-        run: pnpm --filter @mas/desktop package:linux
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter @mas/desktop exec electron-builder --linux --publish never
 
       - name: Upload installers as workflow artifacts
         if: always()
@@ -92,5 +93,6 @@ jobs:
             apps/desktop/release/*.dmg
             apps/desktop/release/*.AppImage
             apps/desktop/release/*.zip
+            apps/desktop/release/*.blockmap
           if-no-files-found: ignore
           retention-days: 14
