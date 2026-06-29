@@ -91,11 +91,12 @@ export class ConsoleLogger implements ILogger {
       this.boundContext !== undefined || bindings.context !== undefined
         ? { ...this.boundContext, ...bindings.context }
         : undefined;
+    const resolvedName: string | undefined = bindings.name ?? this.name;
     const options: ConsoleLoggerOptions = {
       level: this.level,
       sink: this.sink,
       now: this.now,
-      ...(bindings.name ?? this.name ? { name: bindings.name ?? this.name } : {}),
+      ...(resolvedName !== undefined ? { name: resolvedName } : {}),
       ...(mergedContext !== undefined ? { context: mergedContext } : {}),
     };
     return new ConsoleLogger(options);
