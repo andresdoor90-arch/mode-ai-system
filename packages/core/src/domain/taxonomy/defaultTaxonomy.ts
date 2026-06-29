@@ -16,14 +16,9 @@ import { type CategoryId } from '../../shared/Identifier';
 import { type IdGenerator } from '../../shared/IdGenerator';
 import { unwrap } from '../../shared/Result';
 import { Category } from '../entities/Category';
-import {
-  type CategoryMetadataInput,
-} from '../value-objects/CategoryMetadata';
+import { type CategoryMetadataInput } from '../value-objects/CategoryMetadata';
 import { GarmentCategory, categoryLayerSlot } from '../value-objects/GarmentCategory';
-import {
-  SUBCATEGORIES_BY_CATEGORY,
-  HEAVY_OUTERWEAR,
-} from '../value-objects/GarmentSubcategory';
+import { SUBCATEGORIES_BY_CATEGORY, HEAVY_OUTERWEAR } from '../value-objects/GarmentSubcategory';
 import { garmentFormality } from '../services/formality';
 
 /**

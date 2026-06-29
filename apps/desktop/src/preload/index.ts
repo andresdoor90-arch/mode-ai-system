@@ -17,6 +17,7 @@ import {
   IpcChannels,
   type AddGarmentPayload,
   type AiStatusDTO,
+  type AnalyzeGarmentPayload,
   type AnnotateHistoryPayload,
   type AppInfoDTO,
   type CategoryDTO,
@@ -24,6 +25,7 @@ import {
   type ColorPaletteDTO,
   type CreateCategoryPayload,
   type ConfirmTagsPayload,
+  type GarmentAnalysisResultDTO,
   type GarmentDTO,
   type GarmentSearchPayload,
   type HistorySearchPayload,
@@ -39,11 +41,14 @@ import {
   type RepeatOutfitPayload,
   type RepetitionGroupDTO,
   type ReorderPayload,
+  type SaveImagePayload,
+  type SaveImageResultDTO,
   type StyleAnalysisDTO,
   type SuggestionsPayload,
   type TagSuggestionDTO,
   type UpdateCategoryPayload,
   type UpdateGarmentPayload,
+  type UserProfileDTO,
   type WardrobeViewDTO,
 } from '../shared/ipc';
 
@@ -59,6 +64,13 @@ function invoke<T>(channel: string, payload?: unknown): Promise<IpcResponse<T>> 
 const api = {
   app: {
     getInfo: (): Promise<IpcResponse<AppInfoDTO>> => invoke(IpcChannels.appGetInfo),
+  },
+  profile: {
+    get: (): Promise<IpcResponse<UserProfileDTO | null>> => invoke(IpcChannels.profileGet),
+    create: (name: string): Promise<IpcResponse<UserProfileDTO>> =>
+      invoke(IpcChannels.profileCreate, { name }),
+    rename: (name: string): Promise<IpcResponse<{ ok: true }>> =>
+      invoke(IpcChannels.profileRename, { name }),
   },
   wardrobe: {
     get: (): Promise<IpcResponse<WardrobeViewDTO>> => invoke(IpcChannels.wardrobeGet),
@@ -101,7 +113,7 @@ const api = {
   photos: {
     add: (
       garmentId: string,
-      photos: readonly { storageKey: string }[],
+      photos: readonly { storageKey: string; attributes?: Readonly<Record<string, string>> }[],
     ): Promise<IpcResponse<{ photoIds: readonly string[] }>> =>
       invoke(IpcChannels.photosAdd, { garmentId, photos }),
     remove: (garmentId: string, photoId: string): Promise<IpcResponse<{ ok: true }>> =>
@@ -122,6 +134,18 @@ const api = {
       invoke(IpcChannels.tagsSuggest, { garmentId, colorSamples }),
     confirm: (payload: ConfirmTagsPayload): Promise<IpcResponse<{ id: string }>> =>
       invoke(IpcChannels.tagsConfirm, payload),
+  },
+  images: {
+    /** Persist an image (original + optional thumbnail); returns storage keys. */
+    save: (payload: SaveImagePayload): Promise<IpcResponse<SaveImageResultDTO>> =>
+      invoke(IpcChannels.imageSave, payload),
+    /** Build a renderable URL for a stored image key (served by `mas-img://`). */
+    url: (storageKey: string): string => `mas-img://media/${encodeURIComponent(storageKey)}`,
+  },
+  analysis: {
+    /** Analyse a garment photo (colour baseline + free-text hints + vision). */
+    analyze: (payload: AnalyzeGarmentPayload): Promise<IpcResponse<GarmentAnalysisResultDTO>> =>
+      invoke(IpcChannels.garmentAnalyze, payload),
   },
   outfits: {
     suggestions: (

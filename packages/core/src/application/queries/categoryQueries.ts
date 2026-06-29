@@ -37,9 +37,10 @@ export class GetCategoriesQuery implements Query<readonly Category[]> {
   public readonly type = GET_CATEGORIES;
 }
 
-export class GetCategoriesHandler
-  implements RequestHandler<GetCategoriesQuery, readonly Category[]>
-{
+export class GetCategoriesHandler implements RequestHandler<
+  GetCategoriesQuery,
+  readonly Category[]
+> {
   public constructor(private readonly categories: ICategoryRepository) {}
 
   public async handle(): Promise<Result<readonly Category[]>> {
@@ -53,9 +54,10 @@ export class GetCategoryTreeQuery implements Query<readonly CategoryNode[]> {
   public readonly type = GET_CATEGORY_TREE;
 }
 
-export class GetCategoryTreeHandler
-  implements RequestHandler<GetCategoryTreeQuery, readonly CategoryNode[]>
-{
+export class GetCategoryTreeHandler implements RequestHandler<
+  GetCategoryTreeQuery,
+  readonly CategoryNode[]
+> {
   public constructor(private readonly categories: ICategoryRepository) {}
 
   public async handle(): Promise<Result<readonly CategoryNode[]>> {

@@ -10,10 +10,7 @@
 import { ok, type Result } from '../../shared/Result';
 import { type Query, type RequestHandler } from '../bus/types';
 import { type AIOrchestrator } from '../orchestration/AIOrchestrator';
-import {
-  type RecommendationRequest,
-  type RecommendationSet,
-} from '../orchestration/types';
+import { type RecommendationRequest, type RecommendationSet } from '../orchestration/types';
 
 export const RECOMMEND_OUTFITS = 'outfit.recommend';
 
@@ -23,9 +20,10 @@ export class RecommendOutfitsQuery implements Query<RecommendationSet> {
   public constructor(public readonly input: RecommendationRequest) {}
 }
 
-export class RecommendOutfitsHandler
-  implements RequestHandler<RecommendOutfitsQuery, RecommendationSet>
-{
+export class RecommendOutfitsHandler implements RequestHandler<
+  RecommendOutfitsQuery,
+  RecommendationSet
+> {
   public constructor(private readonly orchestrator: AIOrchestrator) {}
 
   public async handle(query: RecommendOutfitsQuery): Promise<Result<RecommendationSet>> {

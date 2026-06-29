@@ -10,6 +10,11 @@ appId: com.modeaisystem.app
 productName: Mode AI System
 copyright: Copyright © 2026 M-A-S
 
+# Pin the Electron version explicitly. Under pnpm's hoisted layout electron-
+# builder cannot auto-detect it from apps/desktop/node_modules, so we state it
+# here (kept in sync with the exact "electron" devDependency).
+electronVersion: 31.7.7
+
 directories:
   output: release
   buildResources: build

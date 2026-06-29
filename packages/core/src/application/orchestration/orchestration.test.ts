@@ -44,20 +44,90 @@ const buildWardrobe = async (): Promise<{
   const seasons = [Season.AllSeason];
   const items = [
     // Tops
-    { id: 't-shirt', name: 'Camisa Oxford', category: GarmentCategory.Tops, subcategory: TopSubcategory.Shirt, color: color('#4d4d4d', 'charcoal'), seasons },
-    { id: 't-tee', name: 'Camiseta básica', category: GarmentCategory.Tops, subcategory: TopSubcategory.TShirt, color: color('#b3b3b3', 'silver'), seasons },
-    { id: 't-sweater', name: 'Jersey de lana', category: GarmentCategory.Tops, subcategory: TopSubcategory.Sweater, color: color('#808080', 'gray'), seasons },
+    {
+      id: 't-shirt',
+      name: 'Camisa Oxford',
+      category: GarmentCategory.Tops,
+      subcategory: TopSubcategory.Shirt,
+      color: color('#4d4d4d', 'charcoal'),
+      seasons,
+    },
+    {
+      id: 't-tee',
+      name: 'Camiseta básica',
+      category: GarmentCategory.Tops,
+      subcategory: TopSubcategory.TShirt,
+      color: color('#b3b3b3', 'silver'),
+      seasons,
+    },
+    {
+      id: 't-sweater',
+      name: 'Jersey de lana',
+      category: GarmentCategory.Tops,
+      subcategory: TopSubcategory.Sweater,
+      color: color('#808080', 'gray'),
+      seasons,
+    },
     // Bottoms
-    { id: 'b-trousers', name: 'Pantalón de vestir', category: GarmentCategory.Bottoms, subcategory: BottomSubcategory.Trousers, color: color('#1a1a1a', 'black'), seasons },
-    { id: 'b-jeans', name: 'Vaqueros', category: GarmentCategory.Bottoms, subcategory: BottomSubcategory.Jeans, color: color('#2e2e2e', 'onyx'), seasons },
-    { id: 'b-chinos', name: 'Chinos', category: GarmentCategory.Bottoms, subcategory: BottomSubcategory.Chinos, color: color('#808080', 'gray'), seasons },
+    {
+      id: 'b-trousers',
+      name: 'Pantalón de vestir',
+      category: GarmentCategory.Bottoms,
+      subcategory: BottomSubcategory.Trousers,
+      color: color('#1a1a1a', 'black'),
+      seasons,
+    },
+    {
+      id: 'b-jeans',
+      name: 'Vaqueros',
+      category: GarmentCategory.Bottoms,
+      subcategory: BottomSubcategory.Jeans,
+      color: color('#2e2e2e', 'onyx'),
+      seasons,
+    },
+    {
+      id: 'b-chinos',
+      name: 'Chinos',
+      category: GarmentCategory.Bottoms,
+      subcategory: BottomSubcategory.Chinos,
+      color: color('#808080', 'gray'),
+      seasons,
+    },
     // Shoes
-    { id: 's-dress', name: 'Zapatos Oxford', category: GarmentCategory.Shoes, subcategory: ShoeSubcategory.DressShoes, color: color('#1a1a1a', 'black'), seasons },
-    { id: 's-sneakers', name: 'Zapatillas', category: GarmentCategory.Shoes, subcategory: ShoeSubcategory.Sneakers, color: color('#e6e6e6', 'white'), seasons },
+    {
+      id: 's-dress',
+      name: 'Zapatos Oxford',
+      category: GarmentCategory.Shoes,
+      subcategory: ShoeSubcategory.DressShoes,
+      color: color('#1a1a1a', 'black'),
+      seasons,
+    },
+    {
+      id: 's-sneakers',
+      name: 'Zapatillas',
+      category: GarmentCategory.Shoes,
+      subcategory: ShoeSubcategory.Sneakers,
+      color: color('#e6e6e6', 'white'),
+      seasons,
+    },
     // Outerwear
-    { id: 'o-blazer', name: 'Americana estructurada', category: GarmentCategory.Outerwear, subcategory: OuterwearSubcategory.Blazer, color: color('#2e2e2e', 'onyx'), seasons },
+    {
+      id: 'o-blazer',
+      name: 'Americana estructurada',
+      category: GarmentCategory.Outerwear,
+      subcategory: OuterwearSubcategory.Blazer,
+      color: color('#2e2e2e', 'onyx'),
+      seasons,
+    },
     // Dress
-    { id: 'd-casual', name: 'Vestido casual', category: GarmentCategory.Dresses, subcategory: DressSubcategory.Casual, color: color('#4d4d4d', 'charcoal'), seasons },
+    {
+      id: 'd-casual',
+      name: 'Vestido casual',
+      category: GarmentCategory.Dresses,
+      subcategory: DressSubcategory.Casual,
+      color: color('#4d4d4d', 'charcoal'),
+      seasons,
+    },
   ];
   for (const item of items) {
     await garments.save(makeGarment(item));
@@ -73,9 +143,7 @@ describe('ContextAnalyzer', () => {
   const analyzer = new ContextAnalyzer();
 
   it('extracts occasion, time of day and cold weather from Spanish text', () => {
-    const ctx = unwrap(
-      analyzer.analyze({ message: 'Tengo una boda por la noche y hará frío' }),
-    );
+    const ctx = unwrap(analyzer.analyze({ message: 'Tengo una boda por la noche y hará frío' }));
     expect(ctx.occasion).toBe(Occasion.Formal);
     expect(ctx.timeOfDay).toBe('evening');
     expect(ctx.weather?.isCold).toBe(true);
@@ -127,14 +195,19 @@ describe('AIProviderRouter', () => {
 
 describe('MemoryEngine + PreferenceEngine', () => {
   it('applyFeedback nudges colour and subcategory affinities', () => {
-    const g = makeGarment({ subcategory: TopSubcategory.TShirt, color: color('#b3b3b3', 'silver') });
+    const g = makeGarment({
+      subcategory: TopSubcategory.TShirt,
+      color: color('#b3b3b3', 'silver'),
+    });
     const accepted = applyFeedback(EMPTY_PREFERENCE_MEMORY, [g], true, '2026-07-02T00:00:00.000Z');
     expect(accepted.colorAffinity['silver']).toBeGreaterThan(0);
     expect(accepted.subcategoryAffinity['t-shirt']).toBeGreaterThan(0);
     expect(accepted.acceptCount).toBe(1);
 
     const rejected = applyFeedback(accepted, [g], false, '2026-07-03T00:00:00.000Z');
-    expect(rejected.subcategoryAffinity['t-shirt']! ).toBeLessThan(accepted.subcategoryAffinity['t-shirt']!);
+    expect(rejected.subcategoryAffinity['t-shirt']!).toBeLessThan(
+      accepted.subcategoryAffinity['t-shirt']!,
+    );
     expect(rejected.rejectCount).toBe(1);
   });
 
@@ -181,7 +254,12 @@ describe('AIOrchestrator — offline (no provider), 10-step flow', () => {
     }
 
     // The three picks are distinct outfits.
-    const signatures = set.recommendations.map((r) => r.garments.map((g) => g.id).sort().join('|'));
+    const signatures = set.recommendations.map((r) =>
+      r.garments
+        .map((g) => g.id)
+        .sort()
+        .join('|'),
+    );
     expect(new Set(signatures).size).toBe(set.recommendations.length);
   });
 });
@@ -191,7 +269,10 @@ describe('AIOrchestrator — provider available adds enrichment without altering
     const repos = await buildWardrobe();
     const request = { message: 'algo para la oficina', occasion: Occasion.Business } as const;
 
-    const offline = await new AIOrchestrator({ ...repos, clock: () => '2026-07-02T09:00:00.000Z' }).recommend(request);
+    const offline = await new AIOrchestrator({
+      ...repos,
+      clock: () => '2026-07-02T09:00:00.000Z',
+    }).recommend(request);
 
     const provider = new FakeTextProvider('fake-llm', true);
     const withProvider = await new AIOrchestrator({
@@ -235,9 +316,16 @@ describe('AIOrchestrator — persistent memory improves future rankings', () => 
     const repos = await buildWardrobe();
     const store = new InMemoryPreferenceMemoryStore();
     const memory = new MemoryEngine(store, () => '2026-07-02T00:00:00.000Z');
-    const orchestrator = new AIOrchestrator({ ...repos, memory, clock: () => '2026-07-02T09:00:00.000Z' });
+    const orchestrator = new AIOrchestrator({
+      ...repos,
+      memory,
+      clock: () => '2026-07-02T09:00:00.000Z',
+    });
 
-    const first = await orchestrator.recommend({ message: 'plan casual', occasion: Occasion.Casual });
+    const first = await orchestrator.recommend({
+      message: 'plan casual',
+      occasion: Occasion.Casual,
+    });
     const comfyFirst = first.recommendations.find((r) => r.kind === 'mas-comoda');
     expect(comfyFirst).toBeDefined();
 
@@ -247,9 +335,20 @@ describe('AIOrchestrator — persistent memory improves future rankings', () => 
     }
     expect(store.saves).toBeGreaterThan(0);
 
-    const second = await orchestrator.recommend({ message: 'plan casual', occasion: Occasion.Casual });
+    const second = await orchestrator.recommend({
+      message: 'plan casual',
+      occasion: Occasion.Casual,
+    });
     const comfySecond = second.recommendations.find(
-      (r) => r.garments.map((g) => g.id).sort().join('|') === comfyFirst!.garments.map((g) => g.id).sort().join('|'),
+      (r) =>
+        r.garments
+          .map((g) => g.id)
+          .sort()
+          .join('|') ===
+        comfyFirst!.garments
+          .map((g) => g.id)
+          .sort()
+          .join('|'),
     );
     expect(comfySecond).toBeDefined();
     expect(comfySecond!.score).toBeGreaterThan(comfyFirst!.score);
@@ -267,9 +366,15 @@ describe('OutfitRankingEngine', () => {
 
     const engine = new OutfitRankingEngine();
     const base = engine.rank([combo], Occasion.Casual, Season.AllSeason, {});
-    const boosted = engine.rank([combo], Occasion.Casual, Season.AllSeason, {}, {
-      affinityBias: () => 0.5,
-    });
+    const boosted = engine.rank(
+      [combo],
+      Occasion.Casual,
+      Season.AllSeason,
+      {},
+      {
+        affinityBias: () => 0.5,
+      },
+    );
     expect(boosted[0]!.finalScore).toBeGreaterThan(base[0]!.finalScore);
     expect(boosted[0]!.baseScore).toBe(base[0]!.baseScore); // domain score unchanged
   });

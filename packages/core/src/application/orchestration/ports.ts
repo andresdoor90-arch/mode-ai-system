@@ -67,7 +67,10 @@ export interface EmbeddingVectorResult {
 export interface IEmbedder {
   readonly id: string;
   readonly dimension: number;
-  embed(inputs: readonly string[], options?: { readonly model?: string }): Promise<EmbeddingVectorResult>;
+  embed(
+    inputs: readonly string[],
+    options?: { readonly model?: string },
+  ): Promise<EmbeddingVectorResult>;
 }
 
 /** A stored vector with arbitrary metadata. */

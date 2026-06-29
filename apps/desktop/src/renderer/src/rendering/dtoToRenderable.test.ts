@@ -9,14 +9,21 @@ const garment = (id: string, category: string, subcategory: string, hex: string)
   name: `${id}-name`,
   category,
   subcategory,
+  categoryId: null,
   color: { hex, name: 'X', category: 'cool', isNeutral: false },
+  secondaryColors: [],
   brand: null,
+  material: null,
   seasons: ['all-season'],
   images: [],
+  photos: [],
   tags: ['t'],
   status: 'available',
   wearCount: 0,
+  formality: 5,
   lastWornAt: null,
+  purchaseDate: null,
+  notes: null,
 });
 
 describe('recommendationToRenderable', () => {
@@ -40,7 +47,11 @@ describe('recommendationToRenderable', () => {
 
 describe('garmentsToRenderable', () => {
   it('maps a loose garment list with an explicit id/label', () => {
-    const outfit = garmentsToRenderable('saved-1', [garment('a', 'shoes', 'sneakers', '#ffffff')], 'Guardado');
+    const outfit = garmentsToRenderable(
+      'saved-1',
+      [garment('a', 'shoes', 'sneakers', '#ffffff')],
+      'Guardado',
+    );
     expect(outfit.id).toBe('saved-1');
     expect(outfit.label).toBe('Guardado');
     expect(outfit.garments[0]?.category).toBe('shoes');

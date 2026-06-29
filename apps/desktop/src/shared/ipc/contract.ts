@@ -10,6 +10,7 @@ import { IpcChannels } from './channels';
 import type {
   AddGarmentPayload,
   AiStatusDTO,
+  AnalyzeGarmentPayload,
   AnnotateHistoryPayload,
   AppInfoDTO,
   CategoryDTO,
@@ -17,10 +18,10 @@ import type {
   CategoryPayload,
   ColorPaletteDTO,
   CreateCategoryPayload,
+  GarmentAnalysisResultDTO,
   GarmentDTO,
   GarmentSearchPayload,
   HistorySearchPayload,
-  OutfitHistoryEntryDTO,
   OutfitHistoryPageDTO,
   OutfitHistoryStatisticsDTO,
   OutfitSuggestionDTO,
@@ -32,6 +33,8 @@ import type {
   RepeatOutfitPayload,
   RepetitionGroupDTO,
   ReorderPayload,
+  SaveImagePayload,
+  SaveImageResultDTO,
   SeasonPayload,
   StyleAnalysisDTO,
   SuggestionsPayload,
@@ -39,6 +42,7 @@ import type {
   ConfirmTagsPayload,
   UpdateCategoryPayload,
   UpdateGarmentPayload,
+  UserProfileDTO,
   WardrobeViewDTO,
 } from './dto';
 
@@ -51,6 +55,10 @@ export type NoPayload = undefined;
  */
 export interface IpcContract {
   [IpcChannels.appGetInfo]: { request: NoPayload; response: AppInfoDTO };
+
+  [IpcChannels.profileGet]: { request: NoPayload; response: UserProfileDTO | null };
+  [IpcChannels.profileCreate]: { request: { name: string }; response: UserProfileDTO };
+  [IpcChannels.profileRename]: { request: { name: string }; response: { ok: true } };
 
   [IpcChannels.wardrobeGet]: { request: NoPayload; response: WardrobeViewDTO };
   [IpcChannels.wardrobeGarmentsByCategory]: {
@@ -73,15 +81,24 @@ export interface IpcContract {
   [IpcChannels.garmentAdd]: { request: AddGarmentPayload; response: { id: string } };
   [IpcChannels.garmentUpdate]: { request: UpdateGarmentPayload; response: { id: string } };
   [IpcChannels.garmentRemove]: { request: { id: string }; response: { id: string } };
-  [IpcChannels.garmentDuplicate]: { request: { id: string; name?: string }; response: { id: string } };
+  [IpcChannels.garmentDuplicate]: {
+    request: { id: string; name?: string };
+    response: { id: string };
+  };
   [IpcChannels.garmentArchive]: { request: { id: string }; response: { id: string } };
   [IpcChannels.garmentRestore]: { request: { id: string }; response: { id: string } };
 
   [IpcChannels.photosAdd]: {
-    request: { garmentId: string; photos: readonly { storageKey: string }[] };
+    request: {
+      garmentId: string;
+      photos: readonly { storageKey: string; attributes?: Readonly<Record<string, string>> }[];
+    };
     response: { photoIds: readonly string[] };
   };
-  [IpcChannels.photoRemove]: { request: { garmentId: string; photoId: string }; response: { ok: true } };
+  [IpcChannels.photoRemove]: {
+    request: { garmentId: string; photoId: string };
+    response: { ok: true };
+  };
   [IpcChannels.photosReorder]: {
     request: { garmentId: string; orderedPhotoIds: readonly string[] };
     response: { ok: true };
@@ -89,10 +106,19 @@ export interface IpcContract {
   [IpcChannels.photoTransform]: { request: PhotoTransformPayload; response: { ok: true } };
 
   [IpcChannels.tagsSuggest]: {
-    request: { garmentId: string; colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[] };
+    request: {
+      garmentId: string;
+      colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[];
+    };
     response: TagSuggestionDTO;
   };
   [IpcChannels.tagsConfirm]: { request: ConfirmTagsPayload; response: { id: string } };
+
+  [IpcChannels.imageSave]: { request: SaveImagePayload; response: SaveImageResultDTO };
+  [IpcChannels.garmentAnalyze]: {
+    request: AnalyzeGarmentPayload;
+    response: GarmentAnalysisResultDTO;
+  };
 
   [IpcChannels.outfitSuggestions]: {
     request: SuggestionsPayload;

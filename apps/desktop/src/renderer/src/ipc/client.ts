@@ -11,12 +11,14 @@
 import type {
   AddGarmentPayload,
   AiStatusDTO,
+  AnalyzeGarmentPayload,
   AppInfoDTO,
   CategoryDTO,
   CategoryNodeDTO,
   ColorPaletteDTO,
   CreateCategoryPayload,
   ConfirmTagsPayload,
+  GarmentAnalysisResultDTO,
   GarmentDTO,
   GarmentSearchPayload,
   IpcResponse,
@@ -25,11 +27,14 @@ import type {
   RecommendationRequestPayload,
   RecommendationSetDTO,
   ReorderPayload,
+  SaveImagePayload,
+  SaveImageResultDTO,
   StyleAnalysisDTO,
   SuggestionsPayload,
   TagSuggestionDTO,
   UpdateCategoryPayload,
   UpdateGarmentPayload,
+  UserProfileDTO,
   WardrobeViewDTO,
 } from '@shared/ipc';
 
@@ -70,6 +75,11 @@ function bridge(): Window['mas'] {
 export const ipc = {
   getAppInfo: (): Promise<AppInfoDTO> => unwrap(bridge().app.getInfo()),
 
+  /* ------------------------------- profile ------------------------------- */
+  getProfile: (): Promise<UserProfileDTO | null> => unwrap(bridge().profile.get()),
+  createProfile: (name: string): Promise<UserProfileDTO> => unwrap(bridge().profile.create(name)),
+  renameProfile: (name: string): Promise<{ ok: true }> => unwrap(bridge().profile.rename(name)),
+
   getWardrobe: (): Promise<WardrobeViewDTO> => unwrap(bridge().wardrobe.get()),
   getGarmentsByCategory: (category: string): Promise<readonly GarmentDTO[]> =>
     unwrap(bridge().wardrobe.garmentsByCategory(category)),
@@ -100,13 +110,12 @@ export const ipc = {
     unwrap(bridge().categories.update(payload)),
   reorderCategories: (payload: ReorderPayload): Promise<{ ok: true }> =>
     unwrap(bridge().categories.reorder(payload)),
-  removeCategory: (id: string): Promise<{ id: string }> =>
-    unwrap(bridge().categories.remove(id)),
+  removeCategory: (id: string): Promise<{ id: string }> => unwrap(bridge().categories.remove(id)),
 
   /* -------------------------------- photos ------------------------------- */
   addPhotos: (
     garmentId: string,
-    photos: readonly { storageKey: string }[],
+    photos: readonly { storageKey: string; attributes?: Readonly<Record<string, string>> }[],
   ): Promise<{ photoIds: readonly string[] }> => unwrap(bridge().photos.add(garmentId, photos)),
   removePhoto: (garmentId: string, photoId: string): Promise<{ ok: true }> =>
     unwrap(bridge().photos.remove(garmentId, photoId)),
@@ -114,6 +123,15 @@ export const ipc = {
     unwrap(bridge().photos.reorder(garmentId, orderedPhotoIds)),
   transformPhoto: (payload: PhotoTransformPayload): Promise<{ ok: true }> =>
     unwrap(bridge().photos.transform(payload)),
+
+  /* --------------------------- images / vision --------------------------- */
+  saveImage: (payload: SaveImagePayload): Promise<SaveImageResultDTO> =>
+    unwrap(bridge().images.save(payload)),
+  /** Renderable URL for a stored image key (empty string when no bridge). */
+  imageUrl: (storageKey: string): string =>
+    isBridgeAvailable() ? window.mas.images.url(storageKey) : '',
+  analyzeGarment: (payload: AnalyzeGarmentPayload): Promise<GarmentAnalysisResultDTO> =>
+    unwrap(bridge().analysis.analyze(payload)),
 
   /* ------------------------------- tagging ------------------------------- */
   suggestTags: (
@@ -123,13 +141,11 @@ export const ipc = {
   confirmTags: (payload: ConfirmTagsPayload): Promise<{ id: string }> =>
     unwrap(bridge().tags.confirm(payload)),
 
-  getOutfitSuggestions: (
-    payload: SuggestionsPayload,
-  ): Promise<readonly OutfitSuggestionDTO[]> => unwrap(bridge().outfits.suggestions(payload)),
+  getOutfitSuggestions: (payload: SuggestionsPayload): Promise<readonly OutfitSuggestionDTO[]> =>
+    unwrap(bridge().outfits.suggestions(payload)),
 
-  getRecommendations: (
-    payload: RecommendationRequestPayload,
-  ): Promise<RecommendationSetDTO> => unwrap(bridge().ai.recommend(payload)),
+  getRecommendations: (payload: RecommendationRequestPayload): Promise<RecommendationSetDTO> =>
+    unwrap(bridge().ai.recommend(payload)),
   getAiStatus: (): Promise<AiStatusDTO> => unwrap(bridge().ai.status()),
 
   getStyleAnalysis: (): Promise<StyleAnalysisDTO> => unwrap(bridge().style.analysis()),

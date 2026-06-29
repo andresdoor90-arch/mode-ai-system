@@ -49,14 +49,13 @@ export class GetGarmentsByCategoryQuery implements Query<readonly Garment[]> {
   public constructor(public readonly category: string) {}
 }
 
-export class GetGarmentsByCategoryHandler
-  implements RequestHandler<GetGarmentsByCategoryQuery, readonly Garment[]>
-{
+export class GetGarmentsByCategoryHandler implements RequestHandler<
+  GetGarmentsByCategoryQuery,
+  readonly Garment[]
+> {
   public constructor(private readonly garments: IGarmentRepository) {}
 
-  public async handle(
-    query: GetGarmentsByCategoryQuery,
-  ): Promise<Result<readonly Garment[]>> {
+  public async handle(query: GetGarmentsByCategoryQuery): Promise<Result<readonly Garment[]>> {
     const result = await this.garments.findByCategory(query.category);
     return ok(result);
   }
@@ -74,14 +73,13 @@ export class GetSeasonalWardrobeQuery implements Query<readonly Garment[]> {
   public constructor(public readonly season: Season) {}
 }
 
-export class GetSeasonalWardrobeHandler
-  implements RequestHandler<GetSeasonalWardrobeQuery, readonly Garment[]>
-{
+export class GetSeasonalWardrobeHandler implements RequestHandler<
+  GetSeasonalWardrobeQuery,
+  readonly Garment[]
+> {
   public constructor(private readonly garments: IGarmentRepository) {}
 
-  public async handle(
-    query: GetSeasonalWardrobeQuery,
-  ): Promise<Result<readonly Garment[]>> {
+  public async handle(query: GetSeasonalWardrobeQuery): Promise<Result<readonly Garment[]>> {
     const all = await this.garments.findAll();
     return ok(all.filter((g) => g.supportsSeason(query.season)));
   }

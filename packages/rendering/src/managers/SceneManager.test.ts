@@ -47,9 +47,7 @@ describe('SceneManager', () => {
     const again = sm.setOutfit(casualOutfit);
     expect(again.cacheKey).toBe(first.cacheKey);
     // same dressed layers reused
-    expect(again.layers.map((l) => l.garmentId)).toEqual(
-      first.layers.map((l) => l.garmentId),
-    );
+    expect(again.layers.map((l) => l.garmentId)).toEqual(first.layers.map((l) => l.garmentId));
   });
 
   it('rotates 360 and updates the camera without losing the outfit', () => {

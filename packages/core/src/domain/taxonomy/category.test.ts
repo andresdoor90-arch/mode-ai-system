@@ -42,9 +42,7 @@ describe('CategoryMetadata', () => {
 
 describe('Category aggregate', () => {
   it('creates a user-defined category (no hardcoding) with a derived slug', () => {
-    const c = unwrap(
-      Category.create(toId('c1'), { name: 'Relojes', metadata: { formality: 6 } }),
-    );
+    const c = unwrap(Category.create(toId('c1'), { name: 'Relojes', metadata: { formality: 6 } }));
     expect(c.slug).toBe('relojes');
     expect(c.isSubcategory).toBe(false);
     expect(c.seeded).toBe(false);
@@ -58,9 +56,7 @@ describe('Category aggregate', () => {
 
   it('supports nesting (subcategories), grouping and reordering', () => {
     const parent = unwrap(Category.create(toId('p'), { name: 'Camisas' }));
-    const child = unwrap(
-      Category.create(toId('ch'), { name: 'Manga Larga', parentId: parent.id }),
-    );
+    const child = unwrap(Category.create(toId('ch'), { name: 'Manga Larga', parentId: parent.id }));
     expect(child.isSubcategory).toBe(true);
     child.regroup('Formal');
     expect(child.group).toBe('Formal');
@@ -100,7 +96,7 @@ describe('default taxonomy seed/migration', () => {
     const tree = buildCategoryTree(seeded);
     expect(tree.length).toBe(6);
     const tops = tree.find((n) => n.category.slug === 'tops');
-    expect((tops?.children.length ?? 0)).toBeGreaterThan(0);
+    expect(tops?.children.length ?? 0).toBeGreaterThan(0);
     // children are sorted by order
     const orders = tops!.children.map((c) => c.order);
     expect([...orders]).toEqual([...orders].sort((a, b) => a - b));

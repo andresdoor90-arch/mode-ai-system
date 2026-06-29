@@ -13,15 +13,7 @@
  * the garments automatically.
  */
 import { Suspense, useEffect, useMemo } from 'react';
-import {
-  Camera,
-  RotateCcw,
-  RotateCw,
-  Maximize,
-  Sparkles,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react';
+import { Camera, RotateCcw, RotateCw, Maximize, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
 
 import { PageHeader } from '../components/common/PageHeader';
 import {
@@ -87,7 +79,8 @@ export function VirtualTryOnPage(): JSX.Element {
 
   const currentRecommendation = current();
   const outfit = useMemo(
-    () => (currentRecommendation !== null ? recommendationToRenderable(currentRecommendation) : null),
+    () =>
+      currentRecommendation !== null ? recommendationToRenderable(currentRecommendation) : null,
     [currentRecommendation],
   );
 
@@ -122,10 +115,20 @@ export function VirtualTryOnPage(): JSX.Element {
               {/* Floating camera controls. */}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4">
                 <div className="pointer-events-auto mx-auto flex flex-wrap items-center justify-center gap-1.5 rounded-full border border-border bg-background/85 px-2 py-1.5 shadow-lg backdrop-blur">
-                  <Button variant="ghost" size="icon" title="Rotar a la izquierda" onClick={() => controls.rotate(-ROTATE_STEP)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Rotar a la izquierda"
+                    onClick={() => controls.rotate(-ROTATE_STEP)}
+                  >
                     <RotateCcw className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" title="Rotar a la derecha" onClick={() => controls.rotate(ROTATE_STEP)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Rotar a la derecha"
+                    onClick={() => controls.rotate(ROTATE_STEP)}
+                  >
                     <RotateCw className="h-4 w-4" />
                   </Button>
                   <span className="mx-1 h-5 w-px bg-border" />
@@ -136,7 +139,12 @@ export function VirtualTryOnPage(): JSX.Element {
                     <ZoomOut className="h-4 w-4" />
                   </Button>
                   <span className="mx-1 h-5 w-px bg-border" />
-                  <Button variant="ghost" size="icon" title="Restablecer cámara" onClick={controls.reset}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Restablecer cámara"
+                    onClick={controls.reset}
+                  >
                     <Maximize className="h-4 w-4" />
                   </Button>
                 </div>
@@ -221,7 +229,12 @@ export function VirtualTryOnPage(): JSX.Element {
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {LIGHTING.map((light) => (
-                  <Button key={light.id} variant="outline" size="sm" onClick={() => controls.setLighting(light.id)}>
+                  <Button
+                    key={light.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => controls.setLighting(light.id)}
+                  >
                     {light.label}
                   </Button>
                 ))}

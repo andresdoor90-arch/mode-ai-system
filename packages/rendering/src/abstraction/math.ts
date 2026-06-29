@@ -41,8 +41,7 @@ export const toRadians = (deg: number): number => (deg * Math.PI) / 180;
 export const toDegrees = (rad: number): number => (rad * 180) / Math.PI;
 
 /** Linear interpolation between `a` and `b` by `t` (t is clamped to [0,1]). */
-export const lerp = (a: number, b: number, t: number): number =>
-  a + (b - a) * clamp(t, 0, 1);
+export const lerp = (a: number, b: number, t: number): number => a + (b - a) * clamp(t, 0, 1);
 
 /** Round a number to `decimals` places (default 4) for stable comparisons. */
 export const round = (value: number, decimals = 4): number => {

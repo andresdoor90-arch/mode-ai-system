@@ -1,11 +1,6 @@
 import { type Result, err } from '../../shared/Result';
 import { HandlerNotFoundError } from '../../shared/errors';
-import {
-  type Message,
-  type RequestHandler,
-  type Middleware,
-  type HandlerFn,
-} from './types';
+import { type Message, type RequestHandler, type Middleware, type HandlerFn } from './types';
 
 /**
  * A pure, in-memory message bus. Routes a message to its registered handler,

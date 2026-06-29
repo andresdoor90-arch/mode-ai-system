@@ -10,7 +10,11 @@ describe('addToast', () => {
   });
 
   it('preserves description and explicit variant', () => {
-    const result = addToast([], { title: 'Oops', description: 'Failed', variant: 'destructive' }, 't2');
+    const result = addToast(
+      [],
+      { title: 'Oops', description: 'Failed', variant: 'destructive' },
+      't2',
+    );
     expect(result[0]).toEqual({
       id: 't2',
       title: 'Oops',

@@ -19,6 +19,7 @@ import {
   ArchiveGarmentCommand,
   ConfirmGarmentTagsCommand,
   CreateCategoryCommand,
+  CreateProfileCommand,
   Color,
   DeleteCategoryCommand,
   DuplicateGarmentCommand,
@@ -32,6 +33,7 @@ import {
   GetRecentRepetitionsQuery,
   GetStyleAnalysisQuery,
   GetWardrobeQuery,
+  GetCurrentProfileQuery,
   RecommendOutfitsQuery,
   RecordOutfitFeedbackCommand,
   RecordOutfitUsageCommand,
@@ -47,6 +49,7 @@ import {
   TransformPhotoCommand,
   UpdateCategoryCommand,
   UpdateGarmentCommand,
+  UpdateProfileCommand,
   toId,
   type CategoryId,
   type OutfitUsageContext,
@@ -110,6 +113,34 @@ export function registerIpcHandlers(container: AppContainer): void {
     }),
   );
 
+  /* -------------------------------- profile ------------------------------- */
+  handle(IpcChannels.profileGet, async () => {
+    const result = await queries.ask(new GetCurrentProfileQuery());
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    const profile = result.value;
+    return ipcSuccess(profile === null ? null : { id: String(profile.id), name: profile.name });
+  });
+
+  handle(IpcChannels.profileCreate, async (_event, payload) => {
+    const { name } = payload as { name: string };
+    const result = await commands.send(new CreateProfileCommand({ name }));
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id: String(result.value), name: name.trim() });
+  });
+
+  handle(IpcChannels.profileRename, async (_event, payload) => {
+    const { name } = payload as { name: string };
+    const result = await commands.send(new UpdateProfileCommand({ name }));
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ ok: true as const });
+  });
+
   /* -------------------------------- wardrobe ------------------------------ */
   handle(IpcChannels.wardrobeGet, async () => {
     const result = await queries.ask(new GetWardrobeQuery());
@@ -159,6 +190,7 @@ export function registerIpcHandlers(container: AppContainer): void {
       colorName?: string;
       tags?: readonly string[];
       status?: GarmentStatusDTO;
+      favorite?: boolean;
     };
     const result = await commands.send(
       new UpdateGarmentCommand({
@@ -166,6 +198,7 @@ export function registerIpcHandlers(container: AppContainer): void {
         ...(p.name !== undefined ? { name: p.name } : {}),
         ...(p.tags !== undefined ? { tags: [...p.tags] } : {}),
         ...(p.status !== undefined ? { status: p.status as never } : {}),
+        ...(p.favorite !== undefined ? { favorite: p.favorite } : {}),
       }),
     );
     if (!result.ok) {
@@ -185,9 +218,7 @@ export function registerIpcHandlers(container: AppContainer): void {
 
   handle(IpcChannels.garmentDuplicate, async (_event, payload) => {
     const { id, name } = payload as { id: string; name?: string };
-    const result = await commands.send(
-      new DuplicateGarmentCommand(toId<'Garment'>(id), name),
-    );
+    const result = await commands.send(new DuplicateGarmentCommand(toId<'Garment'>(id), name));
     if (!result.ok) {
       return ipcFailure(toIpcError(result.error));
     }
@@ -330,9 +361,18 @@ export function registerIpcHandlers(container: AppContainer): void {
 
   /* -------------------------------- photos -------------------------------- */
   handle(IpcChannels.photosAdd, async (_event, payload) => {
-    const p = payload as { garmentId: string; photos: readonly { storageKey: string }[] };
+    const p = payload as {
+      garmentId: string;
+      photos: readonly { storageKey: string; attributes?: Record<string, string> }[];
+    };
     const result = await commands.send(
-      new AddPhotosCommand(toId<'Garment'>(p.garmentId), p.photos.map((ph) => ({ storageKey: ph.storageKey }))),
+      new AddPhotosCommand(
+        toId<'Garment'>(p.garmentId),
+        p.photos.map((ph) => ({
+          storageKey: ph.storageKey,
+          ...(ph.attributes !== undefined ? { attributes: ph.attributes } : {}),
+        })),
+      ),
     );
     if (!result.ok) {
       return ipcFailure(toIpcError(result.error));
@@ -416,6 +456,7 @@ export function registerIpcHandlers(container: AppContainer): void {
   handle(IpcChannels.tagsConfirm, async (_event, payload) => {
     const p = payload as {
       garmentId: string;
+      name?: string;
       category?: string;
       subcategory?: string;
       categoryId?: string;
@@ -424,6 +465,7 @@ export function registerIpcHandlers(container: AppContainer): void {
       material?: string;
       seasons?: readonly string[];
       tags?: readonly string[];
+      metadataPatch?: Record<string, string>;
     };
     const primary = p.primaryColorHex !== undefined ? Color.fromHex(p.primaryColorHex) : undefined;
     if (primary !== undefined && !primary.ok) {
@@ -436,6 +478,7 @@ export function registerIpcHandlers(container: AppContainer): void {
     const result = await commands.send(
       new ConfirmGarmentTagsCommand({
         garmentId: toId<'Garment'>(p.garmentId),
+        ...(p.name !== undefined ? { name: p.name } : {}),
         ...(p.category !== undefined ? { category: p.category } : {}),
         ...(p.subcategory !== undefined ? { subcategory: p.subcategory } : {}),
         ...(p.categoryId !== undefined ? { categoryId: p.categoryId as CategoryId } : {}),
@@ -444,6 +487,7 @@ export function registerIpcHandlers(container: AppContainer): void {
         ...(p.material !== undefined ? { material: p.material } : {}),
         ...(p.seasons !== undefined ? { seasons: p.seasons.map(toSeason) } : {}),
         ...(p.tags !== undefined ? { tags: p.tags } : {}),
+        ...(p.metadataPatch !== undefined ? { metadataPatch: p.metadataPatch } : {}),
       }),
     );
     if (!result.ok) {
@@ -452,7 +496,52 @@ export function registerIpcHandlers(container: AppContainer): void {
     return ipcSuccess({ id: p.garmentId });
   });
 
-  /* -------------------------------- outfits ------------------------------- */
+  /* --------------------------- images / vision ---------------------------- */
+  handle(IpcChannels.imageSave, async (_event, payload) => {
+    const p = payload as {
+      dataBase64: string;
+      mimeType: string;
+      extension: string;
+      originalName?: string;
+      thumbnailBase64?: string;
+    };
+    const original = new Uint8Array(Buffer.from(p.dataBase64, 'base64'));
+    const meta = await container.images.saveImage(original, {
+      extension: p.extension,
+      contentType: p.mimeType,
+      ...(p.originalName !== undefined ? { originalName: p.originalName } : {}),
+    });
+    let thumbnailKey: string | null = null;
+    if (p.thumbnailBase64 !== undefined && p.thumbnailBase64.length > 0) {
+      const thumb = new Uint8Array(Buffer.from(p.thumbnailBase64, 'base64'));
+      const tmeta = await container.images.saveImage(thumb, {
+        extension: 'webp',
+        contentType: 'image/webp',
+      });
+      thumbnailKey = tmeta.key;
+    }
+    return ipcSuccess({ storageKey: meta.key, thumbnailKey });
+  });
+
+  handle(IpcChannels.garmentAnalyze, async (_event, payload) => {
+    const p = payload as {
+      colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[];
+      freeText?: string;
+      storageKey?: string;
+      previous?: unknown;
+    };
+    const input = {
+      ...(p.colorSamples !== undefined ? { colorSamples: p.colorSamples } : {}),
+      ...(p.freeText !== undefined ? { freeText: p.freeText } : {}),
+      ...(p.storageKey !== undefined ? { image: { storageKey: p.storageKey } } : {}),
+    };
+    const result =
+      p.previous !== undefined && p.previous !== null
+        ? await container.analysis.reanalyze(input, p.previous as never)
+        : await container.analysis.analyze(input);
+    // VisionAnalysisResult is structurally identical to GarmentAnalysisResultDTO.
+    return ipcSuccess(result as never);
+  });
   handle(IpcChannels.outfitSuggestions, async (_event, payload) => {
     const p = payload as { occasion: string; season: string; limit?: number };
     const result = await queries.ask(

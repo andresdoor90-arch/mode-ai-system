@@ -48,12 +48,19 @@ export function GarmentsPage(): JSX.Element {
 
   return (
     <div>
-      <PageHeader title="Prendas" description={`Vista detallada de ${pluralize(garments.length, 'prenda')}`} />
+      <PageHeader
+        title="Prendas"
+        description={`Vista detallada de ${pluralize(garments.length, 'prenda')}`}
+      />
 
       {loading && !loaded ? (
         <Skeleton className="h-96" />
       ) : garments.length === 0 ? (
-        <EmptyState icon={Tag} title="No hay prendas" description="Añade prendas desde el guardarropa." />
+        <EmptyState
+          icon={Tag}
+          title="No hay prendas"
+          description="Añade prendas desde el guardarropa."
+        />
       ) : (
         <Card>
           <Table>
@@ -83,7 +90,9 @@ export function GarmentsPage(): JSX.Element {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{garment.brand ?? '—'}</TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_VARIANT[garment.status]}>{titleCase(garment.status)}</Badge>
+                    <Badge variant={STATUS_VARIANT[garment.status]}>
+                      {titleCase(garment.status)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-foreground">
                     {garment.wearCount}

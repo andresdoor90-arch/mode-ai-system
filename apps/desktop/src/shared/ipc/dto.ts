@@ -49,9 +49,13 @@ export interface GarmentDTO {
   readonly status: GarmentStatusDTO;
   readonly wearCount: number;
   readonly formality: number;
+  /** Whether the user marked this garment as a favourite. */
+  readonly favorite?: boolean;
   readonly lastWornAt: string | null;
   readonly purchaseDate: string | null;
   readonly notes: string | null;
+  /** Rich, photo-analysis-derived attributes (pattern, sleeve, style, …). */
+  readonly metadata?: Readonly<Record<string, string>>;
 }
 
 /** A single garment photograph with its non-destructive transform metadata. */
@@ -60,9 +64,16 @@ export interface PhotoDTO {
   readonly storageKey: string;
   readonly order: number;
   readonly rotation: number;
-  readonly crop: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  readonly crop: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
   readonly isPrimary: boolean;
   readonly stage: string;
+  /** Forward-compatible extension bag (e.g. `thumbnailKey`, width, height). */
+  readonly attributes?: Readonly<Record<string, string>>;
 }
 
 /** System metadata carried by a category (mirrors the domain VO). */
@@ -189,6 +200,12 @@ export interface ColorPaletteDTO {
   readonly colors: readonly ColorDTO[];
 }
 
+/** The current user's profile crossing the IPC boundary. */
+export interface UserProfileDTO {
+  readonly id: string;
+  readonly name: string;
+}
+
 export interface AppInfoDTO {
   readonly name: string;
   readonly version: string;
@@ -211,10 +228,14 @@ export interface AddGarmentPayload {
   readonly categoryId?: string;
   readonly colorHex: string;
   readonly colorName?: string;
+  readonly secondaryColorHexes?: readonly string[];
   readonly seasons: readonly string[];
   readonly brand?: string;
   readonly material?: string;
   readonly tags?: readonly string[];
+  readonly notes?: string;
+  /** Rich analysis-derived attributes persisted on the garment. */
+  readonly metadata?: Readonly<Record<string, string>>;
 }
 
 export interface UpdateGarmentPayload {
@@ -224,6 +245,7 @@ export interface UpdateGarmentPayload {
   readonly colorName?: string;
   readonly tags?: readonly string[];
   readonly status?: GarmentStatusDTO;
+  readonly favorite?: boolean;
 }
 
 export interface SuggestionsPayload {
@@ -295,12 +317,18 @@ export interface PhotoTransformPayload {
   readonly garmentId: string;
   readonly photoId: string;
   readonly rotation?: number;
-  readonly crop?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  readonly crop?: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
   readonly setPrimary?: boolean;
 }
 
 export interface ConfirmTagsPayload {
   readonly garmentId: string;
+  readonly name?: string;
   readonly category?: string;
   readonly subcategory?: string;
   readonly categoryId?: string;
@@ -309,6 +337,7 @@ export interface ConfirmTagsPayload {
   readonly material?: string;
   readonly seasons?: readonly string[];
   readonly tags?: readonly string[];
+  readonly metadataPatch?: Readonly<Record<string, string>>;
 }
 
 /* ------------------------- Phase 7 outfit history ------------------------- */
@@ -414,4 +443,91 @@ export interface HistorySearchPayload {
   readonly sortDirection?: 'asc' | 'desc';
   readonly page?: number;
   readonly pageSize?: number;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Photo-first vision analysis (Increment 2)                                  */
+/* -------------------------------------------------------------------------- */
+
+/** Provenance of an analysed value. Mirrors the core `AnalysisSource`. */
+export type AnalysisSourceDTO = 'baseline' | 'vision' | 'user';
+
+/** A single analysed value with provenance + confidence (mirrors core). */
+export interface AnalyzedFieldDTO<T> {
+  readonly value: T;
+  readonly confidence: number;
+  readonly source: AnalysisSourceDTO;
+}
+
+/**
+ * The full rich analysis crossing the IPC boundary. Every field is optional:
+ * an absent field means "not determined" and is rendered empty, never guessed.
+ * Structurally identical to the core `GarmentAnalysis`.
+ */
+export interface GarmentAnalysisDTO {
+  readonly suggestedName?: AnalyzedFieldDTO<string>;
+  readonly garmentType?: AnalyzedFieldDTO<string>;
+  readonly category?: AnalyzedFieldDTO<string>;
+  readonly subcategory?: AnalyzedFieldDTO<string>;
+  readonly primaryColor?: AnalyzedFieldDTO<string>;
+  readonly primaryColorName?: AnalyzedFieldDTO<string>;
+  readonly secondaryColors?: AnalyzedFieldDTO<readonly string[]>;
+  readonly material?: AnalyzedFieldDTO<string>;
+  readonly pattern?: AnalyzedFieldDTO<string>;
+  readonly texture?: AnalyzedFieldDTO<string>;
+  readonly sleeve?: AnalyzedFieldDTO<string>;
+  readonly length?: AnalyzedFieldDTO<string>;
+  readonly neckline?: AnalyzedFieldDTO<string>;
+  readonly fit?: AnalyzedFieldDTO<string>;
+  readonly style?: AnalyzedFieldDTO<string>;
+  readonly formality?: AnalyzedFieldDTO<number>;
+  readonly season?: AnalyzedFieldDTO<string>;
+  readonly gender?: AnalyzedFieldDTO<string>;
+  readonly occasions?: AnalyzedFieldDTO<readonly string[]>;
+  readonly suggestedTags?: AnalyzedFieldDTO<readonly string[]>;
+  readonly compatibleCategories?: AnalyzedFieldDTO<readonly string[]>;
+}
+
+/** The merged analysis plus diagnostics about how it was produced. */
+export interface GarmentAnalysisResultDTO {
+  readonly analysis: GarmentAnalysisDTO;
+  readonly providers: readonly string[];
+  readonly visionAvailable: boolean;
+  readonly overallConfidence: number;
+  readonly populatedFields: number;
+}
+
+/** A sampled pixel for the offline colour baseline. */
+export interface RgbSampleDTO {
+  readonly r: number;
+  readonly g: number;
+  readonly b: number;
+  readonly weight?: number;
+}
+
+/** Request to analyse a garment photo. */
+export interface AnalyzeGarmentPayload {
+  readonly colorSamples?: readonly RgbSampleDTO[];
+  readonly freeText?: string;
+  readonly storageKey?: string;
+  /** Prior analysis to preserve compatible manual edits (photo replacement). */
+  readonly previous?: GarmentAnalysisDTO;
+}
+
+/** Request to persist image bytes (original + optional thumbnail). */
+export interface SaveImagePayload {
+  /** Base64 of the original image bytes. */
+  readonly dataBase64: string;
+  readonly mimeType: string;
+  /** File extension without the dot (png/jpg/webp/…). */
+  readonly extension: string;
+  readonly originalName?: string;
+  /** Base64 of a pre-rendered optimized thumbnail (WebP). */
+  readonly thumbnailBase64?: string;
+}
+
+/** Result of persisting an image: the keys used to reference it. */
+export interface SaveImageResultDTO {
+  readonly storageKey: string;
+  readonly thumbnailKey: string | null;
 }

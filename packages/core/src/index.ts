@@ -98,6 +98,7 @@ export * from './application/queries/styleQueries';
 export * from './application/queries/suggestionQueries';
 export * from './application/queries/recommendationQueries';
 export * from './application/queries/historyQueries';
+export * from './application/queries/profileQueries';
 
 /* ----------------------------- outfit history ----------------------------- */
 export * from './application/history/OutfitHistoryService';
@@ -109,6 +110,13 @@ export * from './application/orchestration';
 export * from './application/tagging/ports';
 export * from './application/tagging/BaselineColorExtractor';
 export * from './application/tagging/DeferredVisionTagSuggester';
+
+/* --------------- vision analysis (photo-first, provider-agnostic) --------- */
+export * from './application/analysis/visionPorts';
+export * from './application/analysis/colorNaming';
+export * from './application/analysis/BaselineVisionProvider';
+export * from './application/analysis/HintRefiner';
+export * from './application/analysis/GarmentAnalysisService';
 
 /* ------------------------------ photo pipeline ---------------------------- */
 export * from './application/photos/pipeline';

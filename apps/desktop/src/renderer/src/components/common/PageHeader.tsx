@@ -14,9 +14,19 @@ export interface PageHeaderProps {
   className?: string;
 }
 
-export function PageHeader({ title, description, actions, className }: PageHeaderProps): JSX.Element {
+export function PageHeader({
+  title,
+  description,
+  actions,
+  className,
+}: PageHeaderProps): JSX.Element {
   return (
-    <div className={cn('mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between', className)}>
+    <div
+      className={cn(
+        'mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between',
+        className,
+      )}
+    >
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description !== undefined && (

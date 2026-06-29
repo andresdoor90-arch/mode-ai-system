@@ -38,9 +38,7 @@ export class CompatibilityChecker {
 
     const sdkRange = manifest.engines.sdk;
     if (sdkRange !== undefined && !satisfies(this.env.sdkVersion, sdkRange)) {
-      reasons.push(
-        `Requires plugin SDK "${sdkRange}" but SDK is ${this.env.sdkVersion}.`,
-      );
+      reasons.push(`Requires plugin SDK "${sdkRange}" but SDK is ${this.env.sdkVersion}.`);
     }
 
     return reasons.length === 0 ? { ok: true } : { ok: false, reasons };

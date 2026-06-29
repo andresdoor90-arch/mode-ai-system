@@ -1,9 +1,4 @@
-import {
-  type RuleCondition,
-  type RuleRecommendation,
-  StyleRule,
-  toId,
-} from '@mas/core';
+import { type RuleCondition, type RuleRecommendation, StyleRule, toId } from '@mas/core';
 
 import { mustOk, parseJson, toBool, toJson } from './mapperUtils';
 

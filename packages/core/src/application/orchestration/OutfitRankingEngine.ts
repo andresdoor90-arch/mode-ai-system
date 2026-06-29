@@ -101,10 +101,7 @@ export class OutfitRankingEngine {
     return ranked;
   }
 
-  private semanticFor(
-    garments: readonly Garment[],
-    scores?: ReadonlyMap<string, number>,
-  ): number {
+  private semanticFor(garments: readonly Garment[], scores?: ReadonlyMap<string, number>): number {
     if (scores === undefined || scores.size === 0) {
       return 0;
     }

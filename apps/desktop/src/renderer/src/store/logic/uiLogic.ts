@@ -30,11 +30,7 @@ export const TOAST_LIMIT = 4;
  * Append a toast to the queue, assigning it `id`, defaulting its variant, and
  * trimming the queue to {@link TOAST_LIMIT} (keeping the most recent).
  */
-export function addToast(
-  toasts: readonly Toast[],
-  input: ToastInput,
-  id: string,
-): Toast[] {
+export function addToast(toasts: readonly Toast[], input: ToastInput, id: string): Toast[] {
   const toast: Toast = {
     id,
     title: input.title,

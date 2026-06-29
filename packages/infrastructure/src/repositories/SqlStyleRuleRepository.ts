@@ -1,16 +1,8 @@
-import {
-  type IStyleRuleRepository,
-  type StyleRule,
-  type StyleRuleId,
-} from '@mas/core';
+import { type IStyleRuleRepository, type StyleRule, type StyleRuleId } from '@mas/core';
 
 import { DatabaseError, wrapSync } from '../errors/InfrastructureError';
 import { type SqlDatabase } from '../database/SqlDatabase';
-import {
-  type StyleRuleRow,
-  styleRuleToDomain,
-  styleRuleToRow,
-} from './mappers/styleRuleMapper';
+import { type StyleRuleRow, styleRuleToDomain, styleRuleToRow } from './mappers/styleRuleMapper';
 
 /** SQLite-backed {@link IStyleRuleRepository}. */
 export class SqlStyleRuleRepository implements IStyleRuleRepository {

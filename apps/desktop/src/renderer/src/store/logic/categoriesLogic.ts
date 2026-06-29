@@ -25,9 +25,7 @@ export function buildTree(categories: readonly CategoryDTO[]): CategoryNodeDTO[]
 }
 
 /** Group top-level categories by their `group` label (for grouped display). */
-export function groupRoots(
-  categories: readonly CategoryDTO[],
-): Record<string, CategoryDTO[]> {
+export function groupRoots(categories: readonly CategoryDTO[]): Record<string, CategoryDTO[]> {
   const groups: Record<string, CategoryDTO[]> = {};
   for (const c of categories) {
     if (c.parentId !== null) {

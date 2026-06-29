@@ -12,9 +12,7 @@ import { type Result, ok } from '../../shared/Result';
 import { NotFoundError } from '../../shared/errors';
 import { Category, type CreateCategoryInput } from '../../domain/entities/Category';
 import { type ICategoryRepository } from '../../domain/repositories/ICategoryRepository';
-import {
-  type CategoryMetadataInput,
-} from '../../domain/value-objects/CategoryMetadata';
+import { type CategoryMetadataInput } from '../../domain/value-objects/CategoryMetadata';
 import { WardrobeEvents } from '../../domain/events/wardrobeEvents';
 import { buildDefaultTaxonomy } from '../../domain/taxonomy/defaultTaxonomy';
 import { type Command, type RequestHandler } from '../bus/types';
@@ -29,9 +27,7 @@ export class CreateCategoryCommand implements Command<CategoryId> {
   public constructor(public readonly input: Omit<CreateCategoryInput, 'seeded'>) {}
 }
 
-export class CreateCategoryHandler
-  implements RequestHandler<CreateCategoryCommand, CategoryId>
-{
+export class CreateCategoryHandler implements RequestHandler<CreateCategoryCommand, CategoryId> {
   public constructor(
     private readonly categories: ICategoryRepository,
     private readonly ids: IdGenerator,
@@ -116,9 +112,7 @@ export class ReorderCategoriesCommand implements Command<void> {
   public constructor(public readonly orderedIds: readonly CategoryId[]) {}
 }
 
-export class ReorderCategoriesHandler
-  implements RequestHandler<ReorderCategoriesCommand, void>
-{
+export class ReorderCategoriesHandler implements RequestHandler<ReorderCategoriesCommand, void> {
   public constructor(
     private readonly categories: ICategoryRepository,
     private readonly events?: IDomainEventPublisher,
@@ -190,9 +184,10 @@ export class SeedDefaultTaxonomyCommand implements Command<number> {
   public readonly type = SEED_DEFAULT_TAXONOMY;
 }
 
-export class SeedDefaultTaxonomyHandler
-  implements RequestHandler<SeedDefaultTaxonomyCommand, number>
-{
+export class SeedDefaultTaxonomyHandler implements RequestHandler<
+  SeedDefaultTaxonomyCommand,
+  number
+> {
   public constructor(
     private readonly categories: ICategoryRepository,
     private readonly ids: IdGenerator,

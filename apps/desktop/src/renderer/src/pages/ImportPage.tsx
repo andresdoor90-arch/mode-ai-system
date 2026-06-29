@@ -39,7 +39,11 @@ export function ImportPage(): JSX.Element {
 
   const handleImport = async (): Promise<void> => {
     if (content.trim().length === 0) {
-      toast({ title: 'Nada que importar', description: 'Selecciona un archivo o pega su contenido.', variant: 'warning' });
+      toast({
+        title: 'Nada que importar',
+        description: 'Selecciona un archivo o pega su contenido.',
+        variant: 'warning',
+      });
       return;
     }
     if (!isBridgeAvailable()) {
@@ -88,7 +92,12 @@ export function ImportPage(): JSX.Element {
             <Download className="h-6 w-6 text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">Selecciona un archivo .json</span>
             <span className="text-xs text-muted-foreground">o pega el contenido abajo</span>
-            <input type="file" accept="application/json,.json" className="hidden" onChange={onFile} />
+            <input
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={onFile}
+            />
           </label>
 
           <Textarea

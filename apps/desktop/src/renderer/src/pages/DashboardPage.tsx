@@ -87,7 +87,9 @@ export function DashboardPage(): JSX.Element {
               <Sparkles className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-foreground">Motor de IA todavía no configurado</p>
+              <p className="text-sm font-semibold text-foreground">
+                Motor de IA todavía no configurado
+              </p>
               <p className="text-sm text-muted-foreground">
                 Las recomendaciones inteligentes llegarán en una fase posterior. Por ahora se usan
                 sugerencias basadas en reglas.
@@ -105,10 +107,30 @@ export function DashboardPage(): JSX.Element {
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)
         ) : (
           <>
-            <StatCard label="Prendas totales" value={stats.total} icon={Shirt} hint="En tu guardarropa" />
-            <StatCard label="Categorías" value={stats.categories} icon={Layers} hint="Tipos de prenda" />
-            <StatCard label="Disponibles" value={stats.available} icon={Star} hint="Listas para usar" />
-            <StatCard label="Uso medio" value={stats.avgWear} icon={CalendarClock} hint="Veces por prenda" />
+            <StatCard
+              label="Prendas totales"
+              value={stats.total}
+              icon={Shirt}
+              hint="En tu guardarropa"
+            />
+            <StatCard
+              label="Categorías"
+              value={stats.categories}
+              icon={Layers}
+              hint="Tipos de prenda"
+            />
+            <StatCard
+              label="Disponibles"
+              value={stats.available}
+              icon={Star}
+              hint="Listas para usar"
+            />
+            <StatCard
+              label="Uso medio"
+              value={stats.avgWear}
+              icon={CalendarClock}
+              hint="Veces por prenda"
+            />
           </>
         )}
       </div>

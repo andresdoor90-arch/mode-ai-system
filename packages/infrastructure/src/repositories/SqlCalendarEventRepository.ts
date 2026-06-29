@@ -1,8 +1,4 @@
-import {
-  type CalendarEvent,
-  type CalendarEventId,
-  type ICalendarEventRepository,
-} from '@mas/core';
+import { type CalendarEvent, type CalendarEventId, type ICalendarEventRepository } from '@mas/core';
 
 import { DatabaseError, wrapSync } from '../errors/InfrastructureError';
 import { type SqlDatabase } from '../database/SqlDatabase';
@@ -53,9 +49,7 @@ export class SqlCalendarEventRepository implements ICalendarEventRepository {
     const rows = wrapSync(
       () =>
         this.db
-          .prepare(
-            'SELECT * FROM calendar_events WHERE date >= ? AND date <= ? ORDER BY date ASC',
-          )
+          .prepare('SELECT * FROM calendar_events WHERE date >= ? AND date <= ? ORDER BY date ASC')
           .all<CalendarEventRow>(fromIsoDate, toIsoDate),
       (cause) => new DatabaseError('Failed to load calendar events in range.', cause),
     );

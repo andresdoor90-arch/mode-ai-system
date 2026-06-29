@@ -41,9 +41,7 @@ export const occasionFormality = (occasion: Occasion): number => {
 };
 
 /** Occasions considered "formal enough" that a tie / tailoring is appropriate. */
-export const isFormalOccasion = (occasion: Occasion): boolean =>
-  occasionFormality(occasion) >= 7;
+export const isFormalOccasion = (occasion: Occasion): boolean => occasionFormality(occasion) >= 7;
 
 /** Occasions considered informal, where formal tailoring looks out of place. */
-export const isInformalOccasion = (occasion: Occasion): boolean =>
-  occasionFormality(occasion) <= 3;
+export const isInformalOccasion = (occasion: Occasion): boolean => occasionFormality(occasion) <= 3;

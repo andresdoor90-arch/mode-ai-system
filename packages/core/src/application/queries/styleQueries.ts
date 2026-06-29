@@ -20,7 +20,11 @@ export interface StyleAnalysis {
   readonly totalGarments: number;
   readonly byCategory: Readonly<Record<string, number>>;
   readonly averageFormality: number;
-  readonly colorTemperature: { readonly warm: number; readonly cool: number; readonly neutral: number };
+  readonly colorTemperature: {
+    readonly warm: number;
+    readonly cool: number;
+    readonly neutral: number;
+  };
   readonly paletteHarmony: number;
   readonly dominantSubcategory: string | null;
 }
@@ -30,9 +34,10 @@ export class GetStyleAnalysisQuery implements Query<StyleAnalysis> {
   public readonly type = GET_STYLE_ANALYSIS;
 }
 
-export class GetStyleAnalysisHandler
-  implements RequestHandler<GetStyleAnalysisQuery, StyleAnalysis>
-{
+export class GetStyleAnalysisHandler implements RequestHandler<
+  GetStyleAnalysisQuery,
+  StyleAnalysis
+> {
   public constructor(
     private readonly garments: IGarmentRepository,
     private readonly colorHarmony = new ColorHarmonyService(),
@@ -113,7 +118,10 @@ export class GetColorPaletteHandler implements RequestHandler<GetColorPaletteQue
   private async derivePalette(): Promise<Result<ColorPalette>> {
     const all = await this.garments.findAll();
     if (all.length === 0) {
-      return { ok: false, error: new ValidationError('Cannot derive a palette from an empty wardrobe.') };
+      return {
+        ok: false,
+        error: new ValidationError('Cannot derive a palette from an empty wardrobe.'),
+      };
     }
 
     const frequency = new Map<string, { color: Color; count: number }>();
@@ -129,12 +137,11 @@ export class GetColorPaletteHandler implements RequestHandler<GetColorPaletteQue
     const nonNeutral = ranked.filter((c) => !c.isNeutral);
     const neutrals = ranked.filter((c) => c.isNeutral);
 
-    const primary = nonNeutral[0] ?? ranked[0] as Color;
+    const primary = nonNeutral[0] ?? (ranked[0] as Color);
     const secondary = nonNeutral[1] ?? primary;
     const accent =
-      nonNeutral
-        .slice(1)
-        .sort((a, b) => primary.hueDistance(b) - primary.hueDistance(a))[0] ?? secondary;
+      nonNeutral.slice(1).sort((a, b) => primary.hueDistance(b) - primary.hueDistance(a))[0] ??
+      secondary;
     const neutral = neutrals[0] ?? unwrap(Color.fromHex('#1a1a1a', 'black'));
 
     return ColorPalette.create({ primary, secondary, accent, neutral });

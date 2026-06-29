@@ -14,7 +14,12 @@
  * Tampering with either the manifest or the code changes the canonical bytes,
  * so a previously-valid signature becomes `Invalid`.
  */
-import { createPublicKey, sign as cryptoSign, verify as cryptoVerify, type KeyObject } from 'node:crypto';
+import {
+  createPublicKey,
+  sign as cryptoSign,
+  verify as cryptoVerify,
+  type KeyObject,
+} from 'node:crypto';
 
 import { type PluginManifest } from '../contracts/manifest';
 import { type ResolvedPlugin } from '../contracts/plugin';

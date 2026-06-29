@@ -51,7 +51,12 @@ describe('InfrastructureError hierarchy', () => {
 
 describe('wrapSync / wrapAsync', () => {
   it('returns the value when the operation succeeds', () => {
-    expect(wrapSync(() => 42, () => new StorageError('nope'))).toBe(42);
+    expect(
+      wrapSync(
+        () => 42,
+        () => new StorageError('nope'),
+      ),
+    ).toBe(42);
   });
 
   it('wraps a thrown error in the requested type', () => {

@@ -7,7 +7,12 @@
  * engine (Babylon, raw WebGPU, a 2D canvas fallback, …) never touches the
  * domain, the managers or the UI logic. Nothing here imports a renderer.
  */
-import { type CameraState, type SceneDescription, type ScreenshotRequest, type ScreenshotResult } from './types';
+import {
+  type CameraState,
+  type SceneDescription,
+  type ScreenshotRequest,
+  type ScreenshotResult,
+} from './types';
 
 /**
  * An opaque handle to wherever the engine should draw (e.g. an HTMLCanvasElement

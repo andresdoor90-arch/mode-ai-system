@@ -93,9 +93,7 @@ export class ExplanationGenerator {
       .map((f) => FACTOR_LABELS[f.name])
       .join(' y ');
     const weatherNote =
-      context.weather !== undefined
-        ? ` Pensada para ${context.weather.temperatureC}°C.`
-        : '';
+      context.weather !== undefined ? ` Pensada para ${context.weather.temperatureC}°C.` : '';
     const score = candidate.finalScore;
 
     return (

@@ -36,7 +36,10 @@ export interface IVectorStore {
   /** Insert or replace one or more records. */
   upsert(records: readonly VectorRecord[]): Promise<void>;
   /** Find the records most similar to a query vector. */
-  query(vector: readonly number[], options?: VectorQueryOptions): Promise<readonly VectorQueryResult[]>;
+  query(
+    vector: readonly number[],
+    options?: VectorQueryOptions,
+  ): Promise<readonly VectorQueryResult[]>;
   /** Delete records by id. */
   delete(ids: readonly string[]): Promise<void>;
   /** Number of stored records. */

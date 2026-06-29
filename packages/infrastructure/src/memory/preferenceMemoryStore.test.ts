@@ -6,10 +6,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { EMPTY_PREFERENCE_MEMORY, type PreferenceMemorySnapshot } from '@mas/core';
 
-import {
-  FilePreferenceMemoryStore,
-  InMemoryPreferenceMemoryStore,
-} from './PreferenceMemoryStore';
+import { FilePreferenceMemoryStore, InMemoryPreferenceMemoryStore } from './PreferenceMemoryStore';
 
 const sample: PreferenceMemorySnapshot = {
   version: 1,

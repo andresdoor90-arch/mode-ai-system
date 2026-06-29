@@ -27,11 +27,7 @@ export type RotationDegrees = 0 | 90 | 180 | 270;
  * Every photo starts `original` and stages can mark progress without the domain
  * knowing how any algorithm works.
  */
-export type PhotoProcessingStage =
-  | 'original'
-  | 'background-removed'
-  | 'segmented'
-  | 'enhanced';
+export type PhotoProcessingStage = 'original' | 'background-removed' | 'segmented' | 'enhanced';
 
 export interface PhotographProps {
   readonly id: PhotoId;
@@ -109,7 +105,9 @@ export class Photograph {
     }
     const crop = input.crop ?? FULL_CROP;
     if (!isValidCrop(crop)) {
-      return err(new ValidationError('Photo crop rectangle is out of bounds (expect 0–1 fractions).'));
+      return err(
+        new ValidationError('Photo crop rectangle is out of bounds (expect 0–1 fractions).'),
+      );
     }
     return ok(
       new Photograph({

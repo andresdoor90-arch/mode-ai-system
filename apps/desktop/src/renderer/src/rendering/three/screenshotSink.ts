@@ -9,8 +9,7 @@
  * restores the previous size. The pure request/filename/format plumbing is
  * tested offline; only this WebGL read-back is deferred.
  */
-import type { Camera, Scene, WebGLRenderer } from 'three';
-import { Vector2 } from 'three';
+import { Vector2, type Camera, type Scene, type WebGLRenderer } from 'three';
 
 import {
   type IScreenshotSink,
@@ -25,7 +24,9 @@ export interface CanvasHandles {
 }
 
 /** Create an {@link IScreenshotSink} backed by a live R3F renderer. */
-export function createCanvasScreenshotSink(getHandles: () => CanvasHandles | null): IScreenshotSink {
+export function createCanvasScreenshotSink(
+  getHandles: () => CanvasHandles | null,
+): IScreenshotSink {
   return {
     captureScreenshot(request: ScreenshotRequest): Promise<ScreenshotResult> {
       const handles = getHandles();
