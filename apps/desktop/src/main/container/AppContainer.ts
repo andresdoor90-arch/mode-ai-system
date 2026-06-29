@@ -244,7 +244,9 @@ export class AppContainer {
     if (ollama.enabled) {
       visionProviders.push(
         new OllamaVisionProvider({
-          client: new OllamaClient({ baseUrl: ollama.host }),
+          // Vision models (esp. 7B on first call) can take well over a minute:
+          // a 3-minute budget avoids spurious timeouts that look like "no detection".
+          client: new OllamaClient({ baseUrl: ollama.host, timeoutMs: 180_000 }),
           model: ollama.visionModel,
         }),
       );

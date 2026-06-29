@@ -85,6 +85,16 @@ export function AddGarmentDialog(): JSX.Element {
           colorSamples: image.colorSamples,
           image: { base64: image.base64, mimeType: image.mimeType },
         });
+        // Diagnostic: shows in DevTools which providers actually ran. If
+        // `providers` lacks 'ollama-vision', the model was not reached/installed;
+        // if it is present but populatedFields is low, the model replied poorly.
+        // eslint-disable-next-line no-console
+        console.info('[addGarment] analysis', {
+          providers: analysis.providers,
+          visionAvailable: analysis.visionAvailable,
+          populatedFields: analysis.populatedFields,
+          fields: Object.keys(analysis.analysis),
+        });
         setResult(analysis);
         setDraft(analysisToDraft(analysis.analysis));
       } catch (error) {
@@ -416,6 +426,28 @@ export function AddGarmentDialog(): JSX.Element {
                 </div>
 
                 <div className="rounded-lg border border-border bg-muted/30 p-4">
+                  <div
+                    className={cn(
+                      'mb-3 flex items-center gap-2 rounded-md px-3 py-2 text-xs',
+                      result.visionAvailable
+                        ? 'bg-success/10 text-success'
+                        : 'bg-warning/15 text-warning',
+                    )}
+                  >
+                    {result.visionAvailable ? (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Analizado con IA de visión (Ollama) · {result.populatedFields}{' '}
+                        características
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5" />
+                        IA de visión no disponible: solo se detectó el color. Verifica que Ollama
+                        esté activo con el modelo qwen2.5vl:7b.
+                      </>
+                    )}
+                  </div>
                   <AnalysisAttributes
                     analysis={result.analysis}
                     overallConfidence={result.overallConfidence}
