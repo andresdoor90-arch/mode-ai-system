@@ -121,7 +121,6 @@ import {
   UPDATE_PROFILE,
   WardrobeSyncCoordinator,
   type EmbeddingVectorResult,
-  type GarmentId,
   type GarmentSnapshot,
   type IEmbedder,
   type IdGenerator,

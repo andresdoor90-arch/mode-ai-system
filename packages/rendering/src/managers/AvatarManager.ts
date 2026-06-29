@@ -11,7 +11,7 @@
  * points are all simple state changes that produce a new {@link AvatarDescriptor}.
  */
 import { colorFromHex, type ColorDescriptor } from '../abstraction/color';
-import { ORIGIN, vec3 } from '../abstraction/math';
+import { vec3, type ORIGIN } from '../abstraction/math';
 import { BodyRegion } from '../abstraction/slots';
 import {
   type AttachmentPoint,
@@ -50,7 +50,10 @@ export class AvatarManager {
   private skinTone: ColorDescriptor;
   private scale: number;
 
-  public constructor(assets: AssetManager = new AssetManager(), options: AvatarManagerOptions = {}) {
+  public constructor(
+    assets: AssetManager = new AssetManager(),
+    options: AvatarManagerOptions = {},
+  ) {
     this.assets = assets;
     this.modelId = options.modelId ?? 'mannequin-v1';
     this.bodyType = options.bodyType ?? 'neutral';

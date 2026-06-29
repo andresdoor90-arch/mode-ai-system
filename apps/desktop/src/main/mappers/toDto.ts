@@ -6,8 +6,13 @@
  * where the domain model is translated for transport; the renderer never sees
  * a domain class instance.
  */
-import type { Color, Garment, Outfit, WardrobeCollection, Category, Photograph } from '@mas/core';
 import type {
+  Color,
+  Garment,
+  Outfit,
+  WardrobeCollection,
+  Category,
+  Photograph,
   OutfitHistoryEntry,
   OutfitHistoryPage,
   OutfitHistoryStatistics,
