@@ -56,7 +56,9 @@ export const normalizeHex = (hex: string): string | null => {
 
 const channelToLinear = (channel0to1: number): number => {
   // Standard sRGB electro-optical transfer function.
-  return channel0to1 <= 0.04045 ? channel0to1 / 12.92 : ((channel0to1 + 0.055) / 1.055) ** 2.4;
+  return channel0to1 <= 0.04045
+    ? channel0to1 / 12.92
+    : ((channel0to1 + 0.055) / 1.055) ** 2.4;
 };
 
 const hexToRgb = (canonicalHex: string): RGB => {
@@ -100,7 +102,11 @@ export const colorFromHex = (hex: string): ColorDescriptor => {
  * Mix two colours in sRGB space by `t` (0 = a, 1 = b). Used to derive subtle
  * shading/accent tints (e.g. a slightly darker seam colour) at the data level.
  */
-export const mixColors = (a: ColorDescriptor, b: ColorDescriptor, t: number): ColorDescriptor => {
+export const mixColors = (
+  a: ColorDescriptor,
+  b: ColorDescriptor,
+  t: number,
+): ColorDescriptor => {
   const k = clamp(t, 0, 1);
   const r = Math.round(a.rgb.r + (b.rgb.r - a.rgb.r) * k);
   const g = Math.round(a.rgb.g + (b.rgb.g - a.rgb.g) * k);

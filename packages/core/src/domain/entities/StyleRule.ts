@@ -87,10 +87,7 @@ export class StyleRule extends Entity<'StyleRule'> {
     if (!Number.isInteger(priority) || priority < 0 || priority > 100) {
       return err(new ValidationError('Style rule priority must be an integer between 0 and 100.'));
     }
-    if (
-      typeof input.recommendation?.message !== 'string' ||
-      input.recommendation.message.trim().length === 0
-    ) {
+    if (typeof input.recommendation?.message !== 'string' || input.recommendation.message.trim().length === 0) {
       return err(new ValidationError('Style rule recommendation requires a message.'));
     }
     return ok(

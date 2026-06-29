@@ -11,14 +11,12 @@
 import type {
   AddGarmentPayload,
   AiStatusDTO,
-  AnalyzeGarmentPayload,
   AppInfoDTO,
   CategoryDTO,
   CategoryNodeDTO,
   ColorPaletteDTO,
   CreateCategoryPayload,
   ConfirmTagsPayload,
-  GarmentAnalysisResultDTO,
   GarmentDTO,
   GarmentSearchPayload,
   IpcResponse,
@@ -27,8 +25,6 @@ import type {
   RecommendationRequestPayload,
   RecommendationSetDTO,
   ReorderPayload,
-  SaveImagePayload,
-  SaveImageResultDTO,
   StyleAnalysisDTO,
   SuggestionsPayload,
   TagSuggestionDTO,
@@ -115,7 +111,7 @@ export const ipc = {
   /* -------------------------------- photos ------------------------------- */
   addPhotos: (
     garmentId: string,
-    photos: readonly { storageKey: string; attributes?: Readonly<Record<string, string>> }[],
+    photos: readonly { storageKey: string }[],
   ): Promise<{ photoIds: readonly string[] }> => unwrap(bridge().photos.add(garmentId, photos)),
   removePhoto: (garmentId: string, photoId: string): Promise<{ ok: true }> =>
     unwrap(bridge().photos.remove(garmentId, photoId)),
@@ -123,15 +119,6 @@ export const ipc = {
     unwrap(bridge().photos.reorder(garmentId, orderedPhotoIds)),
   transformPhoto: (payload: PhotoTransformPayload): Promise<{ ok: true }> =>
     unwrap(bridge().photos.transform(payload)),
-
-  /* --------------------------- images / vision --------------------------- */
-  saveImage: (payload: SaveImagePayload): Promise<SaveImageResultDTO> =>
-    unwrap(bridge().images.save(payload)),
-  /** Renderable URL for a stored image key (empty string when no bridge). */
-  imageUrl: (storageKey: string): string =>
-    isBridgeAvailable() ? window.mas.images.url(storageKey) : '',
-  analyzeGarment: (payload: AnalyzeGarmentPayload): Promise<GarmentAnalysisResultDTO> =>
-    unwrap(bridge().analysis.analyze(payload)),
 
   /* ------------------------------- tagging ------------------------------- */
   suggestTags: (

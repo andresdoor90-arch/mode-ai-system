@@ -13,6 +13,7 @@ import {
   SequentialIdGenerator,
   TopSubcategory,
   unwrap,
+  type GarmentId,
 } from '@mas/core';
 import {
   ExtensionPointId,

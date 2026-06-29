@@ -10,11 +10,7 @@ import {
 import { DatabaseError, wrapSync } from '../errors/InfrastructureError';
 import { type SqlDatabase } from '../database/SqlDatabase';
 import { type GarmentRow, garmentToDomain, garmentToRow } from './mappers/garmentMapper';
-import {
-  type PhotographRow,
-  photographToDomain,
-  photographToRow,
-} from './mappers/photographMapper';
+import { type PhotographRow, photographToDomain, photographToRow } from './mappers/photographMapper';
 
 /** Columns written on save (the repo manages `version` itself). */
 const WRITE_COLUMNS =
@@ -28,8 +24,7 @@ const WRITE_PLACEHOLDERS = WRITE_COLUMNS.split(',')
   .map(() => '?')
   .join(', ');
 
-const PHOTO_COLUMNS =
-  'id, garment_id, storage_key, "order", rotation, crop, is_primary, stage, attributes';
+const PHOTO_COLUMNS = 'id, garment_id, storage_key, "order", rotation, crop, is_primary, stage, attributes';
 
 /** A single modification/audit record for a garment. */
 export interface GarmentAuditEntry {
@@ -64,9 +59,7 @@ export class SqlGarmentRepository implements IGarmentRepository {
           const changeType = prior ? 'updated' : 'created';
 
           this.db
-            .prepare(
-              `INSERT OR REPLACE INTO garments (${WRITE_COLUMNS}) VALUES (${WRITE_PLACEHOLDERS})`,
-            )
+            .prepare(`INSERT OR REPLACE INTO garments (${WRITE_COLUMNS}) VALUES (${WRITE_PLACEHOLDERS})`)
             .run(
               row.id,
               row.name,
@@ -231,8 +224,7 @@ export class SqlGarmentRepository implements IGarmentRepository {
   /** Current persisted version of a garment (0 when it does not exist). */
   public async version(id: GarmentId): Promise<number> {
     const row = wrapSync(
-      () =>
-        this.db.prepare('SELECT version FROM garments WHERE id = ?').get<{ version: number }>(id),
+      () => this.db.prepare('SELECT version FROM garments WHERE id = ?').get<{ version: number }>(id),
       (cause) => new DatabaseError(`Failed to read version of garment ${id}.`, cause),
     );
     return row ? Number(row.version) : 0;

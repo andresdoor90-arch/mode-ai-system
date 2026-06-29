@@ -25,10 +25,9 @@ export class SearchOutfitHistoryQuery implements Query<OutfitHistoryPage> {
   public constructor(public readonly options: OutfitHistoryQueryOptions = {}) {}
 }
 
-export class SearchOutfitHistoryHandler implements RequestHandler<
-  SearchOutfitHistoryQuery,
-  OutfitHistoryPage
-> {
+export class SearchOutfitHistoryHandler
+  implements RequestHandler<SearchOutfitHistoryQuery, OutfitHistoryPage>
+{
   public constructor(private readonly history: IOutfitHistoryRepository) {}
 
   public async handle(query: SearchOutfitHistoryQuery): Promise<Result<OutfitHistoryPage>> {
@@ -45,10 +44,9 @@ export class GetOutfitHistoryStatisticsQuery implements Query<OutfitHistoryStati
   public readonly type = GET_OUTFIT_HISTORY_STATISTICS;
 }
 
-export class GetOutfitHistoryStatisticsHandler implements RequestHandler<
-  GetOutfitHistoryStatisticsQuery,
-  OutfitHistoryStatistics
-> {
+export class GetOutfitHistoryStatisticsHandler
+  implements RequestHandler<GetOutfitHistoryStatisticsQuery, OutfitHistoryStatistics>
+{
   public constructor(private readonly history: IOutfitHistoryRepository) {}
 
   public async handle(): Promise<Result<OutfitHistoryStatistics>> {
@@ -66,10 +64,9 @@ export class GetRecentRepetitionsQuery implements Query<readonly RepetitionGroup
   public constructor(public readonly window?: number) {}
 }
 
-export class GetRecentRepetitionsHandler implements RequestHandler<
-  GetRecentRepetitionsQuery,
-  readonly RepetitionGroup[]
-> {
+export class GetRecentRepetitionsHandler
+  implements RequestHandler<GetRecentRepetitionsQuery, readonly RepetitionGroup[]>
+{
   public constructor(private readonly history: IOutfitHistoryRepository) {}
 
   public async handle(
@@ -94,10 +91,9 @@ export class GetGarmentUsageHistoryQuery implements Query<OutfitHistoryPage> {
   public constructor(public readonly garmentId: GarmentId) {}
 }
 
-export class GetGarmentUsageHistoryHandler implements RequestHandler<
-  GetGarmentUsageHistoryQuery,
-  OutfitHistoryPage
-> {
+export class GetGarmentUsageHistoryHandler
+  implements RequestHandler<GetGarmentUsageHistoryQuery, OutfitHistoryPage>
+{
   public constructor(private readonly history: IOutfitHistoryRepository) {}
 
   public async handle(query: GetGarmentUsageHistoryQuery): Promise<Result<OutfitHistoryPage>> {

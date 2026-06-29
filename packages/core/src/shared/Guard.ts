@@ -32,7 +32,12 @@ export const Guard = {
   },
 
   /** Fails when a number is outside the inclusive `[min, max]` range. */
-  inRange(value: number, min: number, max: number, field: string): Result<void, ValidationError> {
+  inRange(
+    value: number,
+    min: number,
+    max: number,
+    field: string,
+  ): Result<void, ValidationError> {
     if (!Number.isFinite(value) || value < min || value > max) {
       return err(new ValidationError(`${field} must be between ${min} and ${max}.`));
     }

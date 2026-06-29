@@ -17,7 +17,10 @@ export function Breadcrumbs(): JSX.Element {
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm">
-      <Link to="/" className="text-muted-foreground transition-colors hover:text-foreground">
+      <Link
+        to="/"
+        className="text-muted-foreground transition-colors hover:text-foreground"
+      >
         Inicio
       </Link>
       {!isHome && current !== undefined && (

@@ -75,7 +75,10 @@ export type GarmentSubcategory =
   | AccessorySubcategory;
 
 /** Lookup table mapping each category to its allowed subcategory enum object. */
-export const SUBCATEGORIES_BY_CATEGORY: Record<GarmentCategory, Record<string, string>> = {
+export const SUBCATEGORIES_BY_CATEGORY: Record<
+  GarmentCategory,
+  Record<string, string>
+> = {
   [GarmentCategory.Tops]: TopSubcategory,
   [GarmentCategory.Bottoms]: BottomSubcategory,
   [GarmentCategory.Dresses]: DressSubcategory,
@@ -85,7 +88,10 @@ export const SUBCATEGORIES_BY_CATEGORY: Record<GarmentCategory, Record<string, s
 };
 
 /** Whether a subcategory legitimately belongs to the given category. */
-export const isSubcategoryOf = (category: string, subcategory: string): boolean => {
+export const isSubcategoryOf = (
+  category: string,
+  subcategory: string,
+): boolean => {
   const subs = SUBCATEGORIES_BY_CATEGORY[category as GarmentCategory];
   return subs !== undefined && Object.values(subs).includes(subcategory);
 };

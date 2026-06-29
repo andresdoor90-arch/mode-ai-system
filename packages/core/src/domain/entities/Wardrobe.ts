@@ -62,9 +62,7 @@ export class Wardrobe extends AggregateRoot<'Wardrobe'> {
 
   public addGarment(garment: Garment): Result<void, InvariantViolationError> {
     if (this._garments.has(garment.id)) {
-      return err(
-        new InvariantViolationError(`Garment ${garment.id} already exists in the wardrobe.`),
-      );
+      return err(new InvariantViolationError(`Garment ${garment.id} already exists in the wardrobe.`));
     }
     this._garments.set(garment.id, garment);
     return ok(undefined);

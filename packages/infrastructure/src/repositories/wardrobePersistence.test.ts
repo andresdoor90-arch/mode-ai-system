@@ -9,6 +9,7 @@ import {
   Color,
   Garment,
   GarmentCategory,
+  GarmentStatus,
   type Id,
   LayerSlot,
   Occasion,
@@ -22,7 +23,11 @@ import {
 } from '@mas/core';
 
 import { createTestSqlDatabase } from '../__testsupport__/sqlite';
-import { MigrationRunner, defaultMigrationsDir, loadMigrations } from '../database/MigrationRunner';
+import {
+  MigrationRunner,
+  defaultMigrationsDir,
+  loadMigrations,
+} from '../database/MigrationRunner';
 import { type SqlDatabase } from '../database/SqlDatabase';
 import { SqlCategoryRepository } from './SqlCategoryRepository';
 import { SqlGarmentRepository } from './SqlGarmentRepository';
@@ -136,13 +141,7 @@ describe('Phase 7 wardrobe persistence', () => {
     const garments = new SqlGarmentRepository(db);
     const p1 = unwrap(Photograph.create({ id: nextId('Photo'), storageKey: 'a.jpg', order: 0 }));
     const p2 = unwrap(
-      Photograph.create({
-        id: nextId('Photo'),
-        storageKey: 'b.jpg',
-        order: 1,
-        rotation: 90,
-        isPrimary: true,
-      }),
+      Photograph.create({ id: nextId('Photo'), storageKey: 'b.jpg', order: 1, rotation: 90, isPrimary: true }),
     );
     const garment = makeGarment({ photos: [p1, p2] });
     await garments.save(garment);
@@ -164,12 +163,7 @@ describe('Phase 7 wardrobe persistence', () => {
   it('round-trips extended metadata (category metadata, secondary colours, material, dates, notes)', async () => {
     const garments = new SqlGarmentRepository(db);
     const meta = unwrap(
-      CategoryMetadata.create({
-        layerSlot: LayerSlot.UpperBody,
-        formality: 8,
-        comfort: 0.4,
-        heavyOuterwear: false,
-      }),
+      CategoryMetadata.create({ layerSlot: LayerSlot.UpperBody, formality: 8, comfort: 0.4, heavyOuterwear: false }),
     );
     const garment = unwrap(
       Garment.create(nextId('Garment'), {
@@ -250,8 +244,8 @@ describe('Phase 7 wardrobe persistence', () => {
     expect(loaded.occasion).toBe(Occasion.Formal);
     expect(loaded.signature).toBe([ga, gb].sort().join('|'));
 
-    expect(await history.findByGarment(ga)).toHaveLength(1);
-    expect(await history.findByGarment(toId<'Garment'>('g-z'))).toHaveLength(0);
+    expect((await history.findByGarment(ga))).toHaveLength(1);
+    expect((await history.findByGarment(toId<'Garment'>('g-z')))).toHaveLength(0);
     expect(await history.count()).toBe(1);
 
     await history.delete(entry.id);

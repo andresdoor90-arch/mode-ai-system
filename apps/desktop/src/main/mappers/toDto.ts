@@ -6,13 +6,8 @@
  * where the domain model is translated for transport; the renderer never sees
  * a domain class instance.
  */
+import type { Color, Garment, Outfit, WardrobeCollection, Category, Photograph } from '@mas/core';
 import type {
-  Color,
-  Garment,
-  Outfit,
-  WardrobeCollection,
-  Category,
-  Photograph,
   OutfitHistoryEntry,
   OutfitHistoryPage,
   OutfitHistoryStatistics,
@@ -54,7 +49,6 @@ export function photoToDto(photo: Photograph): PhotoDTO {
     crop: { ...photo.crop },
     isPrimary: photo.isPrimary,
     stage: photo.stage,
-    attributes: { ...photo.attributes },
   };
 }
 
@@ -95,11 +89,9 @@ export function garmentToDto(garment: Garment): GarmentDTO {
     status: garment.status as GarmentStatusDTO,
     wearCount: garment.wearCount,
     formality: garment.formality,
-    favorite: garment.metadata.favorite === 'true',
     lastWornAt: garment.lastWornAt ?? null,
     purchaseDate: garment.purchaseDate ?? null,
     notes: garment.notes ?? null,
-    metadata: { ...garment.metadata },
   };
 }
 

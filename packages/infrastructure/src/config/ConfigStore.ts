@@ -2,7 +2,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 import { ConfigurationError } from '../errors/InfrastructureError';
-import { type AppConfig, type DeepPartial, validateConfig, withDefaults } from './AppConfig';
+import {
+  type AppConfig,
+  type DeepPartial,
+  validateConfig,
+  withDefaults,
+} from './AppConfig';
 
 /**
  * Persists the {@link AppConfig} to a JSON file on disk.
@@ -46,7 +51,9 @@ export class ConfigStore {
     const config = withDefaults(parsed as DeepPartial<AppConfig>);
     const issues = validateConfig(config);
     if (issues.length > 0) {
-      throw new ConfigurationError(`Config at ${this.filePath} is invalid: ${issues.join(' ')}`);
+      throw new ConfigurationError(
+        `Config at ${this.filePath} is invalid: ${issues.join(' ')}`,
+      );
     }
     return config;
   }

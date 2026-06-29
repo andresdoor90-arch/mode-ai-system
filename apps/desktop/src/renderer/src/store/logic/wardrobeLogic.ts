@@ -68,7 +68,10 @@ export function filterGarments(
 }
 
 /** Return a new array sorted according to the chosen ordering. */
-export function sortGarments(garments: readonly GarmentDTO[], sort: WardrobeSort): GarmentDTO[] {
+export function sortGarments(
+  garments: readonly GarmentDTO[],
+  sort: WardrobeSort,
+): GarmentDTO[] {
   const copy = [...garments];
   switch (sort) {
     case 'name-asc':
@@ -85,7 +88,9 @@ export function sortGarments(garments: readonly GarmentDTO[], sort: WardrobeSort
 }
 
 /** Group garments by their category. */
-export function groupByCategory(garments: readonly GarmentDTO[]): Record<string, GarmentDTO[]> {
+export function groupByCategory(
+  garments: readonly GarmentDTO[],
+): Record<string, GarmentDTO[]> {
   const groups: Record<string, GarmentDTO[]> = {};
   for (const garment of garments) {
     (groups[garment.category] ??= []).push(garment);
@@ -94,7 +99,9 @@ export function groupByCategory(garments: readonly GarmentDTO[]): Record<string,
 }
 
 /** Count garments per lifecycle status. */
-export function countByStatus(garments: readonly GarmentDTO[]): Record<GarmentStatusDTO, number> {
+export function countByStatus(
+  garments: readonly GarmentDTO[],
+): Record<GarmentStatusDTO, number> {
   const counts: Record<GarmentStatusDTO, number> = {
     available: 0,
     'in-laundry': 0,

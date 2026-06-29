@@ -17,23 +17,14 @@ export function SceneLights({ lights }: SceneLightsProps): JSX.Element {
     <>
       {lights.map((light) => {
         const color = light.color.hex;
-        const position = (light.position ?? { x: 0, y: 0, z: 0 }) as {
-          x: number;
-          y: number;
-          z: number;
-        };
+        const position = (light.position ?? { x: 0, y: 0, z: 0 }) as { x: number; y: number; z: number };
         const pos: [number, number, number] = [position.x, position.y, position.z];
         switch (light.type) {
           case 'ambient':
             return <ambientLight key={light.id} intensity={light.intensity} color={color} />;
           case 'hemisphere':
             return (
-              <hemisphereLight
-                key={light.id}
-                intensity={light.intensity}
-                color={color}
-                position={pos}
-              />
+              <hemisphereLight key={light.id} intensity={light.intensity} color={color} position={pos} />
             );
           case 'point':
             return (

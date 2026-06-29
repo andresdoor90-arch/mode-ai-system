@@ -1,4 +1,8 @@
-import { type IUserProfileRepository, type UserProfile, type UserProfileId } from '@mas/core';
+import {
+  type IUserProfileRepository,
+  type UserProfile,
+  type UserProfileId,
+} from '@mas/core';
 
 import { DatabaseError, wrapSync } from '../errors/InfrastructureError';
 import { type SqlDatabase } from '../database/SqlDatabase';

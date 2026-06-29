@@ -64,7 +64,10 @@ export class InMemoryEventBus implements IEventBus {
     this.onHandlerError = options.onHandlerError ?? ((): void => {});
   }
 
-  public subscribe<TPayload = unknown>(type: string, handler: EventHandler<TPayload>): Unsubscribe {
+  public subscribe<TPayload = unknown>(
+    type: string,
+    handler: EventHandler<TPayload>,
+  ): Unsubscribe {
     const set = this.handlers.get(type) ?? new Set<EventHandler>();
     set.add(handler as EventHandler);
     this.handlers.set(type, set);
@@ -90,7 +93,10 @@ export class InMemoryEventBus implements IEventBus {
       occurredAt: this.now().toISOString(),
     };
     const targeted = this.handlers.get(type);
-    const recipients: EventHandler[] = [...(targeted ? [...targeted] : []), ...this.wildcard];
+    const recipients: EventHandler[] = [
+      ...(targeted ? [...targeted] : []),
+      ...this.wildcard,
+    ];
     for (const handler of recipients) {
       try {
         await handler(event as DomainEventEnvelope);

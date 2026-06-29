@@ -28,7 +28,10 @@ const DEFAULT_OPTIONS: Required<ConnectionOptions> = {
  * Apply the standard pragma set to a raw better-sqlite3 handle. Exposed
  * separately so it can be reused/tested against any pragma-capable handle.
  */
-export const applyPragmas = (db: BetterSqlite3Like, options: ConnectionOptions = {}): void => {
+export const applyPragmas = (
+  db: BetterSqlite3Like,
+  options: ConnectionOptions = {},
+): void => {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   if (opts.wal) {
     db.pragma('journal_mode = WAL');

@@ -139,7 +139,9 @@ export class SearchGarmentsQuery implements Query<Page<Garment>> {
   public constructor(public readonly criteria: GarmentSearchCriteria = {}) {}
 }
 
-export class SearchGarmentsHandler implements RequestHandler<SearchGarmentsQuery, Page<Garment>> {
+export class SearchGarmentsHandler
+  implements RequestHandler<SearchGarmentsQuery, Page<Garment>>
+{
   public constructor(private readonly garments: IGarmentRepository) {}
 
   public async handle(query: SearchGarmentsQuery): Promise<Result<Page<Garment>>> {

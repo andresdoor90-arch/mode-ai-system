@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createTestSqlDatabase } from '../__testsupport__/sqlite';
-import { MigrationRunner, defaultMigrationsDir, loadMigrations } from '../database/MigrationRunner';
+import {
+  MigrationRunner,
+  defaultMigrationsDir,
+  loadMigrations,
+} from '../database/MigrationRunner';
 import { seedDemoData } from '../database/seed';
 import { type SqlDatabase } from '../database/SqlDatabase';
 import { UuidIdGenerator } from '../id/UuidIdGenerator';
@@ -13,11 +17,7 @@ import {
   SqlStyleRuleRepository,
   SqlUserProfileRepository,
 } from '../repositories';
-import {
-  ImportExportService,
-  type TransferRepositories,
-  parseBundleBytes,
-} from './ImportExportService';
+import { ImportExportService, type TransferRepositories, parseBundleBytes } from './ImportExportService';
 
 const buildRepos = async (): Promise<{ db: SqlDatabase; repos: TransferRepositories }> => {
   const db = await createTestSqlDatabase();

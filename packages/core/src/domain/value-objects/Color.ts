@@ -43,7 +43,8 @@ const clamp = (value: number, min: number, max: number): number =>
   Math.min(max, Math.max(min, value));
 
 const rgbToHex = ({ r, g, b }: RGB): string => {
-  const toHex = (n: number): string => clamp(Math.round(n), 0, 255).toString(16).padStart(2, '0');
+  const toHex = (n: number): string =>
+    clamp(Math.round(n), 0, 255).toString(16).padStart(2, '0');
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 };
 
@@ -163,7 +164,9 @@ export class Color extends ValueObject<ColorProps> {
   public static fromRgb(rgb: RGB, name?: string): Result<Color, ValidationError> {
     for (const [channel, value] of Object.entries(rgb)) {
       if (!Number.isFinite(value) || value < 0 || value > 255) {
-        return err(new ValidationError(`RGB channel "${channel}" must be between 0 and 255.`));
+        return err(
+          new ValidationError(`RGB channel "${channel}" must be between 0 and 255.`),
+        );
       }
     }
     return ok(Color.fromComputed(rgb, name));

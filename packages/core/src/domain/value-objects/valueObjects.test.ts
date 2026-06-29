@@ -104,9 +104,7 @@ describe('StylePreference', () => {
 describe('WeatherCondition', () => {
   it('flags hot and cold and infers a season', () => {
     const hot = unwrap(WeatherCondition.create({ temperatureC: 30 }));
-    const cold = unwrap(
-      WeatherCondition.create({ temperatureC: 2, precipitation: Precipitation.Snow }),
-    );
+    const cold = unwrap(WeatherCondition.create({ temperatureC: 2, precipitation: Precipitation.Snow }));
     expect(hot.isHot).toBe(true);
     expect(hot.inferSeason()).toBe(Season.Summer);
     expect(cold.isCold).toBe(true);

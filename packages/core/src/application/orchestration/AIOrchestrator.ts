@@ -154,10 +154,7 @@ export class AIOrchestrator {
     const ranked = this.ranking.rank(candidates, context.occasion, context.season, scoringContext, {
       ...(semanticScores !== undefined ? { semanticScores } : {}),
       ...(memorySnapshot !== undefined
-        ? {
-            affinityBias: (g: readonly Garment[]) =>
-              this.preferences.affinityBias(g, memorySnapshot),
-          }
+        ? { affinityBias: (g: readonly Garment[]) => this.preferences.affinityBias(g, memorySnapshot) }
         : {}),
     });
 
@@ -189,7 +186,8 @@ export class AIOrchestrator {
     }
     const pool = ranked.slice(0, SELECTION_POOL);
     const used = new Set<string>();
-    const sig = (c: RankedCandidate): string => OutfitScoringService.signatureOf(c.garments);
+    const sig = (c: RankedCandidate): string =>
+      OutfitScoringService.signatureOf(c.garments);
 
     const pickFrom = (sorted: readonly RankedCandidate[]): RankedCandidate | undefined => {
       for (const candidate of sorted) {

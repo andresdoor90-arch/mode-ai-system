@@ -14,11 +14,7 @@ import { type PluginActivityLogger } from '../contracts/activity';
 import { PluginError } from '../contracts/errors';
 import { PluginLifecycleEvent, PluginLifecycleState } from '../contracts/lifecycle';
 import { type PluginManifest } from '../contracts/manifest';
-import {
-  approveAll,
-  type PermissionApprover,
-  type PluginCapability,
-} from '../contracts/permissions';
+import { approveAll, type PermissionApprover, type PluginCapability } from '../contracts/permissions';
 import { type PluginSource } from '../contracts/plugin';
 import {
   DEFAULT_RESOURCE_LIMITS,
@@ -143,11 +139,7 @@ export class PluginManager {
   public async activate(id: string): Promise<PluginStatus> {
     const record = this.registry.get(id);
     if (record.manifest === undefined || record.resolved === undefined) {
-      throw new PluginError(
-        `Plugin "${id}" must be validated before activation.`,
-        'PLUGIN_NOT_VALIDATED',
-        id,
-      );
+      throw new PluginError(`Plugin "${id}" must be validated before activation.`, 'PLUGIN_NOT_VALIDATED', id);
     }
     if (!record.lifecycle.can(PluginLifecycleEvent.Activate)) {
       // Surface as an illegal transition via the machine for a consistent error.

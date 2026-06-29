@@ -66,7 +66,9 @@ export interface LangChainEmbeddingConfig {
 }
 
 /** Map our role union onto LangChain's `[role, content]` message tuples. */
-const toLcMessages = (messages: readonly ChatMessage[]): ReadonlyArray<readonly [string, string]> =>
+const toLcMessages = (
+  messages: readonly ChatMessage[],
+): ReadonlyArray<readonly [string, string]> =>
   messages.map((m) => [m.role === 'assistant' ? 'ai' : m.role, m.content] as const);
 
 const contentToString = (content: unknown): string => {
@@ -76,11 +78,7 @@ const contentToString = (content: unknown): string => {
   if (Array.isArray(content)) {
     return content
       .map((part) =>
-        typeof part === 'string'
-          ? part
-          : typeof (part as { text?: unknown }).text === 'string'
-            ? (part as { text: string }).text
-            : '',
+        typeof part === 'string' ? part : typeof (part as { text?: unknown }).text === 'string' ? (part as { text: string }).text : '',
       )
       .join('');
   }
@@ -103,9 +101,7 @@ const loadChatModel = async (config: LangChainTextConfig): Promise<LcChatModel> 
       });
     }
     case AIProviderKind.Anthropic: {
-      const mod = (await import('@langchain/anthropic')) as unknown as {
-        ChatAnthropic: LcChatCtor;
-      };
+      const mod = (await import('@langchain/anthropic')) as unknown as { ChatAnthropic: LcChatCtor };
       return new mod.ChatAnthropic({ model: config.model, apiKey: config.apiKey });
     }
     case AIProviderKind.Ollama: {
@@ -123,15 +119,11 @@ const loadChatModel = async (config: LangChainTextConfig): Promise<LcChatModel> 
 const loadEmbeddings = async (config: LangChainEmbeddingConfig): Promise<LcEmbeddings> => {
   switch (config.kind) {
     case AIProviderKind.OpenAI: {
-      const mod = (await import('@langchain/openai')) as unknown as {
-        OpenAIEmbeddings: LcEmbeddingsCtor;
-      };
+      const mod = (await import('@langchain/openai')) as unknown as { OpenAIEmbeddings: LcEmbeddingsCtor };
       return new mod.OpenAIEmbeddings({ model: config.model, apiKey: config.apiKey });
     }
     case AIProviderKind.Ollama: {
-      const mod = (await import('@langchain/ollama')) as unknown as {
-        OllamaEmbeddings: LcEmbeddingsCtor;
-      };
+      const mod = (await import('@langchain/ollama')) as unknown as { OllamaEmbeddings: LcEmbeddingsCtor };
       return new mod.OllamaEmbeddings({
         model: config.model,
         ...(config.baseUrl !== undefined ? { baseUrl: config.baseUrl } : {}),

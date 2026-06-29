@@ -96,36 +96,11 @@ describe('Plugin system end-to-end (sample plugin through the host)', () => {
     await manager.validate('studio.colorpalette');
     await manager.activate('studio.colorpalette');
 
-    const analyzer =
-      manager.extensionRegistry.analyzers()[0] as AnalyzerContribution<PaletteResult>;
+    const analyzer = manager.extensionRegistry.analyzers()[0] as AnalyzerContribution<PaletteResult>;
     const result = await analyzer.analyze([
-      {
-        id: 'a',
-        name: 'A',
-        category: 'tops',
-        subcategory: 'shirt',
-        colorName: 'navy',
-        tags: [],
-        formality: 5,
-      },
-      {
-        id: 'b',
-        name: 'B',
-        category: 'tops',
-        subcategory: 'tee',
-        colorName: 'navy',
-        tags: [],
-        formality: 5,
-      },
-      {
-        id: 'c',
-        name: 'C',
-        category: 'shoes',
-        subcategory: 'sneaker',
-        colorName: 'white',
-        tags: [],
-        formality: 2,
-      },
+      { id: 'a', name: 'A', category: 'tops', subcategory: 'shirt', colorName: 'navy', tags: [], formality: 5 },
+      { id: 'b', name: 'B', category: 'tops', subcategory: 'tee', colorName: 'navy', tags: [], formality: 5 },
+      { id: 'c', name: 'C', category: 'shoes', subcategory: 'sneaker', colorName: 'white', tags: [], formality: 2 },
     ]);
     expect(result.dominant).toBe('navy');
     expect(result.counts.navy).toBe(2);
@@ -211,11 +186,7 @@ describe('Plugin system end-to-end (sample plugin through the host)', () => {
       contributes: [],
     };
     manager.discover(
-      createInProcessSource({
-        manifest,
-        module: faulty,
-        signing: { keyId: TRUSTED_KEY_ID, privateKey },
-      }),
+      createInProcessSource({ manifest, module: faulty, signing: { keyId: TRUSTED_KEY_ID, privateKey } }),
     );
     manager.install('evil.faulty');
     await manager.validate('evil.faulty');

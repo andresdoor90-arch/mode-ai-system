@@ -8,7 +8,9 @@ import { BaseAIProvider, type BaseProviderConfig } from '../BaseAIProvider';
  * AI-engine phase. This keeps infrastructure free of prompts and model logic.
  */
 export class OllamaProvider extends BaseAIProvider {
-  public constructor(config: Partial<BaseProviderConfig> & { baseUrl: string }) {
+  public constructor(
+    config: Partial<BaseProviderConfig> & { baseUrl: string },
+  ) {
     super({
       id: 'ollama',
       apiKey: null,

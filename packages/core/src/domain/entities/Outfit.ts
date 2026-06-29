@@ -108,9 +108,7 @@ export class Outfit extends Entity<'Outfit'> {
     const ids = new Set<string>();
     for (const garment of garments) {
       if (ids.has(garment.id)) {
-        return err(
-          new InvariantViolationError(`Garment ${garment.id} is duplicated in the outfit.`),
-        );
+        return err(new InvariantViolationError(`Garment ${garment.id} is duplicated in the outfit.`));
       }
       ids.add(garment.id);
     }
@@ -128,10 +126,7 @@ export class Outfit extends Entity<'Outfit'> {
     }
     // A full-body item (dress/jumpsuit) cannot coexist with upper or lower body items.
     if ((slotCounts.get(LayerSlot.FullBody) ?? 0) > 0) {
-      if (
-        (slotCounts.get(LayerSlot.UpperBody) ?? 0) > 0 ||
-        (slotCounts.get(LayerSlot.LowerBody) ?? 0) > 0
-      ) {
+      if ((slotCounts.get(LayerSlot.UpperBody) ?? 0) > 0 || (slotCounts.get(LayerSlot.LowerBody) ?? 0) > 0) {
         return err(
           new InvariantViolationError(
             'A dress/jumpsuit cannot be combined with a separate top or bottom.',

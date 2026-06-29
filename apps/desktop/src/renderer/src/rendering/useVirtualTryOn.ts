@@ -23,11 +23,7 @@ import {
   ScreenshotManager,
 } from '@mas/rendering';
 
-import {
-  type CanvasHandles,
-  createCanvasScreenshotSink,
-  downloadScreenshot,
-} from './three/screenshotSink';
+import { type CanvasHandles, createCanvasScreenshotSink, downloadScreenshot } from './three/screenshotSink';
 
 export interface VirtualTryOnControls {
   rotate: (deltaDeg: number) => void;

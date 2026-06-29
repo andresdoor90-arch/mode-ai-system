@@ -89,7 +89,10 @@ export class HistoryAnalyzer {
    * the entries' own {@link OutfitHistoryEntry.signature} (the same canonical
    * definition the scorer uses), so the freshness rule is never duplicated.
    */
-  private merge(base: HistoryInsights, entries: readonly OutfitHistoryEntry[]): HistoryInsights {
+  private merge(
+    base: HistoryInsights,
+    entries: readonly OutfitHistoryEntry[],
+  ): HistoryInsights {
     const signatures = new Set(base.recentSignatures);
     const wearFrequency: Record<string, number> = { ...base.wearFrequency };
     const seen = new Set(base.recentSignatures);

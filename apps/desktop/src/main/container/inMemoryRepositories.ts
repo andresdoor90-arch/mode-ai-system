@@ -196,8 +196,7 @@ export class InMemoryStyleRuleRepository implements IStyleRuleRepository {
   }
 }
 
-export class InMemoryCalendarEventRepository implements ICalendarEventRepository {
-  private readonly store = new Map<string, CalendarEvent>();
+export class InMemoryCalendarEventRepository implements ICalendarEventRepository {  private readonly store = new Map<string, CalendarEvent>();
 
   public async save(event: CalendarEvent): Promise<void> {
     this.store.set(event.id, event);
@@ -216,6 +215,7 @@ export class InMemoryCalendarEventRepository implements ICalendarEventRepository
   }
 }
 
+
 export class InMemoryOutfitHistoryRepository implements IOutfitHistoryRepository {
   private readonly store = new Map<string, OutfitHistoryEntry>();
 
@@ -227,9 +227,7 @@ export class InMemoryOutfitHistoryRepository implements IOutfitHistoryRepository
   }
   public async findAll(): Promise<readonly OutfitHistoryEntry[]> {
     return [...this.store.values()].sort((a, b) =>
-      a.wornOn === b.wornOn
-        ? b.createdAt.localeCompare(a.createdAt)
-        : b.wornOn.localeCompare(a.wornOn),
+      a.wornOn === b.wornOn ? b.createdAt.localeCompare(a.createdAt) : b.wornOn.localeCompare(a.wornOn),
     );
   }
   public async findByGarment(garmentId: GarmentId): Promise<readonly OutfitHistoryEntry[]> {

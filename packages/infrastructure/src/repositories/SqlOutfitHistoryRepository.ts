@@ -63,9 +63,7 @@ export class SqlOutfitHistoryRepository implements IOutfitHistoryRepository {
   public async findById(id: OutfitHistoryEntryId): Promise<OutfitHistoryEntry | null> {
     const row = wrapSync(
       () =>
-        this.db
-          .prepare(`SELECT ${COLUMNS} FROM outfit_history WHERE id = ?`)
-          .get<OutfitHistoryRow>(id),
+        this.db.prepare(`SELECT ${COLUMNS} FROM outfit_history WHERE id = ?`).get<OutfitHistoryRow>(id),
       (cause) => new DatabaseError(`Failed to load history entry ${id}.`, cause),
     );
     return row ? outfitHistoryToDomain(row) : null;

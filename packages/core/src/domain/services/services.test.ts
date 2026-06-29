@@ -17,7 +17,10 @@ import { ColorHarmonyService, ColorHarmonyType } from './ColorHarmonyService';
 import { StyleCompatibilityService } from './StyleCompatibilityService';
 import { SeasonalRecommendationService } from './SeasonalRecommendationService';
 import { OccasionMatchingService } from './OccasionMatchingService';
-import { OutfitScoringService, DEFAULT_SCORING_WEIGHTS } from './OutfitScoringService';
+import {
+  OutfitScoringService,
+  DEFAULT_SCORING_WEIGHTS,
+} from './OutfitScoringService';
 import { makeGarment, color } from '../../__fixtures__/testSupport';
 
 const C = {
@@ -136,17 +139,9 @@ describe('OutfitScoringService', () => {
 
   const shirt = () => makeGarment({ subcategory: TopSubcategory.Shirt, color: C.navy });
   const trousers = () =>
-    makeGarment({
-      category: GarmentCategory.Bottoms,
-      subcategory: BottomSubcategory.Trousers,
-      color: C.gray,
-    });
+    makeGarment({ category: GarmentCategory.Bottoms, subcategory: BottomSubcategory.Trousers, color: C.gray });
   const loafers = () =>
-    makeGarment({
-      category: GarmentCategory.Shoes,
-      subcategory: ShoeSubcategory.Loafers,
-      color: color('#222222'),
-    });
+    makeGarment({ category: GarmentCategory.Shoes, subcategory: ShoeSubcategory.Loafers, color: color('#222222') });
 
   it('weights sum to exactly 1', () => {
     const total = Object.values(DEFAULT_SCORING_WEIGHTS).reduce((a, b) => a + b, 0);
@@ -166,16 +161,8 @@ describe('OutfitScoringService', () => {
   });
 
   it('SMART RULE: never recommends a damaged/in-laundry garment', () => {
-    const damaged = makeGarment({
-      subcategory: TopSubcategory.Shirt,
-      color: C.navy,
-      status: GarmentStatus.Damaged,
-    });
-    const result = svc.scoreCombination(
-      [damaged, trousers(), loafers()],
-      Occasion.Casual,
-      Season.AllSeason,
-    );
+    const damaged = makeGarment({ subcategory: TopSubcategory.Shirt, color: C.navy, status: GarmentStatus.Damaged });
+    const result = svc.scoreCombination([damaged, trousers(), loafers()], Occasion.Casual, Season.AllSeason);
     expect(result.disqualified).toBe(true);
     expect(result.score).toBe(0);
     expect(result.violations.join(' ')).toContain('damaged');
@@ -203,11 +190,7 @@ describe('OutfitScoringService', () => {
       subcategory: AccessorySubcategory.Tie,
       color: C.gray,
     });
-    const result = svc.scoreCombination(
-      [shirt(), trousers(), loafers(), tie],
-      Occasion.Casual,
-      Season.AllSeason,
-    );
+    const result = svc.scoreCombination([shirt(), trousers(), loafers(), tie], Occasion.Casual, Season.AllSeason);
     expect(result.disqualified).toBe(true);
   });
 
@@ -218,11 +201,7 @@ describe('OutfitScoringService', () => {
       subcategory: BottomSubcategory.Trousers,
       color: C.chartreuse,
     });
-    const result = svc.scoreCombination(
-      [redShirt, clashBottom, loafers()],
-      Occasion.Casual,
-      Season.AllSeason,
-    );
+    const result = svc.scoreCombination([redShirt, clashBottom, loafers()], Occasion.Casual, Season.AllSeason);
     expect(result.disqualified).toBe(true);
     expect(result.violations.join(' ')).toContain('clashing');
   });
@@ -248,16 +227,8 @@ describe('OutfitScoringService', () => {
       Occasion.Casual,
       Season.AllSeason,
     );
-    const wornTop = makeGarment({
-      subcategory: TopSubcategory.Shirt,
-      color: C.navy,
-      wearCount: 30,
-    });
-    const worn = svc.scoreCombination(
-      [wornTop, trousers(), loafers()],
-      Occasion.Casual,
-      Season.AllSeason,
-    );
+    const wornTop = makeGarment({ subcategory: TopSubcategory.Shirt, color: C.navy, wearCount: 30 });
+    const worn = svc.scoreCombination([wornTop, trousers(), loafers()], Occasion.Casual, Season.AllSeason);
     const freshFreshness = fresh.factors.find((f) => f.name === 'freshness')?.value ?? 0;
     const wornFreshness = worn.factors.find((f) => f.name === 'freshness')?.value ?? 0;
     expect(freshFreshness).toBeGreaterThan(wornFreshness);

@@ -21,7 +21,10 @@ import {
   type GarmentRemovedPayload,
   type GarmentPhotosChangedPayload,
 } from '../../domain/events/wardrobeEvents';
-import { type IDomainEventSubscriber, type WardrobeSyncSubsystems } from './ports';
+import {
+  type IDomainEventSubscriber,
+  type WardrobeSyncSubsystems,
+} from './ports';
 
 export class WardrobeSyncCoordinator {
   private readonly unsubscribes: Array<() => void> = [];
@@ -90,7 +93,10 @@ export class WardrobeSyncCoordinator {
     }
   }
 
-  private on<TPayload>(type: string, handler: (payload: TPayload) => Promise<void> | void): void {
+  private on<TPayload>(
+    type: string,
+    handler: (payload: TPayload) => Promise<void> | void,
+  ): void {
     const off = this.bus.subscribe<TPayload>(type, (event) => handler(event.payload));
     this.unsubscribes.push(off);
   }

@@ -111,13 +111,6 @@ export * from './application/tagging/ports';
 export * from './application/tagging/BaselineColorExtractor';
 export * from './application/tagging/DeferredVisionTagSuggester';
 
-/* --------------- vision analysis (photo-first, provider-agnostic) --------- */
-export * from './application/analysis/visionPorts';
-export * from './application/analysis/colorNaming';
-export * from './application/analysis/BaselineVisionProvider';
-export * from './application/analysis/HintRefiner';
-export * from './application/analysis/GarmentAnalysisService';
-
 /* ------------------------------ photo pipeline ---------------------------- */
 export * from './application/photos/pipeline';
 

@@ -7,13 +7,13 @@
  */
 import { cn } from '../../lib/cn';
 
-export function Skeleton({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>): JSX.Element {
+export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>): JSX.Element {
   return (
     <div
-      className={cn('skeleton-shimmer relative overflow-hidden rounded-md bg-muted/70', className)}
+      className={cn(
+        'skeleton-shimmer relative overflow-hidden rounded-md bg-muted/70',
+        className,
+      )}
       {...props}
     />
   );

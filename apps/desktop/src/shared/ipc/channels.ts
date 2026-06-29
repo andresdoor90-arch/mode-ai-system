@@ -50,10 +50,6 @@ export const IpcChannels = {
   tagsSuggest: 'garment:tags:suggest',
   tagsConfirm: 'garment:tags:confirm',
 
-  /* ---------------------------- images / vision -------------------------- */
-  imageSave: 'image:save',
-  garmentAnalyze: 'garment:analyze',
-
   /* ------------------------------- outfits ------------------------------- */
   outfitSuggestions: 'outfit:suggestions',
 

@@ -22,6 +22,9 @@ import {
   type GarmentId,
   type OutfitId,
   unwrap,
+} from '@mas/core';
+
+import {
   AccessorySubcategory,
   BottomSubcategory,
   ShoeSubcategory,
@@ -116,12 +119,7 @@ export const seedDemoData = async (
     UserProfile.create(idGenerator.next<'UserProfile'>(), {
       name: 'Demo User',
       bodyMeasurements: unwrap(
-        BodyMeasurements.create({
-          heightCm: 178,
-          chestCm: 98,
-          waistCm: 82,
-          shape: BodyShape.Rectangle,
-        }),
+        BodyMeasurements.create({ heightCm: 178, chestCm: 98, waistCm: 82, shape: BodyShape.Rectangle }),
       ),
       stylePreference: unwrap(
         StylePreference.create({

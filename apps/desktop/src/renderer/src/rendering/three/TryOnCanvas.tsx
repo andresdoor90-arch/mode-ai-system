@@ -30,10 +30,7 @@ export function TryOnCanvas({ scene, onReady }: TryOnCanvasProps): JSX.Element {
       shadows
       dpr={[1, 2]}
       gl={{ preserveDrawingBuffer: true, antialias: true }}
-      camera={{
-        position: [scene.camera.position.x, scene.camera.position.y, scene.camera.position.z],
-        fov: scene.camera.fovDeg,
-      }}
+      camera={{ position: [scene.camera.position.x, scene.camera.position.y, scene.camera.position.z], fov: scene.camera.fovDeg }}
       style={{ background: scene.background.hex }}
       onCreated={(state) => {
         onReady?.({ gl: state.gl, scene: state.scene, camera: state.camera });

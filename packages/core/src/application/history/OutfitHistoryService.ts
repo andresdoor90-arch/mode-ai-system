@@ -176,8 +176,7 @@ export class OutfitHistoryService {
       options.sort ?? { by: 'wornOn', direction: 'desc' },
     );
     const total = sorted.length;
-    const pageSize =
-      options.pageSize !== undefined && options.pageSize > 0 ? options.pageSize : total;
+    const pageSize = options.pageSize !== undefined && options.pageSize > 0 ? options.pageSize : total;
     const totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
     const page = Math.min(Math.max(1, options.page ?? 1), totalPages);
     const start = (page - 1) * pageSize;

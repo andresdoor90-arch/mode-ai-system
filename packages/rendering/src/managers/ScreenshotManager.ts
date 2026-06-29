@@ -65,10 +65,7 @@ export class ScreenshotManager {
   }
 
   /** Build a request and capture it through the sink. */
-  public async capture(
-    outfitLabel: string,
-    options: ScreenshotOptions = {},
-  ): Promise<ScreenshotResult> {
+  public async capture(outfitLabel: string, options: ScreenshotOptions = {}): Promise<ScreenshotResult> {
     const request = this.buildRequest(outfitLabel, options);
     return this.sink.captureScreenshot(request);
   }

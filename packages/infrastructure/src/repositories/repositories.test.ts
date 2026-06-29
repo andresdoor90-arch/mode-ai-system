@@ -27,7 +27,11 @@ import {
 } from '@mas/core';
 
 import { createTestSqlDatabase } from '../__testsupport__/sqlite';
-import { MigrationRunner, defaultMigrationsDir, loadMigrations } from '../database/MigrationRunner';
+import {
+  MigrationRunner,
+  defaultMigrationsDir,
+  loadMigrations,
+} from '../database/MigrationRunner';
 import { type SqlDatabase } from '../database/SqlDatabase';
 import { SqlCalendarEventRepository } from './SqlCalendarEventRepository';
 import { SqlCollectionRepository } from './SqlCollectionRepository';
@@ -42,16 +46,7 @@ const nextId = <T extends string>(brand: T): import('@mas/core').Id<T> =>
 
 const blue = (): Color => unwrap(Color.fromHex('#3366cc', 'blue'));
 
-const makeGarment = (
-  over: Partial<{
-    name: string;
-    category: GarmentCategory;
-    subcategory: string;
-    status: GarmentStatus;
-    seasons: Season[];
-    tags: string[];
-  }> = {},
-): Garment =>
+const makeGarment = (over: Partial<{ name: string; category: GarmentCategory; subcategory: string; status: GarmentStatus; seasons: Season[]; tags: string[] }> = {}): Garment =>
   unwrap(
     Garment.create(nextId('Garment'), {
       name: over.name ?? 'Tee',

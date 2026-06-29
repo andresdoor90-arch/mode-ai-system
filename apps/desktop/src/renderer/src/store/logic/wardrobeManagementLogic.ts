@@ -24,7 +24,10 @@ export type ManagementSort =
   | 'category';
 
 /** Toggle a garment id in a selection set, returning a NEW set (immutable). */
-export function toggleSelection(selection: ReadonlySet<string>, id: string): Set<string> {
+export function toggleSelection(
+  selection: ReadonlySet<string>,
+  id: string,
+): Set<string> {
   const next = new Set(selection);
   if (next.has(id)) {
     next.delete(id);
@@ -74,7 +77,9 @@ export function isAllSelected(
  * archived garment is selected. Delete/tag are always available for a non-empty
  * selection.
  */
-export function availableBulkActions(selected: readonly GarmentDTO[]): readonly BulkAction[] {
+export function availableBulkActions(
+  selected: readonly GarmentDTO[],
+): readonly BulkAction[] {
   if (selected.length === 0) {
     return [];
   }

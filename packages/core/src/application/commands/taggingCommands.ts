@@ -35,10 +35,9 @@ export class SuggestGarmentTagsQuery implements Query<GarmentTagSuggestion> {
   ) {}
 }
 
-export class SuggestGarmentTagsHandler implements RequestHandler<
-  SuggestGarmentTagsQuery,
-  GarmentTagSuggestion
-> {
+export class SuggestGarmentTagsHandler
+  implements RequestHandler<SuggestGarmentTagsQuery, GarmentTagSuggestion>
+{
   public constructor(
     private readonly garments: IGarmentRepository,
     private readonly suggester: IGarmentTagSuggester,
@@ -69,7 +68,6 @@ export const CONFIRM_GARMENT_TAGS = 'garment.tags.confirm';
  */
 export interface ConfirmGarmentTagsInput {
   readonly garmentId: GarmentId;
-  readonly name?: string;
   readonly category?: string;
   readonly subcategory?: string;
   readonly categoryId?: CategoryId;
@@ -79,8 +77,6 @@ export interface ConfirmGarmentTagsInput {
   readonly material?: string;
   readonly seasons?: readonly Season[];
   readonly tags?: readonly string[];
-  /** Rich attribute metadata to merge (pattern, sleeve, style, …). */
-  readonly metadataPatch?: Readonly<Record<string, string>>;
 }
 
 export class ConfirmGarmentTagsCommand implements Command<void> {
@@ -88,7 +84,9 @@ export class ConfirmGarmentTagsCommand implements Command<void> {
   public constructor(public readonly input: ConfirmGarmentTagsInput) {}
 }
 
-export class ConfirmGarmentTagsHandler implements RequestHandler<ConfirmGarmentTagsCommand, void> {
+export class ConfirmGarmentTagsHandler
+  implements RequestHandler<ConfirmGarmentTagsCommand, void>
+{
   public constructor(
     private readonly garments: IGarmentRepository,
     private readonly events?: IDomainEventPublisher,
@@ -106,18 +104,10 @@ export class ConfirmGarmentTagsHandler implements RequestHandler<ConfirmGarmentT
         category: input.category,
         ...(input.subcategory !== undefined ? { subcategory: input.subcategory } : {}),
         ...(input.categoryId !== undefined ? { categoryId: input.categoryId } : {}),
-        ...(input.categoryMetadata !== undefined
-          ? { categoryMetadata: input.categoryMetadata }
-          : {}),
+        ...(input.categoryMetadata !== undefined ? { categoryMetadata: input.categoryMetadata } : {}),
       });
       if (!reassigned.ok) {
         return reassigned;
-      }
-    }
-    if (input.name !== undefined) {
-      const renamed = garment.rename(input.name);
-      if (!renamed.ok) {
-        return renamed;
       }
     }
     if (input.primaryColor !== undefined) {
@@ -137,10 +127,6 @@ export class ConfirmGarmentTagsHandler implements RequestHandler<ConfirmGarmentT
     }
     if (input.tags !== undefined) {
       garment.retag(input.tags);
-    }
-
-    if (input.metadataPatch !== undefined) {
-      garment.mergeMetadata(input.metadataPatch);
     }
 
     await this.garments.save(garment);

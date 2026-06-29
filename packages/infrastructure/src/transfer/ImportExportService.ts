@@ -88,7 +88,9 @@ export class ImportExportService {
           row: collectionToRow(collection),
           garmentIds: collection.garmentIds.map((id) => id as string),
         }));
-        const calendarEvents = (await this.repos.calendarEvents.findAll()).map(calendarEventToRow);
+        const calendarEvents = (await this.repos.calendarEvents.findAll()).map(
+          calendarEventToRow,
+        );
 
         return {
           formatVersion: BUNDLE_FORMAT_VERSION,

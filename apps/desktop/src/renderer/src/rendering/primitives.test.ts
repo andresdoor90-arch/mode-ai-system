@@ -70,7 +70,7 @@ describe('avatarParts', () => {
   it('widens the silhouette for the plus body type', () => {
     const neutralTorso = avatarParts(avatar).find((p) => p.id === 'torso');
     const plusTorso = avatarParts({ ...avatar, bodyType: 'plus' }).find((p) => p.id === 'torso');
-    expect(plusTorso?.primitive.args[0] ?? 0).toBeGreaterThan(neutralTorso?.primitive.args[0] ?? 0);
+    expect((plusTorso?.primitive.args[0] ?? 0)).toBeGreaterThan(neutralTorso?.primitive.args[0] ?? 0);
   });
 
   it('scales body part positions with avatar scale', () => {

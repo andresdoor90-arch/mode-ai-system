@@ -15,11 +15,7 @@
  *
  * A small LRU bound keeps memory predictable.
  */
-import {
-  type RenderableOutfit,
-  type SceneDescription,
-  type ViewPreset,
-} from '../abstraction/types';
+import { type RenderableOutfit, type SceneDescription, type ViewPreset } from '../abstraction/types';
 
 export interface CacheKeyParts {
   readonly avatarSignature: string;

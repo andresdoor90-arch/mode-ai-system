@@ -16,7 +16,10 @@ export class ValidationMiddleware {
   private readonly validators = new Map<string, Validator<Message>>();
 
   /** Register a validator for a message type. */
-  public register<TMessage extends Message>(type: string, validator: Validator<TMessage>): this {
+  public register<TMessage extends Message>(
+    type: string,
+    validator: Validator<TMessage>,
+  ): this {
     this.validators.set(type, validator as Validator<Message>);
     return this;
   }

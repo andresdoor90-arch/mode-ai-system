@@ -1,4 +1,10 @@
-import { CalendarEvent, type DressCode, type Occasion, type OutfitId, toId } from '@mas/core';
+import {
+  CalendarEvent,
+  type DressCode,
+  type Occasion,
+  type OutfitId,
+  toId,
+} from '@mas/core';
 
 import { mustOk, parseJson, toJson } from './mapperUtils';
 

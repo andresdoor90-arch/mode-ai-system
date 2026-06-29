@@ -34,7 +34,9 @@ export class OutfitRenderer {
   }
 
   private resolveVisibility(layers: readonly ClothingLayer[]): ClothingLayer[] {
-    const hasFullBody = layers.some((l) => l.slot === GarmentLayerSlot.FullBody);
+    const hasFullBody = layers.some(
+      (l) => l.slot === GarmentLayerSlot.FullBody,
+    );
     const occupied = new Set<GarmentLayerSlot>();
 
     return layers.map((layer) => {

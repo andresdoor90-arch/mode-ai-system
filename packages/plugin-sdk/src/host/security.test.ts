@@ -27,10 +27,8 @@ const manifest: PluginManifest = {
   contributes: [],
 };
 
-const keypair = (): {
-  publicKey: import('node:crypto').KeyObject;
-  privateKey: import('node:crypto').KeyObject;
-} => generateKeyPairSync('ed25519');
+const keypair = (): { publicKey: import('node:crypto').KeyObject; privateKey: import('node:crypto').KeyObject } =>
+  generateKeyPairSync('ed25519');
 
 describe('SignatureVerifier', () => {
   it('verifies a valid signature from a trusted key', () => {
@@ -80,13 +78,8 @@ describe('SignatureVerifier', () => {
   });
 
   it('honours the policy for unsigned plugins', () => {
-    const resolved: ResolvedPlugin = {
-      manifest,
-      packageBytes: canonicalPackageBytes(manifest, ''),
-    };
-    expect(new SignatureVerifier([], STRICT_SIGNATURE_POLICY).verify(resolved).accepted).toBe(
-      false,
-    );
+    const resolved: ResolvedPlugin = { manifest, packageBytes: canonicalPackageBytes(manifest, '') };
+    expect(new SignatureVerifier([], STRICT_SIGNATURE_POLICY).verify(resolved).accepted).toBe(false);
     const permissive = new SignatureVerifier([], PERMISSIVE_SIGNATURE_POLICY).verify(resolved);
     expect(permissive.status).toBe(SignatureStatus.Unsigned);
     expect(permissive.accepted).toBe(true);

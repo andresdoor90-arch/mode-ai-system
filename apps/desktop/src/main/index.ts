@@ -15,13 +15,9 @@ import { app, BrowserWindow } from 'electron';
 
 import { AppContainer } from './container/AppContainer';
 import { registerIpcHandlers, unregisterIpcHandlers } from './ipc/registerIpcHandlers';
-import { registerImageProtocol, registerImageProtocolScheme } from './protocol/imageProtocol';
 import { installSecurityPolicies } from './security';
 import { initAutoUpdates } from './updater';
 import { createMainWindow, focusMainWindow } from './window';
-
-// Register custom schemes BEFORE the app is ready (Electron requirement).
-registerImageProtocolScheme();
 
 // Enforce a single running instance; focus the existing window otherwise.
 const gotLock = app.requestSingleInstanceLock();
@@ -39,8 +35,6 @@ if (!gotLock) {
       dataDir: app.getPath('userData'),
     });
     registerIpcHandlers(container);
-    // Serve stored garment images to the sandboxed renderer over mas-img://.
-    registerImageProtocol(container.images);
 
     createMainWindow();
 

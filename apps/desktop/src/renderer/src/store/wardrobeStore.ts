@@ -39,7 +39,6 @@ interface WardrobeState {
   setSort: (sort: WardrobeSort) => void;
   addGarment: (payload: AddGarmentPayload) => Promise<boolean>;
   removeGarment: (id: string) => Promise<void>;
-  toggleFavorite: (id: string) => Promise<void>;
   /** Derived: garments after applying the active filters and sort. */
   visibleGarments: () => GarmentDTO[];
 }
@@ -116,28 +115,5 @@ export const useWardrobeStore = create<WardrobeState>((set, get) => ({
   visibleGarments: () => {
     const { garments, filters, sort } = get();
     return sortGarments(filterGarments(garments, filters), sort);
-  },
-
-  toggleFavorite: async (id) => {
-    const previous = get().garments;
-    const target = previous.find((g) => g.id === id);
-    if (target === undefined) {
-      return;
-    }
-    const next = target.favorite !== true;
-    // Optimistic flip; reconcile from source afterwards.
-    set({ garments: previous.map((g) => (g.id === id ? { ...g, favorite: next } : g)) });
-    if (!isBridgeAvailable()) {
-      return;
-    }
-    try {
-      await ipc.updateGarment({ id, favorite: next });
-      await get().load();
-    } catch (error) {
-      set({
-        garments: previous,
-        error: error instanceof Error ? error.message : 'Failed to update favourite.',
-      });
-    }
   },
 }));

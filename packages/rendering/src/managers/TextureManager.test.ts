@@ -15,7 +15,9 @@ describe('TextureManager', () => {
 
   it('lets explicit tags override the subcategory finish', () => {
     const tm = new TextureManager();
-    const m = tm.materialFor(makeGarment({ id: 'f', subcategory: 't-shirt', tags: ['leather'] }));
+    const m = tm.materialFor(
+      makeGarment({ id: 'f', subcategory: 't-shirt', tags: ['leather'] }),
+    );
     expect(m.finish).toBe('leather');
   });
 

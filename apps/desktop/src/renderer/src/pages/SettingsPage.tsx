@@ -53,19 +53,13 @@ export function SettingsPage(): JSX.Element {
 
   useEffect(() => {
     if (isBridgeAvailable()) {
-      ipc
-        .getAppInfo()
-        .then(setInfo)
-        .catch(() => setInfo(null));
+      ipc.getAppInfo().then(setInfo).catch(() => setInfo(null));
     }
   }, []);
 
   return (
     <div>
-      <PageHeader
-        title="Configuración"
-        description="Personaliza la apariencia y gestiona tus datos."
-      />
+      <PageHeader title="Configuración" description="Personaliza la apariencia y gestiona tus datos." />
 
       <Tabs defaultValue="appearance">
         <TabsList>
@@ -106,11 +100,7 @@ export function SettingsPage(): JSX.Element {
                 ))}
               </div>
 
-              <FormField
-                label="Densidad de la interfaz"
-                htmlFor="s-density"
-                hint="Espaciado de las listas y tarjetas"
-              >
+              <FormField label="Densidad de la interfaz" htmlFor="s-density" hint="Espaciado de las listas y tarjetas">
                 <Select
                   id="s-density"
                   value={density}
@@ -131,11 +121,7 @@ export function SettingsPage(): JSX.Element {
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField label="Ocasión" htmlFor="s-occasion">
-                <Select
-                  id="s-occasion"
-                  value={defaultOccasion}
-                  onChange={(e) => setDefaultOccasion(e.target.value)}
-                >
+                <Select id="s-occasion" value={defaultOccasion} onChange={(e) => setDefaultOccasion(e.target.value)}>
                   {OCCASION_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
@@ -144,11 +130,7 @@ export function SettingsPage(): JSX.Element {
                 </Select>
               </FormField>
               <FormField label="Temporada" htmlFor="s-season">
-                <Select
-                  id="s-season"
-                  value={defaultSeason}
-                  onChange={(e) => setDefaultSeason(e.target.value)}
-                >
+                <Select id="s-season" value={defaultSeason} onChange={(e) => setDefaultSeason(e.target.value)}>
                   {SEASON_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
@@ -191,8 +173,7 @@ export function SettingsPage(): JSX.Element {
               <Row label="Node.js" value={info?.versions.node || '—'} />
               {!isBridgeAvailable() && (
                 <p className="pt-2 text-xs text-muted-foreground">
-                  Vista previa sin la aplicación de escritorio: la información del entorno no está
-                  disponible.
+                  Vista previa sin la aplicación de escritorio: la información del entorno no está disponible.
                 </p>
               )}
             </CardContent>

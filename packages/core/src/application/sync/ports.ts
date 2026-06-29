@@ -13,7 +13,9 @@
  * an index or the history actually works.
  */
 import { type GarmentId } from '../../shared/Identifier';
-import { type GarmentSnapshot } from '../../domain/events/wardrobeEvents';
+import {
+  type GarmentSnapshot,
+} from '../../domain/events/wardrobeEvents';
 
 /** Publish a domain event. Satisfied by infrastructure `IEventBus`. */
 export interface IDomainEventPublisher {
@@ -24,11 +26,7 @@ export interface IDomainEventPublisher {
 export interface IDomainEventSubscriber {
   subscribe<TPayload = unknown>(
     type: string,
-    handler: (event: {
-      type: string;
-      payload: TPayload;
-      occurredAt: string;
-    }) => void | Promise<void>,
+    handler: (event: { type: string; payload: TPayload; occurredAt: string }) => void | Promise<void>,
   ): () => void;
 }
 

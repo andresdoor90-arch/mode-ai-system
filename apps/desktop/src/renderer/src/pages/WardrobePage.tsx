@@ -6,17 +6,20 @@
  * supports removal (optimistic, reconciled over IPC). Adding goes through the
  * AddGarmentDialog. Loading shows skeletons; no matches shows an EmptyState.
  */
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Search, Shirt, SlidersHorizontal } from 'lucide-react';
 
 import { AddGarmentDialog } from '../components/common/AddGarmentDialog';
 import { EmptyState } from '../components/common/EmptyState';
 import { GarmentCard } from '../components/common/GarmentCard';
-import { GarmentDetailDialog } from '../components/common/GarmentDetailDialog';
 import { PageHeader } from '../components/common/PageHeader';
 import { Button, Card, Input, Select, Skeleton } from '../components/ui';
 import { useToast } from '../hooks/useToast';
-import { CATEGORY_OPTIONS, SEASON_OPTIONS, STATUS_OPTIONS } from '../data/wardrobeOptions';
+import {
+  CATEGORY_OPTIONS,
+  SEASON_OPTIONS,
+  STATUS_OPTIONS,
+} from '../data/wardrobeOptions';
 import { pluralize } from '../lib/format';
 import type { WardrobeSort } from '../store/logic/wardrobeLogic';
 import { useWardrobeStore } from '../store/wardrobeStore';
@@ -39,15 +42,8 @@ export function WardrobePage(): JSX.Element {
   const sort = useWardrobeStore((state) => state.sort);
   const setSort = useWardrobeStore((state) => state.setSort);
   const removeGarment = useWardrobeStore((state) => state.removeGarment);
-  const toggleFavorite = useWardrobeStore((state) => state.toggleFavorite);
   const visible = useWardrobeStore((state) => state.visibleGarments());
   const total = useWardrobeStore((state) => state.garments.length);
-
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const selected = useWardrobeStore(
-    (state) => state.garments.find((g) => g.id === selectedId) ?? null,
-  );
 
   useEffect(() => {
     if (!loaded) {
@@ -58,11 +54,6 @@ export function WardrobePage(): JSX.Element {
   const handleRemove = (id: string): void => {
     void removeGarment(id);
     toast({ title: 'Prenda eliminada', variant: 'default' });
-  };
-
-  const handleOpen = (id: string): void => {
-    setSelectedId(id);
-    setDetailOpen(true);
   };
 
   return (
@@ -169,18 +160,10 @@ export function WardrobePage(): JSX.Element {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visible.map((garment) => (
-            <GarmentCard
-              key={garment.id}
-              garment={garment}
-              onOpen={handleOpen}
-              onRemove={handleRemove}
-              onToggleFavorite={(id) => void toggleFavorite(id)}
-            />
+            <GarmentCard key={garment.id} garment={garment} onRemove={handleRemove} />
           ))}
         </div>
       )}
-
-      <GarmentDetailDialog garment={selected} open={detailOpen} onOpenChange={setDetailOpen} />
     </div>
   );
 }

@@ -7,7 +7,11 @@
  * {@link OutfitHistoryEntry}, so the UI never records history directly and the
  * cognitive engine improves from real usage over time.
  */
-import { type GarmentId, type OutfitHistoryEntryId, type OutfitId } from '../../shared/Identifier';
+import {
+  type GarmentId,
+  type OutfitHistoryEntryId,
+  type OutfitId,
+} from '../../shared/Identifier';
 import { type IdGenerator } from '../../shared/IdGenerator';
 import { type Result, ok } from '../../shared/Result';
 import { NotFoundError, ValidationError } from '../../shared/errors';
@@ -114,10 +118,9 @@ export class RecordOutfitUsageCommand implements Command<OutfitHistoryEntryId> {
   ) {}
 }
 
-export class RecordOutfitUsageHandler implements RequestHandler<
-  RecordOutfitUsageCommand,
-  OutfitHistoryEntryId
-> {
+export class RecordOutfitUsageHandler
+  implements RequestHandler<RecordOutfitUsageCommand, OutfitHistoryEntryId>
+{
   public constructor(
     private readonly garments: IGarmentRepository,
     private readonly history: IOutfitHistoryRepository,
@@ -125,7 +128,9 @@ export class RecordOutfitUsageHandler implements RequestHandler<
     private readonly clock: () => string = () => new Date().toISOString(),
   ) {}
 
-  public async handle(command: RecordOutfitUsageCommand): Promise<Result<OutfitHistoryEntryId>> {
+  public async handle(
+    command: RecordOutfitUsageCommand,
+  ): Promise<Result<OutfitHistoryEntryId>> {
     const resolved = await resolveGarments(this.garments, command.garmentIds);
     if (!resolved.ok) {
       return resolved;
@@ -171,10 +176,9 @@ export class RecordOutfitFeedbackCommand implements Command<OutfitFeedbackResult
   public constructor(public readonly input: OutfitFeedbackInput) {}
 }
 
-export class RecordOutfitFeedbackHandler implements RequestHandler<
-  RecordOutfitFeedbackCommand,
-  OutfitFeedbackResult
-> {
+export class RecordOutfitFeedbackHandler
+  implements RequestHandler<RecordOutfitFeedbackCommand, OutfitFeedbackResult>
+{
   public constructor(
     private readonly garments: IGarmentRepository,
     private readonly history: IOutfitHistoryRepository,
@@ -183,7 +187,9 @@ export class RecordOutfitFeedbackHandler implements RequestHandler<
     private readonly clock: () => string = () => new Date().toISOString(),
   ) {}
 
-  public async handle(command: RecordOutfitFeedbackCommand): Promise<Result<OutfitFeedbackResult>> {
+  public async handle(
+    command: RecordOutfitFeedbackCommand,
+  ): Promise<Result<OutfitFeedbackResult>> {
     const { garmentIds, accepted, context = {} } = command.input;
     const resolved = await resolveGarments(this.garments, garmentIds);
     if (!resolved.ok) {
@@ -247,10 +253,9 @@ export class RepeatOutfitCommand implements Command<RepeatOutfitResult> {
   public constructor(public readonly input: RepeatOutfitInput) {}
 }
 
-export class RepeatOutfitHandler implements RequestHandler<
-  RepeatOutfitCommand,
-  RepeatOutfitResult
-> {
+export class RepeatOutfitHandler
+  implements RequestHandler<RepeatOutfitCommand, RepeatOutfitResult>
+{
   public constructor(
     private readonly garments: IGarmentRepository,
     private readonly history: IOutfitHistoryRepository,
@@ -315,10 +320,9 @@ export class AnnotateOutfitHistoryCommand implements Command<void> {
   public constructor(public readonly input: AnnotateOutfitHistoryInput) {}
 }
 
-export class AnnotateOutfitHistoryHandler implements RequestHandler<
-  AnnotateOutfitHistoryCommand,
-  void
-> {
+export class AnnotateOutfitHistoryHandler
+  implements RequestHandler<AnnotateOutfitHistoryCommand, void>
+{
   public constructor(private readonly history: IOutfitHistoryRepository) {}
 
   public async handle(command: AnnotateOutfitHistoryCommand): Promise<Result<void>> {

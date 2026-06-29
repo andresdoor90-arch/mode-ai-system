@@ -120,7 +120,9 @@ export class SqlOutfitRepository implements IOutfitRepository {
     for (const garmentId of garmentIds) {
       const garment = await this.garments.findById(garmentId as Garment['id']);
       if (garment === null) {
-        throw new MappingError(`Outfit ${row.id} references missing garment ${garmentId}.`);
+        throw new MappingError(
+          `Outfit ${row.id} references missing garment ${garmentId}.`,
+        );
       }
       garments.push(garment);
     }

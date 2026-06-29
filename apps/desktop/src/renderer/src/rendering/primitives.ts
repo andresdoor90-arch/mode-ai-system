@@ -85,11 +85,7 @@ export function avatarParts(avatar: AvatarDescriptor): readonly AvatarPart[] {
     {
       id: 'neck',
       colorHex: skin,
-      primitive: {
-        kind: 'cylinder',
-        args: [0.05 * s, 0.05 * s, 0.1 * s, 16],
-        position: [0, 1.5 * s, 0],
-      },
+      primitive: { kind: 'cylinder', args: [0.05 * s, 0.05 * s, 0.1 * s, 16], position: [0, 1.5 * s, 0] },
     },
     {
       id: 'torso',

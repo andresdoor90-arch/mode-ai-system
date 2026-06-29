@@ -11,7 +11,11 @@ import {
   SqlUserProfileRepository,
 } from '../repositories';
 import { type TransferRepositories } from '../transfer/ImportExportService';
-import { MigrationRunner, defaultMigrationsDir, loadMigrations } from './MigrationRunner';
+import {
+  MigrationRunner,
+  defaultMigrationsDir,
+  loadMigrations,
+} from './MigrationRunner';
 import { type SqlDatabase } from './SqlDatabase';
 import { seedDemoData } from './seed';
 

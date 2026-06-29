@@ -36,7 +36,10 @@ export class PreferenceEngine {
    * {@link StylePreference}. Learned signals are merged with — and take
    * precedence over — the stored profile preference.
    */
-  public derive(memory: PreferenceMemorySnapshot, base?: StylePreference): DerivedPreferences {
+  public derive(
+    memory: PreferenceMemorySnapshot,
+    base?: StylePreference,
+  ): DerivedPreferences {
     const preferred = new Set<string>(base?.preferredColors ?? []);
     const avoided = new Set<string>(base?.avoidedColors ?? []);
 
@@ -72,7 +75,10 @@ export class PreferenceEngine {
    * and subcategory affinities of its garments. 0 when nothing has been
    * learned, so a fresh install ranks purely on domain merit.
    */
-  public affinityBias(garments: readonly Garment[], memory: PreferenceMemorySnapshot): number {
+  public affinityBias(
+    garments: readonly Garment[],
+    memory: PreferenceMemorySnapshot,
+  ): number {
     if (garments.length === 0) {
       return 0;
     }

@@ -17,7 +17,8 @@ export class InMemoryPluginStorageProvider {
     const namespace = this.stores.get(pluginId) ?? new Map<string, string>();
     this.stores.set(pluginId, namespace);
     return {
-      get: (key: string): Promise<string | null> => Promise.resolve(namespace.get(key) ?? null),
+      get: (key: string): Promise<string | null> =>
+        Promise.resolve(namespace.get(key) ?? null),
       set: (key: string, value: string): Promise<void> => {
         namespace.set(key, value);
         return Promise.resolve();

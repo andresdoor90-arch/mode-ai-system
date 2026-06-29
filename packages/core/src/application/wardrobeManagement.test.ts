@@ -27,7 +27,10 @@ import {
   SeedDefaultTaxonomyCommand,
   SeedDefaultTaxonomyHandler,
 } from './commands/categoryCommands';
-import { AddGarmentCommand, AddGarmentHandler } from './commands/garmentCommands';
+import {
+  AddGarmentCommand,
+  AddGarmentHandler,
+} from './commands/garmentCommands';
 import {
   DuplicateGarmentCommand,
   DuplicateGarmentHandler,
@@ -62,27 +65,17 @@ import type {
 
 class TestBus implements IDomainEventPublisher, IDomainEventSubscriber {
   public readonly published: Array<{ type: string; payload: unknown }> = [];
-  private readonly handlers = new Map<
-    string,
-    Array<(e: { type: string; payload: unknown; occurredAt: string }) => void | Promise<void>>
-  >();
+  private readonly handlers = new Map<string, Array<(e: { type: string; payload: unknown; occurredAt: string }) => void | Promise<void>>>();
 
   public subscribe<TPayload = unknown>(
     type: string,
-    handler: (event: {
-      type: string;
-      payload: TPayload;
-      occurredAt: string;
-    }) => void | Promise<void>,
+    handler: (event: { type: string; payload: TPayload; occurredAt: string }) => void | Promise<void>,
   ): () => void {
     const list = this.handlers.get(type) ?? [];
     list.push(handler as never);
     this.handlers.set(type, list);
     return () => {
-      this.handlers.set(
-        type,
-        (this.handlers.get(type) ?? []).filter((h) => h !== handler),
-      );
+      this.handlers.set(type, (this.handlers.get(type) ?? []).filter((h) => h !== handler));
     };
   }
 
@@ -113,7 +106,9 @@ describe('Category management (Module 1 — fully dynamic)', () => {
     const sacos = unwrap(
       await create.handle(new CreateCategoryCommand({ name: 'Sacos', metadata: { formality: 8 } })),
     );
-    const blazers = unwrap(await create.handle(new CreateCategoryCommand({ name: 'Blazers' })));
+    const blazers = unwrap(
+      await create.handle(new CreateCategoryCommand({ name: 'Blazers' })),
+    );
     expect(await repo.count()).toBe(2);
     expect(bus.published.filter((e) => e.type === WardrobeEvents.CategoryCreated)).toHaveLength(2);
 
@@ -121,12 +116,7 @@ describe('Category management (Module 1 — fully dynamic)', () => {
     const update = new UpdateCategoryHandler(repo, bus);
     unwrap(
       await update.handle(
-        new UpdateCategoryCommand({
-          id: sacos,
-          name: 'Sacos elegantes',
-          group: 'Formal',
-          metadata: { formality: 9 },
-        }),
+        new UpdateCategoryCommand({ id: sacos, name: 'Sacos elegantes', group: 'Formal', metadata: { formality: 9 } }),
       ),
     );
     const edited = await repo.findById(sacos);
@@ -152,11 +142,7 @@ describe('Category management (Module 1 — fully dynamic)', () => {
     const create = new CreateCategoryHandler(repo, ids);
     const camisas = unwrap(await create.handle(new CreateCategoryCommand({ name: 'Camisas' })));
     for (const sub of ['Manga corta', 'Manga larga', 'Sin mangas']) {
-      unwrap(
-        await create.handle(
-          new CreateCategoryCommand({ name: sub, parentId: camisas as CategoryId }),
-        ),
-      );
+      unwrap(await create.handle(new CreateCategoryCommand({ name: sub, parentId: camisas as CategoryId })));
     }
     const children = await repo.findChildren(camisas as CategoryId);
     expect(children).toHaveLength(3);
@@ -198,13 +184,9 @@ describe('Garment lifecycle (Module 2)', () => {
     const { repo, bus } = setup();
     const g = makeGarment({ id: 'gx' });
     await repo.save(g);
-    unwrap(
-      await new ArchiveGarmentHandler(repo, bus).handle(new ArchiveGarmentCommand(toId('gx'))),
-    );
+    unwrap(await new ArchiveGarmentHandler(repo, bus).handle(new ArchiveGarmentCommand(toId('gx'))));
     expect((await repo.findById(toId('gx')))?.status).toBe(GarmentStatus.Archived);
-    unwrap(
-      await new RestoreGarmentHandler(repo, bus).handle(new RestoreGarmentCommand(toId('gx'))),
-    );
+    unwrap(await new RestoreGarmentHandler(repo, bus).handle(new RestoreGarmentCommand(toId('gx'))));
     expect((await repo.findById(toId('gx')))?.status).toBe(GarmentStatus.Available);
     const events = bus.published.map((e) => e.type);
     expect(events).toContain(WardrobeEvents.GarmentArchived);
@@ -239,9 +221,7 @@ describe('Photo management (Module 3)', () => {
     );
     const reordered = await repo.findById(toId('gp'));
     expect(reordered?.photos.map((p) => p.id)).toEqual([photoIds[2], photoIds[0], photoIds[1]]);
-    expect(
-      bus.published.filter((e) => e.type === WardrobeEvents.GarmentPhotosChanged).length,
-    ).toBeGreaterThanOrEqual(2);
+    expect(bus.published.filter((e) => e.type === WardrobeEvents.GarmentPhotosChanged).length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -314,27 +294,9 @@ describe('AI-assisted tagging (Module 5) — suggestions never auto-applied', ()
 
 describe('Search / filter / sort (Module 2)', () => {
   const garments = [
-    makeGarment({
-      id: 's1',
-      name: 'Blazer negro',
-      category: 'outerwear',
-      subcategory: 'blazer',
-      tags: ['formal'],
-    }),
-    makeGarment({
-      id: 's2',
-      name: 'Camiseta blanca',
-      category: 'tops',
-      subcategory: 't-shirt',
-      wearCount: 10,
-    }),
-    makeGarment({
-      id: 's3',
-      name: 'Camisa azul',
-      category: 'tops',
-      subcategory: 'shirt',
-      wearCount: 2,
-    }),
+    makeGarment({ id: 's1', name: 'Blazer negro', category: 'outerwear', subcategory: 'blazer', tags: ['formal'] }),
+    makeGarment({ id: 's2', name: 'Camiseta blanca', category: 'tops', subcategory: 't-shirt', wearCount: 10 }),
+    makeGarment({ id: 's3', name: 'Camisa azul', category: 'tops', subcategory: 'shirt', wearCount: 2 }),
   ];
   garments[0]!.archive();
 
@@ -371,39 +333,19 @@ describe('Event-driven cognitive sync (Module 6)', () => {
     };
     const subsystems: WardrobeSyncSubsystems = {
       inventory: {
-        applyUpserted: (s) => {
-          notified.inventoryUpsert.push(s.id);
-        },
-        applyRemoved: (id) => {
-          notified.inventoryRemove.push(id);
-        },
+        applyUpserted: (s) => { notified.inventoryUpsert.push(s.id); },
+        applyRemoved: (id) => { notified.inventoryRemove.push(id); },
       },
       semanticIndex: {
-        index: async (s) => {
-          notified.indexed.push(s.id);
-        },
-        remove: async (id) => {
-          notified.removedFromIndex.push(id);
-        },
+        index: async (s) => { notified.indexed.push(s.id); },
+        remove: async (id) => { notified.removedFromIndex.push(id); },
       },
       cache: {
-        invalidateRecommendations: () => {
-          notified.recoInvalidations += 1;
-        },
-        invalidateVisualization: (id) => {
-          notified.vizInvalidations.push(id);
-        },
+        invalidateRecommendations: () => { notified.recoInvalidations += 1; },
+        invalidateVisualization: (id) => { notified.vizInvalidations.push(id); },
       },
-      history: {
-        record: (name) => {
-          notified.history.push(name);
-        },
-      },
-      preferenceMemory: {
-        onGarmentRemoved: (id) => {
-          notified.preferenceForgets.push(id);
-        },
-      },
+      history: { record: (name) => { notified.history.push(name); } },
+      preferenceMemory: { onGarmentRemoved: (id) => { notified.preferenceForgets.push(id); } },
     };
     const coordinator = new WardrobeSyncCoordinator(bus, subsystems).start();
 

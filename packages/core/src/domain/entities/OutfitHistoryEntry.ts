@@ -1,5 +1,9 @@
 import { Entity } from '../../shared/Entity';
-import { type GarmentId, type OutfitHistoryEntryId, type OutfitId } from '../../shared/Identifier';
+import {
+  type GarmentId,
+  type OutfitHistoryEntryId,
+  type OutfitId,
+} from '../../shared/Identifier';
 import { type Result, ok, err } from '../../shared/Result';
 import { ValidationError } from '../../shared/errors';
 import { signatureOfIds } from '../services/OutfitScoringService';

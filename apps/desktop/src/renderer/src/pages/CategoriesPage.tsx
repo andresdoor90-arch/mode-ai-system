@@ -16,7 +16,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, FolderPlus, LayoutGrid, Plus, Trash2 } from 'lucide-react';
 
 import { PageHeader } from '../components/common/PageHeader';
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from '../components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+} from '../components/ui';
 import { useToast } from '../hooks/useToast';
 import { ipc, isBridgeAvailable } from '../ipc/client';
 import {

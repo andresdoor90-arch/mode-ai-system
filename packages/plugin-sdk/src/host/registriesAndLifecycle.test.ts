@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  DuplicatePluginError,
-  IllegalLifecycleTransitionError,
-  PluginNotFoundError,
-} from '../contracts/errors';
+import { DuplicatePluginError, IllegalLifecycleTransitionError, PluginNotFoundError } from '../contracts/errors';
 import { ExtensionPointId } from '../contracts/extensionPoints';
 import { PluginLifecycleEvent, PluginLifecycleState } from '../contracts/lifecycle';
 import { ExtensionRegistry } from './ExtensionRegistry';

@@ -120,7 +120,7 @@ describe('ValidationMiddleware', () => {
     const garments = new InMemoryGarmentRepository();
     bus.use(
       new ValidationMiddleware()
-        .register(ADD_GARMENT, (_message: Command) => {
+        .register(ADD_GARMENT, (message: Command) => {
           // Reject everything to prove the handler is never reached.
           return { ok: false, error: new Error('blocked') as never };
         })
@@ -163,7 +163,10 @@ describe('garment + outfit command/query flow', () => {
     queries.register(GET_GARMENTS_BY_CATEGORY, new GetGarmentsByCategoryHandler(garments));
     queries.register(GET_STYLE_ANALYSIS, new GetStyleAnalysisHandler(garments));
     queries.register(GET_COLOR_PALETTE, new GetColorPaletteHandler(garments, profiles));
-    queries.register(GET_OUTFIT_SUGGESTIONS, new GetOutfitSuggestionsHandler(garments, profiles));
+    queries.register(
+      GET_OUTFIT_SUGGESTIONS,
+      new GetOutfitSuggestionsHandler(garments, profiles),
+    );
   });
 
   const seedThree = async (): Promise<GarmentId[]> => {

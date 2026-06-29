@@ -45,10 +45,9 @@ export class GetOutfitSuggestionsQuery implements Query<readonly OutfitSuggestio
   public constructor(public readonly input: GetOutfitSuggestionsInput) {}
 }
 
-export class GetOutfitSuggestionsHandler implements RequestHandler<
-  GetOutfitSuggestionsQuery,
-  readonly OutfitSuggestion[]
-> {
+export class GetOutfitSuggestionsHandler
+  implements RequestHandler<GetOutfitSuggestionsQuery, readonly OutfitSuggestion[]>
+{
   public constructor(
     private readonly garments: IGarmentRepository,
     private readonly profiles: IUserProfileRepository,
@@ -91,7 +90,9 @@ export class GetOutfitSuggestionsHandler implements RequestHandler<
       for (const bottom of bottoms) {
         for (const shoe of shoeOptions) {
           for (const outer of outerOptions) {
-            pushCapped([top, bottom, shoe, outer].filter((g): g is Garment => g !== null));
+            pushCapped(
+              [top, bottom, shoe, outer].filter((g): g is Garment => g !== null),
+            );
           }
         }
       }
@@ -109,7 +110,9 @@ export class GetOutfitSuggestionsHandler implements RequestHandler<
     const context: ScoringContext = {
       ...(input.weather !== undefined ? { weather: input.weather } : {}),
       ...(preference !== undefined ? { stylePreference: preference } : {}),
-      ...(input.recentSignatures !== undefined ? { recentSignatures: input.recentSignatures } : {}),
+      ...(input.recentSignatures !== undefined
+        ? { recentSignatures: input.recentSignatures }
+        : {}),
       ...(input.referenceDate !== undefined ? { referenceDate: input.referenceDate } : {}),
     };
 
