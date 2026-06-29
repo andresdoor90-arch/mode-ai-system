@@ -89,9 +89,12 @@ export const SUBCATEGORIES_BY_CATEGORY: Record<
 
 /** Whether a subcategory legitimately belongs to the given category. */
 export const isSubcategoryOf = (
-  category: GarmentCategory,
+  category: string,
   subcategory: string,
-): boolean => Object.values(SUBCATEGORIES_BY_CATEGORY[category]).includes(subcategory);
+): boolean => {
+  const subs = SUBCATEGORIES_BY_CATEGORY[category as GarmentCategory];
+  return subs !== undefined && Object.values(subs).includes(subcategory);
+};
 
 /**
  * Subcategories that represent *heavy* cold-weather outerwear. The "no heavy

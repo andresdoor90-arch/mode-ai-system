@@ -1,6 +1,6 @@
 import { Entity } from '../../shared/Entity';
 import { type CategoryId, type GarmentId, type PhotoId } from '../../shared/Identifier';
-import { type Result, ok, err } from '../../shared/Result';
+import { type Result, ok, err, unwrapOr } from '../../shared/Result';
 import { ValidationError, InvariantViolationError, NotFoundError } from '../../shared/errors';
 import { type Color } from '../value-objects/Color';
 import {
@@ -442,7 +442,7 @@ export class Garment extends Entity<'Garment'> {
     for (const id of orderedIds) {
       const photo = byId.get(id);
       if (photo !== undefined) {
-        reordered.push(photo.with({ order: idx }).value ?? photo);
+        reordered.push(unwrapOr(photo.with({ order: idx }), photo));
         byId.delete(id);
         idx += 1;
       }
@@ -450,7 +450,7 @@ export class Garment extends Entity<'Garment'> {
     // Append any photos not referenced in the order list, preserving sequence.
     for (const photo of this._photos) {
       if (byId.has(photo.id)) {
-        reordered.push(photo.with({ order: idx }).value ?? photo);
+        reordered.push(unwrapOr(photo.with({ order: idx }), photo));
         idx += 1;
       }
     }
@@ -463,7 +463,7 @@ export class Garment extends Entity<'Garment'> {
     if (!this._photos.some((p) => p.id === photoId)) {
       return err(new NotFoundError(`Photo ${photoId} not found on this garment.`));
     }
-    this._photos = this._photos.map((p) => p.with({ isPrimary: p.id === photoId }).value ?? p);
+    this._photos = this._photos.map((p) => unwrapOr(p.with({ isPrimary: p.id === photoId }), p));
     return ok(undefined);
   }
 
@@ -481,7 +481,7 @@ export class Garment extends Entity<'Garment'> {
     const hasPrimary = sorted.some((p) => p.isPrimary);
     return sorted.map((p, i) => {
       const isPrimary = hasPrimary ? p.isPrimary : i === 0;
-      return p.with({ order: i, isPrimary }).value ?? p;
+      return unwrapOr(p.with({ order: i, isPrimary }), p);
     });
   }
 

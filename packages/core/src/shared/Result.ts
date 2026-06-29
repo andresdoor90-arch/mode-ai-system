@@ -42,6 +42,13 @@ export const unwrap = <T, E extends DomainError>(result: Result<T, E>): T => {
 };
 
 /**
+ * Unwrap a result's value, returning the given fallback when it failed.
+ * Use at call-sites that can safely degrade to a default instead of failing.
+ */
+export const unwrapOr = <T, E extends DomainError>(result: Result<T, E>, fallback: T): T =>
+  result.ok ? result.value : fallback;
+
+/**
  * Combine many results into a single result containing the array of values.
  * Fails fast on the first error encountered.
  */
