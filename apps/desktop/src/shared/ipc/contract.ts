@@ -10,6 +10,7 @@ import { IpcChannels } from './channels';
 import type {
   AddGarmentPayload,
   AiStatusDTO,
+  AnalyzeGarmentPayload,
   AnnotateHistoryPayload,
   AppInfoDTO,
   CategoryDTO,
@@ -17,10 +18,11 @@ import type {
   CategoryPayload,
   ColorPaletteDTO,
   CreateCategoryPayload,
+  GarmentAnalysisResultDTO,
   GarmentDTO,
   GarmentSearchPayload,
   HistorySearchPayload,
-  OutfitHistoryEntryDTO,
+  ImageDataDTO,
   OutfitHistoryPageDTO,
   OutfitHistoryStatisticsDTO,
   OutfitSuggestionDTO,
@@ -32,6 +34,8 @@ import type {
   RepeatOutfitPayload,
   RepetitionGroupDTO,
   ReorderPayload,
+  SaveImagePayload,
+  SaveImageResultDTO,
   SeasonPayload,
   StyleAnalysisDTO,
   SuggestionsPayload,
@@ -86,7 +90,10 @@ export interface IpcContract {
   [IpcChannels.garmentRestore]: { request: { id: string }; response: { id: string } };
 
   [IpcChannels.photosAdd]: {
-    request: { garmentId: string; photos: readonly { storageKey: string }[] };
+    request: {
+      garmentId: string;
+      photos: readonly { storageKey: string; attributes?: Readonly<Record<string, string>> }[];
+    };
     response: { photoIds: readonly string[] };
   };
   [IpcChannels.photoRemove]: {
@@ -107,6 +114,13 @@ export interface IpcContract {
     response: TagSuggestionDTO;
   };
   [IpcChannels.tagsConfirm]: { request: ConfirmTagsPayload; response: { id: string } };
+
+  [IpcChannels.imageSave]: { request: SaveImagePayload; response: SaveImageResultDTO };
+  [IpcChannels.imageGet]: { request: { key: string }; response: ImageDataDTO };
+  [IpcChannels.garmentAnalyze]: {
+    request: AnalyzeGarmentPayload;
+    response: GarmentAnalysisResultDTO;
+  };
 
   [IpcChannels.outfitSuggestions]: {
     request: SuggestionsPayload;

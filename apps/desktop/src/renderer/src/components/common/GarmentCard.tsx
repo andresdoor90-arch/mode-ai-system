@@ -1,17 +1,18 @@
 /**
- * GarmentCard — the canonical wardrobe item tile.
+ * GarmentCard — the catalog wardrobe tile. THE PHOTO IS THE GARMENT.
  *
- * Presents a garment's key attributes (name, category, colour, brand, status,
- * tags, wear count) on a Card, with a thumbnail area that falls back to an
- * initial-style monogram when no image exists. Right-click exposes a context
- * menu and a kebab button exposes the same actions, both routed back to the
- * caller via `onRemove`. Purely presentational beyond those callbacks.
+ * The photograph dominates the card; below it the essentials appear: name,
+ * category/subcategory, colour and tags. The photo is fetched lazily over IPC
+ * by {@link GarmentImage} (with a graceful monogram fallback for garments that
+ * have no photo yet). Right-click and the hover kebab both expose delete,
+ * routed back to the caller via `onRemove`.
  */
-import { MoreVertical, Shirt, Trash2 } from 'lucide-react';
+import { MoreVertical, Trash2 } from 'lucide-react';
 
 import type { GarmentDTO } from '@shared/ipc';
 
 import { titleCase } from '../../lib/format';
+import { thumbnailKeyOf } from '../../lib/garmentImages';
 import { Badge, type BadgeProps } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
@@ -30,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { ColorDot } from './ColorDot';
+import { GarmentImage } from './GarmentImage';
 
 const STATUS_VARIANT: Record<GarmentDTO['status'], BadgeProps['variant']> = {
   available: 'success',
@@ -62,16 +64,12 @@ export function GarmentCard({ garment, onRemove }: GarmentCardProps): JSX.Elemen
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <Card className="group overflow-hidden transition-shadow hover:shadow-elevated">
-          <div
-            className="relative flex aspect-[4/3] items-center justify-center"
-            style={{ backgroundColor: `${garment.color.hex}1a` }}
-          >
-            <span
-              className="flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-sm"
-              style={{ backgroundColor: garment.color.hex }}
-            >
-              <Shirt className="h-7 w-7 opacity-90" />
-            </span>
+          <div className="relative aspect-[4/5]">
+            <GarmentImage
+              storageKey={thumbnailKeyOf(garment)}
+              alt={garment.name}
+              className="h-full w-full"
+            />
             <div className="absolute right-2 top-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -95,29 +93,24 @@ export function GarmentCard({ garment, onRemove }: GarmentCardProps): JSX.Elemen
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
-
-          <div className="space-y-3 p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h3 className="truncate text-sm font-semibold text-foreground">{garment.name}</h3>
-                <p className="truncate text-xs text-muted-foreground">
-                  {titleCase(garment.category)} · {titleCase(garment.subcategory)}
-                </p>
-              </div>
+            <div className="absolute left-2 top-2">
               <Badge variant={STATUS_VARIANT[garment.status]}>{titleCase(garment.status)}</Badge>
             </div>
+          </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <ColorDot hex={garment.color.hex} name={garment.color.name} />
-                <span>{garment.color.name}</span>
-              </div>
-              {garment.brand !== null && (
-                <span className="truncate text-xs text-muted-foreground">{garment.brand}</span>
-              )}
+          <div className="space-y-2 p-3">
+            <div>
+              <h3 className="truncate text-sm font-semibold text-foreground" title={garment.name}>
+                {garment.name}
+              </h3>
+              <p className="truncate text-xs text-muted-foreground">
+                {titleCase(garment.category)} · {titleCase(garment.subcategory)}
+              </p>
             </div>
-
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <ColorDot hex={garment.color.hex} name={garment.color.name} />
+              <span className="truncate">{garment.color.name}</span>
+            </div>
             {garment.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {garment.tags.slice(0, 3).map((tag) => (

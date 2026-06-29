@@ -17,6 +17,7 @@ import {
   IpcChannels,
   type AddGarmentPayload,
   type AiStatusDTO,
+  type AnalyzeGarmentPayload,
   type AnnotateHistoryPayload,
   type AppInfoDTO,
   type CategoryDTO,
@@ -24,9 +25,11 @@ import {
   type ColorPaletteDTO,
   type CreateCategoryPayload,
   type ConfirmTagsPayload,
+  type GarmentAnalysisResultDTO,
   type GarmentDTO,
   type GarmentSearchPayload,
   type HistorySearchPayload,
+  type ImageDataDTO,
   type IpcResponse,
   type OutfitHistoryPageDTO,
   type OutfitHistoryStatisticsDTO,
@@ -39,6 +42,8 @@ import {
   type RepeatOutfitPayload,
   type RepetitionGroupDTO,
   type ReorderPayload,
+  type SaveImagePayload,
+  type SaveImageResultDTO,
   type StyleAnalysisDTO,
   type SuggestionsPayload,
   type TagSuggestionDTO,
@@ -109,7 +114,7 @@ const api = {
   photos: {
     add: (
       garmentId: string,
-      photos: readonly { storageKey: string }[],
+      photos: readonly { storageKey: string; attributes?: Readonly<Record<string, string>> }[],
     ): Promise<IpcResponse<{ photoIds: readonly string[] }>> =>
       invoke(IpcChannels.photosAdd, { garmentId, photos }),
     remove: (garmentId: string, photoId: string): Promise<IpcResponse<{ ok: true }>> =>
@@ -121,6 +126,18 @@ const api = {
       invoke(IpcChannels.photosReorder, { garmentId, orderedPhotoIds }),
     transform: (payload: PhotoTransformPayload): Promise<IpcResponse<{ ok: true }>> =>
       invoke(IpcChannels.photoTransform, payload),
+  },
+  images: {
+    /** Persist an image (original + optional thumbnail); returns storage keys. */
+    save: (payload: SaveImagePayload): Promise<IpcResponse<SaveImageResultDTO>> =>
+      invoke(IpcChannels.imageSave, payload),
+    /** Fetch stored image bytes (base64 + mime) for direct <img> display. */
+    get: (key: string): Promise<IpcResponse<ImageDataDTO>> => invoke(IpcChannels.imageGet, { key }),
+  },
+  analysis: {
+    /** Analyse a garment photo (offline colour baseline + optional hints). */
+    analyze: (payload: AnalyzeGarmentPayload): Promise<IpcResponse<GarmentAnalysisResultDTO>> =>
+      invoke(IpcChannels.garmentAnalyze, payload),
   },
   tags: {
     suggest: (

@@ -11,20 +11,25 @@
 import type {
   AddGarmentPayload,
   AiStatusDTO,
+  AnalyzeGarmentPayload,
   AppInfoDTO,
   CategoryDTO,
   CategoryNodeDTO,
   ColorPaletteDTO,
   CreateCategoryPayload,
   ConfirmTagsPayload,
+  GarmentAnalysisResultDTO,
   GarmentDTO,
   GarmentSearchPayload,
+  ImageDataDTO,
   IpcResponse,
   OutfitSuggestionDTO,
   PhotoTransformPayload,
   RecommendationRequestPayload,
   RecommendationSetDTO,
   ReorderPayload,
+  SaveImagePayload,
+  SaveImageResultDTO,
   StyleAnalysisDTO,
   SuggestionsPayload,
   TagSuggestionDTO,
@@ -111,7 +116,7 @@ export const ipc = {
   /* -------------------------------- photos ------------------------------- */
   addPhotos: (
     garmentId: string,
-    photos: readonly { storageKey: string }[],
+    photos: readonly { storageKey: string; attributes?: Readonly<Record<string, string>> }[],
   ): Promise<{ photoIds: readonly string[] }> => unwrap(bridge().photos.add(garmentId, photos)),
   removePhoto: (garmentId: string, photoId: string): Promise<{ ok: true }> =>
     unwrap(bridge().photos.remove(garmentId, photoId)),
@@ -119,6 +124,13 @@ export const ipc = {
     unwrap(bridge().photos.reorder(garmentId, orderedPhotoIds)),
   transformPhoto: (payload: PhotoTransformPayload): Promise<{ ok: true }> =>
     unwrap(bridge().photos.transform(payload)),
+
+  /* --------------------------- images / vision --------------------------- */
+  saveImage: (payload: SaveImagePayload): Promise<SaveImageResultDTO> =>
+    unwrap(bridge().images.save(payload)),
+  getImage: (key: string): Promise<ImageDataDTO> => unwrap(bridge().images.get(key)),
+  analyzeGarment: (payload: AnalyzeGarmentPayload): Promise<GarmentAnalysisResultDTO> =>
+    unwrap(bridge().analysis.analyze(payload)),
 
   /* ------------------------------- tagging ------------------------------- */
   suggestTags: (

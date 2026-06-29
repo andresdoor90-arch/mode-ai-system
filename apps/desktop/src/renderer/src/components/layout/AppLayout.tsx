@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 
 import { useAiStatusStore } from '../../store/aiStatusStore';
+import { ErrorBoundary } from '../common/ErrorBoundary';
 import { Toaster } from '../ui/toaster';
 import { TooltipProvider } from '../ui/tooltip';
 import { Header } from './Header';
@@ -32,7 +33,9 @@ export function AppLayout(): JSX.Element {
           <Header />
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-[1400px] px-6 py-7">
-              <Outlet />
+              <ErrorBoundary>
+                <Outlet />
+              </ErrorBoundary>
             </div>
           </main>
         </div>

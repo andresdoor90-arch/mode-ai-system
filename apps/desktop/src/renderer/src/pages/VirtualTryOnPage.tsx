@@ -1,233 +1,183 @@
 /**
- * Virtual Try-On — visualises the recommended outfit on a fictional avatar.
+ * Virtual Try-On — a simple, fast 2D paper-doll.
  *
- * This screen wires the existing recommendation flow (renderer → IPC →
- * orchestrator → domain) to the engine-agnostic rendering layer: it takes the
- * selected recommendation's structured garments, maps them to a renderable
- * outfit (NO AI/score data crosses into the renderer) and feeds the pure
- * `SceneManager` via {@link useVirtualTryOn}. The 3D drawing is done by the
- * swappable Three.js/R3F adapter (`../rendering/three`).
- *
- * Controls: 360° rotation, zoom in/out, front/back/side view presets, body
- * type, lighting and screenshot capture. Switching recommendation tabs swaps
- * the garments automatically.
+ * The user assembles an outfit by picking garments from their own wardrobe,
+ * one per body slot (top, bottom, outerwear, belt, shoes, accessory). Each
+ * pick paints a SIMPLIFIED representation of that garment (its colour + pattern,
+ * derived from the photo analysis — never the photo itself) onto a flat,
+ * minimal mannequin, which updates immediately. No 3D, no WebGL: instant and
+ * stable.
  */
-import { Suspense, useEffect, useMemo } from 'react';
-import {
-  Camera,
-  RotateCcw,
-  RotateCw,
-  Maximize,
-  Sparkles,
-  ZoomIn,
-  ZoomOut,
-} from 'lucide-react';
+import { Shirt, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
+import { EmptyState } from '../components/common/EmptyState';
+import { GarmentImage } from '../components/common/GarmentImage';
 import { PageHeader } from '../components/common/PageHeader';
+import { TryOnMannequin } from '../components/common/TryOnMannequin';
+import { Badge, Button, Card, CardContent } from '../components/ui';
+import { cn } from '../lib/cn';
+import { titleCase } from '../lib/format';
+import { thumbnailKeyOf } from '../lib/garmentImages';
 import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Skeleton,
-} from '../components/ui';
-import { recommendationToRenderable } from '../rendering/dtoToRenderable';
-import { ROTATE_STEP, useVirtualTryOn } from '../rendering/useVirtualTryOn';
-import { TryOnCanvas } from '../rendering/three/TryOnCanvas';
-import { useRecommendationStore } from '../store/recommendationStore';
-import { useUserStore } from '../store/userStore';
-import type { BodyType, LightingPreset, ViewPreset } from '@mas/rendering';
-
-const VIEW_PRESETS: ReadonlyArray<{ id: ViewPreset; label: string }> = [
-  { id: 'front', label: 'Frente' },
-  { id: 'back', label: 'Espalda' },
-  { id: 'left', label: 'Izquierda' },
-  { id: 'right', label: 'Derecha' },
-  { id: 'three-quarter', label: '3/4' },
-];
-
-const BODY_TYPES: ReadonlyArray<{ id: BodyType; label: string }> = [
-  { id: 'neutral', label: 'Neutro' },
-  { id: 'feminine', label: 'Femenino' },
-  { id: 'masculine', label: 'Masculino' },
-  { id: 'athletic', label: 'Atlético' },
-  { id: 'plus', label: 'Plus' },
-];
-
-const LIGHTING: ReadonlyArray<{ id: LightingPreset; label: string }> = [
-  { id: 'studio', label: 'Estudio' },
-  { id: 'soft', label: 'Suave' },
-  { id: 'dramatic', label: 'Dramática' },
-];
+  buildOutfitLayers,
+  OUTFIT_SLOTS,
+  slotForGarment,
+  type OutfitSelection,
+  type SlotId,
+} from '../lib/outfitModel';
+import { useWardrobeStore } from '../store/wardrobeStore';
 
 export function VirtualTryOnPage(): JSX.Element {
-  const set = useRecommendationStore((s) => s.set);
-  const loading = useRecommendationStore((s) => s.loading);
-  const loaded = useRecommendationStore((s) => s.loaded);
-  const selectedKind = useRecommendationStore((s) => s.selectedKind);
-  const recommend = useRecommendationStore((s) => s.recommend);
-  const select = useRecommendationStore((s) => s.select);
-  const current = useRecommendationStore((s) => s.current);
+  const loaded = useWardrobeStore((s) => s.loaded);
+  const load = useWardrobeStore((s) => s.load);
+  const garments = useWardrobeStore((s) => s.garments);
 
-  const defaultOccasion = useUserStore((s) => s.defaultOccasion);
-  const defaultSeason = useUserStore((s) => s.defaultSeason);
+  const [selection, setSelection] = useState<OutfitSelection>({});
 
   useEffect(() => {
     if (!loaded) {
-      void recommend({
-        message: 'Quiero un look para hoy',
-        occasion: defaultOccasion,
-        season: defaultSeason,
-      });
+      void load();
     }
-  }, [loaded, recommend, defaultOccasion, defaultSeason]);
+  }, [loaded, load]);
 
-  const currentRecommendation = current();
-  const outfit = useMemo(
-    () => (currentRecommendation !== null ? recommendationToRenderable(currentRecommendation) : null),
-    [currentRecommendation],
-  );
+  // Garments grouped by the body slot they occupy (only wearable ones).
+  const bySlot = useMemo(() => {
+    const groups: Record<SlotId, typeof garments> = {
+      top: [],
+      bottom: [],
+      outerwear: [],
+      belt: [],
+      shoes: [],
+      accessory: [],
+    };
+    for (const garment of garments) {
+      const slot = slotForGarment(garment);
+      if (slot !== null) {
+        groups[slot].push(garment);
+      }
+    }
+    return groups;
+  }, [garments]);
 
-  const { scene, controls, registerCanvas, capture, currentView } = useVirtualTryOn(outfit);
+  const layers = useMemo(() => buildOutfitLayers(selection), [selection]);
+
+  const assign = (slot: SlotId, garmentId: string): void => {
+    setSelection((prev) => {
+      if (prev[slot]?.id === garmentId) {
+        const next = { ...prev };
+        delete next[slot];
+        return next;
+      }
+      const garment = garments.find((g) => g.id === garmentId);
+      return garment === undefined ? prev : { ...prev, [slot]: garment };
+    });
+  };
+
+  const clearSlot = (slot: SlotId): void =>
+    setSelection((prev) => {
+      const next = { ...prev };
+      delete next[slot];
+      return next;
+    });
+
+  const clearAll = (): void => setSelection({});
+
+  if (loaded && garments.length === 0) {
+    return (
+      <div>
+        <PageHeader
+          title="Probador virtual"
+          description="Arma un conjunto con tus prendas y míralo en el maniquí."
+        />
+        <EmptyState
+          icon={Shirt}
+          title="Tu guardarropa está vacío"
+          description="Agrega prendas con fotografía en el guardarropa para poder probarlas aquí."
+        />
+      </div>
+    );
+  }
 
   return (
     <div>
       <PageHeader
         title="Probador virtual"
-        description="Visualiza el conjunto recomendado sobre un personaje y míralo desde todos los ángulos."
+        description="Elige una prenda por zona y míralas combinadas en el maniquí al instante."
         actions={
-          <Button onClick={() => void capture()}>
-            <Camera className="h-4 w-4" />
-            Captura
+          <Button variant="outline" onClick={clearAll} disabled={layers.length === 0}>
+            <X className="h-4 w-4" />
+            Vaciar conjunto
           </Button>
         }
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* ----------------------------- 3D viewport ----------------------------- */}
-        <Card className="lg:col-span-2">
-          <CardContent className="p-0">
-            <div className="relative h-[520px] w-full overflow-hidden rounded-xl">
-              {loading && !loaded ? (
-                <Skeleton className="h-full w-full" />
-              ) : (
-                <Suspense fallback={<Skeleton className="h-full w-full" />}>
-                  <TryOnCanvas scene={scene} onReady={registerCanvas} />
-                </Suspense>
-              )}
-
-              {/* Floating camera controls. */}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4">
-                <div className="pointer-events-auto mx-auto flex flex-wrap items-center justify-center gap-1.5 rounded-full border border-border bg-background/85 px-2 py-1.5 shadow-lg backdrop-blur">
-                  <Button variant="ghost" size="icon" title="Rotar a la izquierda" onClick={() => controls.rotate(-ROTATE_STEP)}>
-                    <RotateCcw className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" title="Rotar a la derecha" onClick={() => controls.rotate(ROTATE_STEP)}>
-                    <RotateCw className="h-4 w-4" />
-                  </Button>
-                  <span className="mx-1 h-5 w-px bg-border" />
-                  <Button variant="ghost" size="icon" title="Acercar" onClick={controls.zoomIn}>
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" title="Alejar" onClick={controls.zoomOut}>
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  <span className="mx-1 h-5 w-px bg-border" />
-                  <Button variant="ghost" size="icon" title="Restablecer cámara" onClick={controls.reset}>
-                    <Maximize className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[400px_1fr]">
+        {/* ------------------------------- mannequin ------------------------------ */}
+        <Card className="bg-gradient-to-b from-zinc-900 to-zinc-950">
+          <CardContent className="flex items-center justify-center p-4">
+            <TryOnMannequin layers={layers} className="h-[520px] w-auto" />
           </CardContent>
         </Card>
 
-        {/* ------------------------------- side panel ------------------------------ */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Recomendaciones
-              </CardTitle>
-              <CardDescription>
-                {set?.degraded === true
-                  ? 'Generadas con las reglas del dominio (sin proveedor de IA).'
-                  : 'Elige cuál quieres ver puesta.'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {(set?.recommendations ?? []).map((rec) => (
-                <button
-                  key={rec.kind}
-                  type="button"
-                  onClick={() => select(rec.kind)}
-                  className={`flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors ${
-                    rec.kind === selectedKind
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:bg-muted/50'
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">{rec.label}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {rec.garments.map((g) => g.name).join(' · ')}
-                    </p>
+        {/* ----------------------------- outfit builder --------------------------- */}
+        <div className="space-y-5">
+          {OUTFIT_SLOTS.map(({ id, label }) => {
+            const options = bySlot[id];
+            const selected = selection[id];
+            return (
+              <div key={id}>
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">{label}</h3>
+                  {selected !== undefined && (
+                    <Button variant="ghost" size="sm" onClick={() => clearSlot(id)}>
+                      <X className="h-3.5 w-3.5" />
+                      Quitar
+                    </Button>
+                  )}
+                </div>
+                {options.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-border px-3 py-4 text-xs text-muted-foreground">
+                    No tienes prendas en esta zona todavía.
+                  </p>
+                ) : (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {options.map((garment) => {
+                      const isSelected = selected?.id === garment.id;
+                      return (
+                        <button
+                          key={garment.id}
+                          type="button"
+                          onClick={() => assign(id, garment.id)}
+                          title={garment.name}
+                          className={cn(
+                            'group relative flex w-24 shrink-0 flex-col overflow-hidden rounded-lg border text-left transition-colors',
+                            isSelected
+                              ? 'border-primary ring-2 ring-primary/40'
+                              : 'border-border hover:border-primary/50',
+                          )}
+                        >
+                          <GarmentImage
+                            storageKey={thumbnailKeyOf(garment)}
+                            alt={garment.name}
+                            className="aspect-square w-full"
+                          />
+                          <span className="truncate px-1.5 py-1 text-[11px] font-medium text-foreground">
+                            {garment.name}
+                          </span>
+                          {isSelected && (
+                            <span className="absolute right-1 top-1">
+                              <Badge variant="success">✓</Badge>
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <Badge variant="success">{Math.round(rec.score)}</Badge>
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Ángulo</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-1.5">
-              {VIEW_PRESETS.map((preset) => (
-                <Button
-                  key={preset.id}
-                  variant={preset.id === currentView ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => controls.applyView(preset.id)}
-                >
-                  {preset.label}
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Personaje</CardTitle>
-              <CardDescription>Tipo de cuerpo e iluminación</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex flex-wrap gap-1.5">
-                {BODY_TYPES.map((body) => (
-                  <Button
-                    key={body.id}
-                    variant={body.id === scene.avatar.bodyType ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => controls.setBodyType(body.id)}
-                  >
-                    {body.label}
-                  </Button>
-                ))}
+                )}
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {LIGHTING.map((light) => (
-                  <Button key={light.id} variant="outline" size="sm" onClick={() => controls.setLighting(light.id)}>
-                    {light.label}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+            );
+          })}
         </div>
       </div>
     </div>

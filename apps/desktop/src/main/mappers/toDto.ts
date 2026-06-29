@@ -49,6 +49,7 @@ export function photoToDto(photo: Photograph): PhotoDTO {
     crop: { ...photo.crop },
     isPrimary: photo.isPrimary,
     stage: photo.stage,
+    attributes: { ...photo.attributes },
   };
 }
 
@@ -92,6 +93,7 @@ export function garmentToDto(garment: Garment): GarmentDTO {
     lastWornAt: garment.lastWornAt ?? null,
     purchaseDate: garment.purchaseDate ?? null,
     notes: garment.notes ?? null,
+    metadata: { ...garment.metadata },
   };
 }
 

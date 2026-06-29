@@ -359,11 +359,17 @@ export function registerIpcHandlers(container: AppContainer): void {
 
   /* -------------------------------- photos -------------------------------- */
   handle(IpcChannels.photosAdd, async (_event, payload) => {
-    const p = payload as { garmentId: string; photos: readonly { storageKey: string }[] };
+    const p = payload as {
+      garmentId: string;
+      photos: readonly { storageKey: string; attributes?: Record<string, string> }[];
+    };
     const result = await commands.send(
       new AddPhotosCommand(
         toId<'Garment'>(p.garmentId),
-        p.photos.map((ph) => ({ storageKey: ph.storageKey })),
+        p.photos.map((ph) => ({
+          storageKey: ph.storageKey,
+          ...(ph.attributes !== undefined ? { attributes: ph.attributes } : {}),
+        })),
       ),
     );
     if (!result.ok) {
@@ -482,6 +488,65 @@ export function registerIpcHandlers(container: AppContainer): void {
       return ipcFailure(toIpcError(result.error));
     }
     return ipcSuccess({ id: p.garmentId });
+  });
+
+  /* --------------------------- images / vision ---------------------------- */
+  handle(IpcChannels.imageSave, async (_event, payload) => {
+    const p = payload as {
+      dataBase64: string;
+      mimeType: string;
+      extension: string;
+      originalName?: string;
+      thumbnailBase64?: string;
+    };
+    const original = new Uint8Array(Buffer.from(p.dataBase64, 'base64'));
+    const meta = await container.images.saveImage(original, {
+      extension: p.extension,
+      contentType: p.mimeType,
+      ...(p.originalName !== undefined ? { originalName: p.originalName } : {}),
+    });
+    let thumbnailKey: string | null = null;
+    if (p.thumbnailBase64 !== undefined && p.thumbnailBase64.length > 0) {
+      const thumb = new Uint8Array(Buffer.from(p.thumbnailBase64, 'base64'));
+      const tmeta = await container.images.saveImage(thumb, {
+        extension: 'webp',
+        contentType: 'image/webp',
+      });
+      thumbnailKey = tmeta.key;
+    }
+    return ipcSuccess({ storageKey: meta.key, thumbnailKey });
+  });
+
+  handle(IpcChannels.imageGet, async (_event, payload) => {
+    const p = payload as { key: string };
+    const bytes = await container.images.getImage(p.key);
+    const base64 = Buffer.from(bytes).toString('base64');
+    const ext = p.key.slice(p.key.lastIndexOf('.') + 1).toLowerCase();
+    const mimeType =
+      ext === 'png'
+        ? 'image/png'
+        : ext === 'webp'
+          ? 'image/webp'
+          : ext === 'gif'
+            ? 'image/gif'
+            : ext === 'avif'
+              ? 'image/avif'
+              : 'image/jpeg';
+    return ipcSuccess({ base64, mimeType });
+  });
+
+  handle(IpcChannels.garmentAnalyze, async (_event, payload) => {
+    const p = payload as {
+      colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[];
+      freeText?: string;
+    };
+    const input = {
+      ...(p.colorSamples !== undefined ? { colorSamples: p.colorSamples } : {}),
+      ...(p.freeText !== undefined ? { freeText: p.freeText } : {}),
+    };
+    const result = await container.analysis.analyze(input);
+    // VisionAnalysisResult is structurally identical to GarmentAnalysisResultDTO.
+    return ipcSuccess(result as never);
   });
 
   /* -------------------------------- outfits ------------------------------- */

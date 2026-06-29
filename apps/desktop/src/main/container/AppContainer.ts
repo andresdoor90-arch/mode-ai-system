@@ -21,6 +21,9 @@
  * provider (Ollama/OpenAI/Anthropic via the LangChain adapters) is a matter of
  * populating the {@link AIProviderRouter} here — the domain never changes.
  */
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import {
   AddGarmentHandler,
   ADD_GARMENT,
@@ -32,6 +35,7 @@ import {
   ANNOTATE_OUTFIT_HISTORY,
   ArchiveGarmentHandler,
   ARCHIVE_GARMENT,
+  BaselineVisionProvider,
   CommandBus,
   ConfirmGarmentTagsHandler,
   CONFIRM_GARMENT_TAGS,
@@ -44,6 +48,7 @@ import {
   DeferredVisionTagSuggester,
   DeleteCategoryHandler,
   DELETE_CATEGORY,
+  GarmentAnalysisService,
   DuplicateGarmentHandler,
   DUPLICATE_GARMENT,
   GetCategoriesHandler,
@@ -127,9 +132,11 @@ import {
 import {
   EMBEDDED_MIGRATIONS,
   FilePreferenceMemoryStore,
+  ImageStorageService,
   InMemoryEventBus,
   InMemoryPreferenceMemoryStore,
   InMemoryVectorStore,
+  LocalFileStorage,
   MigrationRunner,
   type SqlDatabase,
   createSqliteDatabase,
@@ -167,6 +174,10 @@ export class AppContainer {
   public readonly repositories: Repositories;
   /** The provider-agnostic AI engine (offline-capable by default). */
   public readonly orchestrator: AIOrchestrator;
+  /** Image byte storage (originals + thumbnails) for garment photos. */
+  public readonly images: ImageStorageService;
+  /** Provider-agnostic garment photo analysis (baseline + hints + vision). */
+  public readonly analysis: GarmentAnalysisService;
   /** In-memory pub/sub bus driving the automatic, event-driven sync (Module 6). */
   public readonly events: InMemoryEventBus;
   private readonly ids: IdGenerator;
@@ -185,6 +196,17 @@ export class AppContainer {
     this.database = database;
 
     this.events = new InMemoryEventBus();
+
+    // Image byte storage: originals + thumbnails live under the data directory
+    // (a temp dir when none is provided, e.g. in lightweight tests). The
+    // constructor performs no I/O, so this can never fail app startup.
+    const imagesRoot = options.dataDir ?? join(tmpdir(), 'mas-images');
+    this.images = new ImageStorageService(new LocalFileStorage(imagesRoot, 'images'));
+
+    // Garment photo analysis: the always-on offline colour baseline today; a
+    // real vision provider (OpenAI/Ollama) layers on top here with no other
+    // change required.
+    this.analysis = new GarmentAnalysisService([new BaselineVisionProvider()]);
 
     // Preference memory persists through an infrastructure store so the engine
     // genuinely learns across sessions; falls back to volatile memory when no
