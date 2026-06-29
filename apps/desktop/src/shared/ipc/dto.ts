@@ -60,7 +60,12 @@ export interface PhotoDTO {
   readonly storageKey: string;
   readonly order: number;
   readonly rotation: number;
-  readonly crop: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  readonly crop: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
   readonly isPrimary: boolean;
   readonly stage: string;
 }
@@ -189,6 +194,12 @@ export interface ColorPaletteDTO {
   readonly colors: readonly ColorDTO[];
 }
 
+/** The current user's profile crossing the IPC boundary. */
+export interface UserProfileDTO {
+  readonly id: string;
+  readonly name: string;
+}
+
 export interface AppInfoDTO {
   readonly name: string;
   readonly version: string;
@@ -295,7 +306,12 @@ export interface PhotoTransformPayload {
   readonly garmentId: string;
   readonly photoId: string;
   readonly rotation?: number;
-  readonly crop?: { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
+  readonly crop?: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
   readonly setPrimary?: boolean;
 }
 

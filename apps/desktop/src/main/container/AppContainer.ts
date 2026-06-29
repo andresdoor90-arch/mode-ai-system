@@ -119,6 +119,10 @@ import {
   UPDATE_CATEGORY,
   UpdateGarmentHandler,
   UPDATE_GARMENT,
+  CreateProfileHandler,
+  CREATE_PROFILE,
+  GetCurrentProfileHandler,
+  GET_CURRENT_PROFILE,
   UpdateProfileHandler,
   UPDATE_PROFILE,
   unwrap,
@@ -346,6 +350,7 @@ export class AppContainer {
       .register(CREATE_OUTFIT, new CreateOutfitHandler(garments, outfits, this.ids))
       .register(RATE_OUTFIT, new RateOutfitHandler(outfits))
       .register(CREATE_COLLECTION, new CreateCollectionHandler(garments, collections, this.ids))
+      .register(CREATE_PROFILE, new CreateProfileHandler(profiles, this.ids))
       .register(UPDATE_PROFILE, new UpdateProfileHandler(profiles))
       .register(SET_PREFERENCES, new SetPreferencesHandler(profiles))
       // Phase 7 Part B — outfit history (the accept/feedback path records usage
@@ -373,7 +378,8 @@ export class AppContainer {
       .register(SEARCH_OUTFIT_HISTORY, new SearchOutfitHistoryHandler(history))
       .register(GET_OUTFIT_HISTORY_STATISTICS, new GetOutfitHistoryStatisticsHandler(history))
       .register(GET_RECENT_REPETITIONS, new GetRecentRepetitionsHandler(history))
-      .register(GET_GARMENT_USAGE_HISTORY, new GetGarmentUsageHistoryHandler(history));
+      .register(GET_GARMENT_USAGE_HISTORY, new GetGarmentUsageHistoryHandler(history))
+      .register(GET_CURRENT_PROFILE, new GetCurrentProfileHandler(profiles));
   }
 
   /**

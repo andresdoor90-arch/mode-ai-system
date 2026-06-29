@@ -30,6 +30,7 @@ import type {
   TagSuggestionDTO,
   UpdateCategoryPayload,
   UpdateGarmentPayload,
+  UserProfileDTO,
   WardrobeViewDTO,
 } from '@shared/ipc';
 
@@ -70,6 +71,11 @@ function bridge(): Window['mas'] {
 export const ipc = {
   getAppInfo: (): Promise<AppInfoDTO> => unwrap(bridge().app.getInfo()),
 
+  /* ------------------------------- profile ------------------------------- */
+  getProfile: (): Promise<UserProfileDTO | null> => unwrap(bridge().profile.get()),
+  createProfile: (name: string): Promise<UserProfileDTO> => unwrap(bridge().profile.create(name)),
+  renameProfile: (name: string): Promise<{ ok: true }> => unwrap(bridge().profile.rename(name)),
+
   getWardrobe: (): Promise<WardrobeViewDTO> => unwrap(bridge().wardrobe.get()),
   getGarmentsByCategory: (category: string): Promise<readonly GarmentDTO[]> =>
     unwrap(bridge().wardrobe.garmentsByCategory(category)),
@@ -100,8 +106,7 @@ export const ipc = {
     unwrap(bridge().categories.update(payload)),
   reorderCategories: (payload: ReorderPayload): Promise<{ ok: true }> =>
     unwrap(bridge().categories.reorder(payload)),
-  removeCategory: (id: string): Promise<{ id: string }> =>
-    unwrap(bridge().categories.remove(id)),
+  removeCategory: (id: string): Promise<{ id: string }> => unwrap(bridge().categories.remove(id)),
 
   /* -------------------------------- photos ------------------------------- */
   addPhotos: (
@@ -123,13 +128,11 @@ export const ipc = {
   confirmTags: (payload: ConfirmTagsPayload): Promise<{ id: string }> =>
     unwrap(bridge().tags.confirm(payload)),
 
-  getOutfitSuggestions: (
-    payload: SuggestionsPayload,
-  ): Promise<readonly OutfitSuggestionDTO[]> => unwrap(bridge().outfits.suggestions(payload)),
+  getOutfitSuggestions: (payload: SuggestionsPayload): Promise<readonly OutfitSuggestionDTO[]> =>
+    unwrap(bridge().outfits.suggestions(payload)),
 
-  getRecommendations: (
-    payload: RecommendationRequestPayload,
-  ): Promise<RecommendationSetDTO> => unwrap(bridge().ai.recommend(payload)),
+  getRecommendations: (payload: RecommendationRequestPayload): Promise<RecommendationSetDTO> =>
+    unwrap(bridge().ai.recommend(payload)),
   getAiStatus: (): Promise<AiStatusDTO> => unwrap(bridge().ai.status()),
 
   getStyleAnalysis: (): Promise<StyleAnalysisDTO> => unwrap(bridge().style.analysis()),

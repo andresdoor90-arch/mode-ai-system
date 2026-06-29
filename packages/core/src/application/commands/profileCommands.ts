@@ -1,4 +1,5 @@
 import { type UserProfileId } from '../../shared/Identifier';
+import { type IdGenerator } from '../../shared/IdGenerator';
 import { type Result, ok } from '../../shared/Result';
 import { NotFoundError, ValidationError } from '../../shared/errors';
 import { type BodyMeasurements } from '../../domain/value-objects/BodyMeasurements';
@@ -6,7 +7,40 @@ import { type ColorPalette } from '../../domain/value-objects/ColorPalette';
 import { type StylePreference } from '../../domain/value-objects/StylePreference';
 import { type IUserProfileRepository } from '../../domain/repositories/IUserProfileRepository';
 import { type Command, type RequestHandler } from '../bus/types';
-import { type UserProfile } from '../../domain/entities/UserProfile';
+import { UserProfile } from '../../domain/entities/UserProfile';
+
+/* -------------------------------------------------------------------------- */
+/* CreateProfile (first-run onboarding)                                       */
+/* -------------------------------------------------------------------------- */
+
+export const CREATE_PROFILE = 'profile.create';
+
+export interface CreateProfileInput {
+  readonly name: string;
+}
+
+/** Create the user's profile on first run. Returns the new profile id. */
+export class CreateProfileCommand implements Command<UserProfileId> {
+  public readonly type = CREATE_PROFILE;
+  public constructor(public readonly input: CreateProfileInput) {}
+}
+
+export class CreateProfileHandler implements RequestHandler<CreateProfileCommand, UserProfileId> {
+  public constructor(
+    private readonly profiles: IUserProfileRepository,
+    private readonly ids: IdGenerator,
+  ) {}
+
+  public async handle(command: CreateProfileCommand): Promise<Result<UserProfileId>> {
+    const id = this.ids.next<'UserProfile'>();
+    const created = UserProfile.create(id, { name: command.input.name });
+    if (!created.ok) {
+      return created;
+    }
+    await this.profiles.save(created.value);
+    return ok(id);
+  }
+}
 
 const loadProfile = async (
   repo: IUserProfileRepository,
@@ -75,11 +109,11 @@ export class SetPreferencesHandler implements RequestHandler<SetPreferencesComma
   public constructor(private readonly profiles: IUserProfileRepository) {}
 
   public async handle(command: SetPreferencesCommand): Promise<Result<void>> {
-    if (
-      command.input.stylePreference === undefined &&
-      command.input.colorPalette === undefined
-    ) {
-      return { ok: false, error: new ValidationError('Nothing to set: provide preferences or a palette.') };
+    if (command.input.stylePreference === undefined && command.input.colorPalette === undefined) {
+      return {
+        ok: false,
+        error: new ValidationError('Nothing to set: provide preferences or a palette.'),
+      };
     }
     const profile = await loadProfile(this.profiles, command.input.profileId);
     if (profile === null) {

@@ -98,6 +98,7 @@ export * from './application/queries/styleQueries';
 export * from './application/queries/suggestionQueries';
 export * from './application/queries/recommendationQueries';
 export * from './application/queries/historyQueries';
+export * from './application/queries/profileQueries';
 
 /* ----------------------------- outfit history ----------------------------- */
 export * from './application/history/OutfitHistoryService';

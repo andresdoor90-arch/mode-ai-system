@@ -8,8 +8,9 @@
  * DTOs so the try-on view can visualise the selected outfit and swap garments
  * automatically when the selection or recommendation changes.
  *
- * When the bridge is unavailable (e.g. a browser preview) it falls back to a
- * realistic sample so the screen is never empty.
+ * Recommendations are built EXCLUSIVELY from the user's real garments by the
+ * engine; there is no sample/mock fallback. With no garments yet, the set is
+ * simply null and the screen shows an empty state.
  */
 import { create } from 'zustand';
 
@@ -20,38 +21,6 @@ import type {
 } from '@shared/ipc';
 
 import { ipc, isBridgeAvailable } from '../ipc/client';
-import { sampleGarments } from '../data/sampleData';
-
-const SAMPLE_SET: RecommendationSetDTO = {
-  occasion: 'business',
-  season: 'all-season',
-  providerId: null,
-  degraded: true,
-  notes: ['Conjunto de ejemplo (puente de escritorio no disponible).'],
-  recommendations: [
-    {
-      kind: 'principal',
-      label: 'Principal',
-      score: 88,
-      explanation: 'Equilibrio de formalidad y armonía de color para la ocasión.',
-      garments: [sampleGarments[0]!, sampleGarments[3]!, sampleGarments[7]!],
-    },
-    {
-      kind: 'mas-elegante',
-      label: 'Más elegante',
-      score: 84,
-      explanation: 'Sube el registro con una americana estructurada.',
-      garments: [sampleGarments[0]!, sampleGarments[3]!, sampleGarments[6]!, sampleGarments[7]!],
-    },
-    {
-      kind: 'mas-comoda',
-      label: 'Más cómoda',
-      score: 80,
-      explanation: 'Prioriza comodidad y movilidad sin perder coherencia.',
-      garments: [sampleGarments[2]!, sampleGarments[4]!, sampleGarments[8]!],
-    },
-  ],
-};
 
 interface RecommendationState {
   set: RecommendationSetDTO | null;
@@ -81,12 +50,7 @@ export const useRecommendationStore = create<RecommendationState>((rawSet, get) 
   recommend: async (payload) => {
     rawSet({ loading: true, error: null });
     if (!isBridgeAvailable()) {
-      rawSet({
-        set: SAMPLE_SET,
-        selectedKind: firstKind(SAMPLE_SET),
-        loading: false,
-        loaded: true,
-      });
+      rawSet({ set: null, selectedKind: null, loading: false, loaded: true });
       return;
     }
     try {
@@ -99,8 +63,8 @@ export const useRecommendationStore = create<RecommendationState>((rawSet, get) 
       });
     } catch (error) {
       rawSet({
-        set: SAMPLE_SET,
-        selectedKind: firstKind(SAMPLE_SET),
+        set: null,
+        selectedKind: null,
         loading: false,
         loaded: true,
         error: error instanceof Error ? error.message : 'No se pudo obtener la recomendación.',
@@ -120,6 +84,8 @@ export const useRecommendationStore = create<RecommendationState>((rawSet, get) 
     if (set === null) {
       return null;
     }
-    return set.recommendations.find((r) => r.kind === selectedKind) ?? set.recommendations[0] ?? null;
+    return (
+      set.recommendations.find((r) => r.kind === selectedKind) ?? set.recommendations[0] ?? null
+    );
   },
 }));

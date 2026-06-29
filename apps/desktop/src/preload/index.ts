@@ -44,6 +44,7 @@ import {
   type TagSuggestionDTO,
   type UpdateCategoryPayload,
   type UpdateGarmentPayload,
+  type UserProfileDTO,
   type WardrobeViewDTO,
 } from '../shared/ipc';
 
@@ -59,6 +60,13 @@ function invoke<T>(channel: string, payload?: unknown): Promise<IpcResponse<T>> 
 const api = {
   app: {
     getInfo: (): Promise<IpcResponse<AppInfoDTO>> => invoke(IpcChannels.appGetInfo),
+  },
+  profile: {
+    get: (): Promise<IpcResponse<UserProfileDTO | null>> => invoke(IpcChannels.profileGet),
+    create: (name: string): Promise<IpcResponse<UserProfileDTO>> =>
+      invoke(IpcChannels.profileCreate, { name }),
+    rename: (name: string): Promise<IpcResponse<{ ok: true }>> =>
+      invoke(IpcChannels.profileRename, { name }),
   },
   wardrobe: {
     get: (): Promise<IpcResponse<WardrobeViewDTO>> => invoke(IpcChannels.wardrobeGet),

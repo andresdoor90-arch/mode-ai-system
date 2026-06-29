@@ -13,6 +13,11 @@ export const IpcChannels = {
   /* ----------------------------- application ----------------------------- */
   appGetInfo: 'app:getInfo',
 
+  /* ------------------------------- profile ------------------------------- */
+  profileGet: 'profile:get',
+  profileCreate: 'profile:create',
+  profileRename: 'profile:rename',
+
   /* ------------------------------- wardrobe ------------------------------ */
   wardrobeGet: 'wardrobe:get',
   wardrobeGarmentsByCategory: 'wardrobe:garmentsByCategory',
@@ -75,9 +80,7 @@ export const IpcChannels = {
 export type IpcChannel = (typeof IpcChannels)[keyof typeof IpcChannels];
 
 /** All channel names as a readonly array (useful for validation/allowlists). */
-export const ALL_IPC_CHANNELS: readonly IpcChannel[] = Object.freeze(
-  Object.values(IpcChannels),
-);
+export const ALL_IPC_CHANNELS: readonly IpcChannel[] = Object.freeze(Object.values(IpcChannels));
 
 /** Type guard: is `value` a known IPC channel? */
 export function isIpcChannel(value: unknown): value is IpcChannel {

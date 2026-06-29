@@ -19,6 +19,7 @@ import {
   ArchiveGarmentCommand,
   ConfirmGarmentTagsCommand,
   CreateCategoryCommand,
+  CreateProfileCommand,
   Color,
   DeleteCategoryCommand,
   DuplicateGarmentCommand,
@@ -32,6 +33,7 @@ import {
   GetRecentRepetitionsQuery,
   GetStyleAnalysisQuery,
   GetWardrobeQuery,
+  GetCurrentProfileQuery,
   RecommendOutfitsQuery,
   RecordOutfitFeedbackCommand,
   RecordOutfitUsageCommand,
@@ -47,6 +49,7 @@ import {
   TransformPhotoCommand,
   UpdateCategoryCommand,
   UpdateGarmentCommand,
+  UpdateProfileCommand,
   toId,
   type CategoryId,
   type OutfitUsageContext,
@@ -109,6 +112,34 @@ export function registerIpcHandlers(container: AppContainer): void {
       },
     }),
   );
+
+  /* -------------------------------- profile ------------------------------- */
+  handle(IpcChannels.profileGet, async () => {
+    const result = await queries.ask(new GetCurrentProfileQuery());
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    const profile = result.value;
+    return ipcSuccess(profile === null ? null : { id: String(profile.id), name: profile.name });
+  });
+
+  handle(IpcChannels.profileCreate, async (_event, payload) => {
+    const { name } = payload as { name: string };
+    const result = await commands.send(new CreateProfileCommand({ name }));
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ id: String(result.value), name: name.trim() });
+  });
+
+  handle(IpcChannels.profileRename, async (_event, payload) => {
+    const { name } = payload as { name: string };
+    const result = await commands.send(new UpdateProfileCommand({ name }));
+    if (!result.ok) {
+      return ipcFailure(toIpcError(result.error));
+    }
+    return ipcSuccess({ ok: true as const });
+  });
 
   /* -------------------------------- wardrobe ------------------------------ */
   handle(IpcChannels.wardrobeGet, async () => {
@@ -185,9 +216,7 @@ export function registerIpcHandlers(container: AppContainer): void {
 
   handle(IpcChannels.garmentDuplicate, async (_event, payload) => {
     const { id, name } = payload as { id: string; name?: string };
-    const result = await commands.send(
-      new DuplicateGarmentCommand(toId<'Garment'>(id), name),
-    );
+    const result = await commands.send(new DuplicateGarmentCommand(toId<'Garment'>(id), name));
     if (!result.ok) {
       return ipcFailure(toIpcError(result.error));
     }
@@ -332,7 +361,10 @@ export function registerIpcHandlers(container: AppContainer): void {
   handle(IpcChannels.photosAdd, async (_event, payload) => {
     const p = payload as { garmentId: string; photos: readonly { storageKey: string }[] };
     const result = await commands.send(
-      new AddPhotosCommand(toId<'Garment'>(p.garmentId), p.photos.map((ph) => ({ storageKey: ph.storageKey }))),
+      new AddPhotosCommand(
+        toId<'Garment'>(p.garmentId),
+        p.photos.map((ph) => ({ storageKey: ph.storageKey })),
+      ),
     );
     if (!result.ok) {
       return ipcFailure(toIpcError(result.error));

@@ -3,15 +3,14 @@
  *
  * Caches scored outfit suggestions (produced by the domain's deterministic,
  * rules-based scoring — NOT an AI engine) and the outfit history view-model.
- * Suggestions are fetched over IPC; history currently uses sample content until
- * outfit persistence queries are surfaced in a later phase.
+ * Suggestions are fetched over IPC; outfit history starts empty and is filled
+ * from real persisted usage.
  */
 import { create } from 'zustand';
 
 import type { OutfitDTO, OutfitSuggestionDTO, SuggestionsPayload } from '@shared/ipc';
 
 import { ipc, isBridgeAvailable } from '../ipc/client';
-import { sampleOutfitHistory } from '../data/sampleData';
 
 interface OutfitState {
   suggestions: OutfitSuggestionDTO[];
@@ -46,5 +45,5 @@ export const useOutfitStore = create<OutfitState>((set) => ({
     }
   },
 
-  loadHistory: () => set({ history: sampleOutfitHistory }),
+  loadHistory: () => set({ history: [] }),
 }));
