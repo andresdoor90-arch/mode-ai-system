@@ -158,16 +158,33 @@ export class OllamaVisionProvider implements IVisionProvider {
   public readonly id = 'ollama-vision';
   private readonly client: OllamaClient;
   private readonly model: string;
+  /** The exact installed model name resolved from the server (tag-tolerant). */
+  private resolvedModel: string | null = null;
 
   public constructor(config: OllamaVisionProviderConfig) {
     this.client = config.client;
     this.model = config.model;
   }
 
-  /** Available when the server is reachable and the vision model is installed. */
+  /**
+   * Pick the installed model that best matches the configured one: an exact
+   * match wins, otherwise any model sharing the same base name (so a configured
+   * `qwen2.5vl:7b` still resolves to an installed `qwen2.5vl:latest`, etc.).
+   */
+  private pickInstalledModel(installed: readonly string[]): string | null {
+    const exact = installed.find((m) => m === this.model || m.startsWith(`${this.model}:`));
+    if (exact !== undefined) {
+      return exact;
+    }
+    const base = this.model.split(':')[0] ?? this.model;
+    return installed.find((m) => (m.split(':')[0] ?? m) === base) ?? null;
+  }
+
+  /** Available when the server is reachable and a matching model is installed. */
   public async isAvailable(): Promise<boolean> {
     const models = await this.client.listModels();
-    return models.some((m) => m === this.model || m.startsWith(`${this.model}:`));
+    this.resolvedModel = this.pickInstalledModel(models);
+    return this.resolvedModel !== null;
   }
 
   public async analyze(input: VisionAnalysisInput): Promise<GarmentAnalysis> {
@@ -177,7 +194,7 @@ export class OllamaVisionProvider implements IVisionProvider {
     }
     try {
       const result = await this.client.chat({
-        model: this.model,
+        model: this.resolvedModel ?? this.model,
         format: 'json',
         messages: buildGarmentVisionMessages(base64),
       });

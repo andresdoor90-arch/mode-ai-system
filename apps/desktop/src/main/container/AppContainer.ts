@@ -190,7 +190,7 @@ function resolveOllamaConfig(): OllamaConfig {
   return {
     enabled: !disabled,
     host: env.MAS_OLLAMA_URL ?? 'http://localhost:11434',
-    visionModel: env.MAS_OLLAMA_VISION_MODEL ?? 'llava',
+    visionModel: env.MAS_OLLAMA_VISION_MODEL ?? 'qwen2.5vl:7b',
     textModel: env.MAS_OLLAMA_TEXT_MODEL ?? 'llama3.1',
     embeddingModel: env.MAS_OLLAMA_EMBED_MODEL ?? 'nomic-embed-text',
   };

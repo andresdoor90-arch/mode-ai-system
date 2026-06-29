@@ -97,6 +97,26 @@ describe('OllamaVisionProvider', () => {
     expect(await absent.isAvailable()).toBe(false);
   });
 
+  it('resolves a tag-tolerant match and uses the installed model name to chat', async () => {
+    const calls: string[] = [];
+    const fetchImpl: OllamaFetch = async (url, init) => {
+      if (url.endsWith('/api/tags')) {
+        return response(true, 200, { models: [{ name: 'qwen2.5vl:7b' }] });
+      }
+      calls.push(JSON.parse(init.body ?? '{}').model as string);
+      return response(true, 200, { message: { content: '{"garmentType":"Camisa"}' } });
+    };
+    // Configured without an explicit tag; the installed ":7b" must be used.
+    const provider = new OllamaVisionProvider({
+      client: new OllamaClient({ baseUrl: 'http://x', fetchImpl }),
+      model: 'qwen2.5vl',
+    });
+    expect(await provider.isAvailable()).toBe(true);
+    const result = await provider.analyze({ image: { base64: 'B64' } });
+    expect(result.garmentType?.value).toBe('Camisa');
+    expect(calls[0]).toBe('qwen2.5vl:7b');
+  });
+
   it('analyses an image and returns vision fields', async () => {
     const client = new OllamaClient({
       baseUrl: 'http://x',
