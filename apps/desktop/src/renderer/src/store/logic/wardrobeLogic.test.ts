@@ -17,19 +17,26 @@ function garment(overrides: Partial<GarmentDTO> = {}): GarmentDTO {
     name: overrides.name ?? 'Sample',
     category: overrides.category ?? 'tops',
     subcategory: overrides.subcategory ?? 'shirt',
+    categoryId: overrides.categoryId ?? null,
     color: overrides.color ?? {
       hex: '#000000',
       name: 'Black',
       category: 'neutral',
       isNeutral: true,
     },
+    secondaryColors: overrides.secondaryColors ?? [],
     brand: overrides.brand ?? null,
+    material: overrides.material ?? null,
     seasons: overrides.seasons ?? ['all-season'],
     images: overrides.images ?? [],
+    photos: overrides.photos ?? [],
     tags: overrides.tags ?? [],
     status: overrides.status ?? 'available',
     wearCount: overrides.wearCount ?? 0,
+    formality: overrides.formality ?? 5,
     lastWornAt: overrides.lastWornAt ?? null,
+    purchaseDate: overrides.purchaseDate ?? null,
+    notes: overrides.notes ?? null,
   };
 }
 

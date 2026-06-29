@@ -9,14 +9,21 @@ const garment = (id: string, category: string, subcategory: string, hex: string)
   name: `${id}-name`,
   category,
   subcategory,
+  categoryId: null,
   color: { hex, name: 'X', category: 'cool', isNeutral: false },
+  secondaryColors: [],
   brand: null,
+  material: null,
   seasons: ['all-season'],
   images: [],
+  photos: [],
   tags: ['t'],
   status: 'available',
   wearCount: 0,
+  formality: 5,
   lastWornAt: null,
+  purchaseDate: null,
+  notes: null,
 });
 
 describe('recommendationToRenderable', () => {
