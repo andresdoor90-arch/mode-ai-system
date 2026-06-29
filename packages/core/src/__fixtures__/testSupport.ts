@@ -5,15 +5,10 @@
  * in memory (no I/O) so the application layer can be exercised in tests without
  * any infrastructure. The directory is excluded from the package build.
  */
-import { type GarmentId } from '../shared/Identifier';
-import { type CategoryId } from '../shared/Identifier';
+import { type CategoryId, type GarmentId } from '../shared/Identifier';
 import { type IdGenerator } from '../shared/IdGenerator';
 import { unwrap } from '../shared/Result';
-import {
-  Garment,
-  GarmentStatus,
-  type CreateGarmentInput,
-} from '../domain/entities/Garment';
+import { Garment, GarmentStatus, type CreateGarmentInput } from '../domain/entities/Garment';
 import { type Outfit } from '../domain/entities/Outfit';
 import { type UserProfile } from '../domain/entities/UserProfile';
 import { type StyleRule } from '../domain/entities/StyleRule';
@@ -29,10 +24,7 @@ import {
   type IGarmentRepository,
   type GarmentQuery,
 } from '../domain/repositories/IGarmentRepository';
-import {
-  type IOutfitRepository,
-  type OutfitQuery,
-} from '../domain/repositories/IOutfitRepository';
+import { type IOutfitRepository, type OutfitQuery } from '../domain/repositories/IOutfitRepository';
 import { type IUserProfileRepository } from '../domain/repositories/IUserProfileRepository';
 import { type IStyleRuleRepository } from '../domain/repositories/IStyleRuleRepository';
 import { type ICollectionRepository } from '../domain/repositories/ICollectionRepository';
@@ -45,7 +37,9 @@ export const color = (hex: string, name?: string): Color => unwrap(Color.fromHex
 let counter = 0;
 
 /** Build a valid {@link Garment} with sensible defaults for tests. */
-export const makeGarment = (overrides: Partial<CreateGarmentInput> & { id?: string } = {}): Garment => {
+export const makeGarment = (
+  overrides: Partial<CreateGarmentInput> & { id?: string } = {},
+): Garment => {
   counter += 1;
   const id = (overrides.id ?? `g-${counter}`) as GarmentId;
   const input: CreateGarmentInput = {
@@ -91,10 +85,12 @@ export class InMemoryGarmentRepository implements IGarmentRepository {
   public async query(criteria: GarmentQuery): Promise<readonly Garment[]> {
     return [...this.store.values()].filter((g) => {
       if (criteria.category !== undefined && g.category !== criteria.category) return false;
-      if (criteria.subcategory !== undefined && g.subcategory !== criteria.subcategory) return false;
+      if (criteria.subcategory !== undefined && g.subcategory !== criteria.subcategory)
+        return false;
       if (criteria.status !== undefined && g.status !== criteria.status) return false;
       if (criteria.season !== undefined && !g.supportsSeason(criteria.season)) return false;
-      if (criteria.tags !== undefined && !criteria.tags.every((t) => g.tags.includes(t))) return false;
+      if (criteria.tags !== undefined && !criteria.tags.every((t) => g.tags.includes(t)))
+        return false;
       return true;
     });
   }
@@ -169,7 +165,9 @@ export class InMemoryStyleRuleRepository implements IStyleRuleRepository {
     return [...this.store.values()];
   }
   public async findEnabledByPriority(): Promise<readonly StyleRule[]> {
-    return [...this.store.values()].filter((r) => r.enabled).sort((a, b) => b.priority - a.priority);
+    return [...this.store.values()]
+      .filter((r) => r.enabled)
+      .sort((a, b) => b.priority - a.priority);
   }
   public async delete(id: string): Promise<void> {
     this.store.delete(id);
@@ -248,8 +246,6 @@ export class InMemoryCategoryRepository implements ICategoryRepository {
     return this.store.size;
   }
 }
-
-
 
 /* -------------------------------------------------------------------------- */
 /* AI orchestration test doubles (pure, no infrastructure)                    */
@@ -347,7 +343,11 @@ export class InMemoryVectorIndex implements IVectorIndex {
 
   public async upsert(records: readonly IndexedVector[]): Promise<void> {
     for (const r of records) {
-      this.records.set(r.id, { id: r.id, vector: [...r.vector], ...(r.metadata ? { metadata: { ...r.metadata } } : {}) });
+      this.records.set(r.id, {
+        id: r.id,
+        vector: [...r.vector],
+        ...(r.metadata ? { metadata: { ...r.metadata } } : {}),
+      });
     }
   }
 
@@ -358,7 +358,11 @@ export class InMemoryVectorIndex implements IVectorIndex {
     const topK = options.topK ?? 10;
     const hits: VectorHit[] = [];
     for (const r of this.records.values()) {
-      hits.push({ id: r.id, score: (cosine(vector, r.vector) + 1) / 2, ...(r.metadata ? { metadata: r.metadata } : {}) });
+      hits.push({
+        id: r.id,
+        score: (cosine(vector, r.vector) + 1) / 2,
+        ...(r.metadata ? { metadata: r.metadata } : {}),
+      });
     }
     hits.sort((a, b) => b.score - a.score);
     return hits.slice(0, topK);
