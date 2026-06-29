@@ -13,7 +13,7 @@
  * Nothing is fabricated: attributes the analyser could not determine are left
  * empty for the user. The flow degrades gracefully without the desktop bridge.
  */
-import { ImagePlus, Loader2, Plus, Sparkles, Upload } from 'lucide-react';
+import { ImagePlus, Loader2, Plus, Sparkles, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { AddGarmentPayload, CategoryNodeDTO, GarmentAnalysisResultDTO } from '@shared/ipc';
@@ -23,10 +23,10 @@ import { useToast } from '../../hooks/useToast';
 import { ipc, isBridgeAvailable } from '../../ipc/client';
 import { cn } from '../../lib/cn';
 import {
+  analysisPassthroughMetadata,
   analysisToDraft,
-  buildGarmentMetadata,
+  draftToMetadata,
   parseTags,
-  secondaryColorHexes,
   type GarmentDraft,
 } from '../../lib/garmentAnalysis';
 import { processImageFile, type ProcessedImage } from '../../lib/imageProcessing';
@@ -43,6 +43,7 @@ import {
   FormField,
   Input,
   Select,
+  Textarea,
 } from '../ui';
 
 type Phase = 'await-photo' | 'processing' | 'analyzing' | 'ready' | 'saving';
@@ -61,6 +62,60 @@ const DETECTED_CATEGORY_TO_LAYER_SLOT: Readonly<Record<string, string>> = {
   shoes: 'feet',
   accessories: 'accessory',
 };
+
+/**
+ * Editable list of secondary-colour hexes: pre-filled from the analysis, each
+ * shown as a removable chip, with a colour picker to add more. Never invents —
+ * starts empty when the model detected none.
+ */
+function SecondaryColorsField({
+  colors,
+  onChange,
+}: {
+  colors: readonly string[];
+  onChange: (next: string[]) => void;
+}): JSX.Element {
+  const [pending, setPending] = useState('#888888');
+  const add = (): void => {
+    const hex = pending.toLowerCase();
+    if (!colors.includes(hex)) {
+      onChange([...colors, hex]);
+    }
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {colors.map((hex) => (
+        <button
+          key={hex}
+          type="button"
+          onClick={() => onChange(colors.filter((c) => c !== hex))}
+          className="group flex items-center gap-1.5 rounded-full border border-border bg-background py-1 pl-1.5 pr-2 text-xs"
+          title="Quitar este color"
+        >
+          <span
+            className="h-4 w-4 rounded-full border border-border"
+            style={{ backgroundColor: hex }}
+            aria-hidden
+          />
+          <span className="text-muted-foreground">{hex}</span>
+          <X className="h-3 w-3 text-muted-foreground group-hover:text-destructive" />
+        </button>
+      ))}
+      <div className="flex items-center gap-1.5">
+        <input
+          type="color"
+          value={pending}
+          onChange={(e) => setPending(e.target.value)}
+          className="h-8 w-10 cursor-pointer rounded-md border border-input bg-background p-1"
+          aria-label="Elegir un color secundario"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={add}>
+          Añadir color
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export function AddGarmentDialog(): JSX.Element {
   const { toast } = useToast();
@@ -277,6 +332,11 @@ export function AddGarmentDialog(): JSX.Element {
           : {}),
       });
 
+      // The domain requires at least one season; if the model didn't determine
+      // one and the user left it blank, fall back to the neutral "all-season"
+      // (applies-to-all — not a fabricated specific-season claim).
+      const seasons = draft.season.trim().length > 0 ? [draft.season] : ['all-season'];
+
       const payload: AddGarmentPayload = {
         name: draft.name.trim(),
         category: top.slug,
@@ -284,14 +344,18 @@ export function AddGarmentDialog(): JSX.Element {
         categoryId: sub?.id ?? top.id,
         colorHex: draft.colorHex,
         ...(draft.colorName.trim().length > 0 ? { colorName: draft.colorName.trim() } : {}),
-        seasons: [draft.season],
+        ...(draft.secondaryColors.length > 0 ? { secondaryColorHexes: draft.secondaryColors } : {}),
+        seasons,
+        ...(draft.brand.trim().length > 0 ? { brand: draft.brand.trim() } : {}),
         ...(draft.material.trim().length > 0 ? { material: draft.material.trim() } : {}),
         ...(draft.tags.length > 0 ? { tags: draft.tags } : {}),
-        secondaryColorHexes: secondaryColorHexes(result.analysis),
-        // Carry the category's structural zone so the 2D try-on places the
-        // garment correctly (e.g. a watch on the wrist, a shirt on the torso).
+        ...(draft.notes.trim().length > 0 ? { notes: draft.notes.trim() } : {}),
+        // Rich attributes persisted in the metadata bag: the user's EDITED
+        // values, plus detected extras (texture/length/fit/gender) that have no
+        // dedicated control, plus the category's structural try-on zone.
         metadata: {
-          ...buildGarmentMetadata(result.analysis, result.overallConfidence),
+          ...analysisPassthroughMetadata(result.analysis),
+          ...draftToMetadata(draft, result.overallConfidence),
           layerSlot: top.metadata.layerSlot,
         },
       };
@@ -420,12 +484,33 @@ export function AddGarmentDialog(): JSX.Element {
                   </div>
                 )}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <FormField label="Nombre" htmlFor="g-name" required className="sm:col-span-2">
+                  <FormField
+                    label="Nombre sugerido"
+                    htmlFor="g-name"
+                    required
+                    className="sm:col-span-2"
+                  >
                     <Input
                       id="g-name"
                       value={draft.name}
                       onChange={(e) => setField('name', e.target.value)}
                       placeholder="Camisa de lino azul"
+                    />
+                  </FormField>
+                  <FormField label="Tipo de prenda" htmlFor="g-type">
+                    <Input
+                      id="g-type"
+                      value={draft.garmentType}
+                      onChange={(e) => setField('garmentType', e.target.value)}
+                      placeholder="Camisa, pantalón, zapatos…"
+                    />
+                  </FormField>
+                  <FormField label="Estilo" htmlFor="g-style">
+                    <Input
+                      id="g-style"
+                      value={draft.style}
+                      onChange={(e) => setField('style', e.target.value)}
+                      placeholder="Casual, formal, urbano…"
                     />
                   </FormField>
                   <FormField label="Categoría" htmlFor="g-category">
@@ -463,7 +548,7 @@ export function AddGarmentDialog(): JSX.Element {
                       ))}
                     </Select>
                   </FormField>
-                  <FormField label="Color" htmlFor="g-color">
+                  <FormField label="Color principal" htmlFor="g-color">
                     <div className="flex items-center gap-2">
                       <input
                         id="g-color"
@@ -480,12 +565,13 @@ export function AddGarmentDialog(): JSX.Element {
                       />
                     </div>
                   </FormField>
-                  <FormField label="Temporada" htmlFor="g-season">
+                  <FormField label="Temporada recomendada" htmlFor="g-season">
                     <Select
                       id="g-season"
                       value={draft.season}
                       onChange={(e) => setField('season', e.target.value)}
                     >
+                      <option value="">Sin determinar</option>
                       {SEASON_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>
                           {o.label}
@@ -493,25 +579,100 @@ export function AddGarmentDialog(): JSX.Element {
                       ))}
                     </Select>
                   </FormField>
-                  <FormField label="Material" htmlFor="g-material" className="sm:col-span-2">
+                  <FormField
+                    label="Colores secundarios"
+                    hint="Detectados por la IA · haz clic en un color para quitarlo"
+                    className="sm:col-span-2"
+                  >
+                    <SecondaryColorsField
+                      colors={draft.secondaryColors}
+                      onChange={(next) => setField('secondaryColors', next)}
+                    />
+                  </FormField>
+                  <FormField label="Material" htmlFor="g-material">
                     <Input
                       id="g-material"
                       value={draft.material}
                       onChange={(e) => setField('material', e.target.value)}
-                      placeholder="Lino, algodón…"
+                      placeholder="Lino, algodón, mezclilla…"
+                    />
+                  </FormField>
+                  <FormField label="Patrón o estampado" htmlFor="g-pattern">
+                    <Input
+                      id="g-pattern"
+                      value={draft.pattern}
+                      onChange={(e) => setField('pattern', e.target.value)}
+                      placeholder="Liso, rayas, cuadros…"
+                    />
+                  </FormField>
+                  <FormField label="Tipo de manga" htmlFor="g-sleeve">
+                    <Input
+                      id="g-sleeve"
+                      value={draft.sleeve}
+                      onChange={(e) => setField('sleeve', e.target.value)}
+                      placeholder="Manga larga, corta, sin mangas…"
+                    />
+                  </FormField>
+                  <FormField label="Tipo de cuello" htmlFor="g-neckline">
+                    <Input
+                      id="g-neckline"
+                      value={draft.neckline}
+                      onChange={(e) => setField('neckline', e.target.value)}
+                      placeholder="Cuello redondo, en V, mao…"
+                    />
+                  </FormField>
+                  <FormField label="Nivel de formalidad" htmlFor="g-formality" hint="0 a 10">
+                    <Input
+                      id="g-formality"
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={1}
+                      value={draft.formality}
+                      onChange={(e) => setField('formality', e.target.value)}
+                      placeholder="0–10"
                     />
                   </FormField>
                   <FormField
-                    label="Etiquetas"
-                    htmlFor="g-tags"
+                    label="Ocasiones recomendadas"
+                    htmlFor="g-occasions"
                     hint="Separadas por comas"
-                    className="sm:col-span-2"
                   >
+                    <Input
+                      id="g-occasions"
+                      value={draft.occasions}
+                      onChange={(e) => setField('occasions', e.target.value)}
+                      placeholder="formal, trabajo, fiesta…"
+                    />
+                  </FormField>
+                  <FormField label="Marca" htmlFor="g-brand" hint="Opcional">
+                    <Input
+                      id="g-brand"
+                      value={draft.brand}
+                      onChange={(e) => setField('brand', e.target.value)}
+                      placeholder="Opcional"
+                    />
+                  </FormField>
+                  <FormField label="Etiquetas" htmlFor="g-tags" hint="Separadas por comas">
                     <Input
                       id="g-tags"
                       value={draft.tags.join(', ')}
                       onChange={(e) => setField('tags', parseTags(e.target.value))}
                       placeholder="trabajo, clásico"
+                    />
+                  </FormField>
+                  <FormField
+                    label="Observaciones"
+                    htmlFor="g-notes"
+                    hint="Opcional"
+                    className="sm:col-span-2"
+                  >
+                    <Textarea
+                      id="g-notes"
+                      value={draft.notes}
+                      onChange={(e) => setField('notes', e.target.value)}
+                      placeholder="Notas personales sobre la prenda…"
+                      className="min-h-[64px]"
                     />
                   </FormField>
                 </div>

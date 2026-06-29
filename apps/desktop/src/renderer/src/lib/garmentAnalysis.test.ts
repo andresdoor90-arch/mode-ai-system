@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
+import { parseGarmentVisionResponse } from '@mas/infrastructure/ai/OllamaVisionProvider';
 import type { GarmentAnalysisDTO } from '@shared/ipc';
 
 import {
   analysisToDraft,
-  buildGarmentMetadata,
   confidencePercent,
   describeAnalysis,
+  draftToMetadata,
   garmentDetailAttributes,
   parseTags,
-  secondaryColorHexes,
   sourceLabel,
 } from './garmentAnalysis';
 
@@ -33,20 +33,34 @@ describe('analysisToDraft', () => {
   it('fills the draft from the analysis', () => {
     const draft = analysisToDraft(ANALYSIS);
     expect(draft.name).toBe('Camisa de lino azul petróleo');
-    expect(draft.category).toBe('tops');
-    expect(draft.subcategory).toBe('shirt');
+    expect(draft.garmentType).toBe('Camisa');
     expect(draft.colorHex).toBe('#235a6e');
+    expect(draft.colorName).toBe('Azul petróleo');
     expect(draft.material).toBe('Lino');
+    expect(draft.sleeve).toBe('Manga larga');
+    expect(draft.neckline).toBe('Cuello mao');
+    expect(draft.formality).toBe('9');
+    expect(draft.occasions).toBe('formal');
+    expect(draft.secondaryColors).toEqual(['#1a1a1a']);
     expect(draft.tags).toEqual(['Lino', 'formal']);
   });
 
-  it('uses safe UI defaults when fields are unknown (without inventing facts)', () => {
+  it('leaves undetermined fields empty (never invents a value)', () => {
     const draft = analysisToDraft({});
     expect(draft.name).toBe('');
-    expect(draft.category).toBe('tops');
-    expect(draft.subcategory).toBe('t-shirt');
+    expect(draft.garmentType).toBe('');
+    expect(draft.colorName).toBe('');
+    expect(draft.secondaryColors).toEqual([]);
     expect(draft.material).toBe('');
-    expect(draft.season).toBe('all-season');
+    expect(draft.sleeve).toBe('');
+    expect(draft.neckline).toBe('');
+    expect(draft.pattern).toBe('');
+    expect(draft.style).toBe('');
+    expect(draft.formality).toBe('');
+    expect(draft.season).toBe('');
+    expect(draft.occasions).toBe('');
+    expect(draft.brand).toBe('');
+    expect(draft.notes).toBe('');
     expect(draft.tags).toEqual([]);
   });
 });
@@ -68,16 +82,22 @@ describe('describeAnalysis', () => {
   });
 });
 
-describe('buildGarmentMetadata', () => {
-  it('flattens rich fields + confidence, skipping unknowns', () => {
-    const meta = buildGarmentMetadata(ANALYSIS, 0.82);
+describe('draftToMetadata', () => {
+  it('persists the EDITED draft values into the metadata bag, skipping empties', () => {
+    const draft = analysisToDraft(ANALYSIS);
+    draft.style = 'Clásico'; // a user edit
+    draft.pattern = ''; // a cleared field
+    const meta = draftToMetadata(draft, 0.82);
+    expect(meta.garmentType).toBe('Camisa');
     expect(meta.sleeve).toBe('Manga larga');
     expect(meta.neckline).toBe('Cuello mao');
+    expect(meta.style).toBe('Clásico');
     expect(meta.formality).toBe('9');
     expect(meta.occasions).toBe('formal');
     expect(meta.secondaryColors).toBe('#1a1a1a');
     expect(meta.analysisConfidence).toBe('0.82');
-    expect(meta.texture).toBeUndefined();
+    // Cleared/undetermined fields are simply absent.
+    expect(meta.pattern).toBeUndefined();
   });
 });
 
@@ -126,9 +146,60 @@ describe('misc helpers', () => {
     expect(sourceLabel('vision')).toBe('IA');
   });
 
-  it('extracts secondary colours and parses tags', () => {
-    expect(secondaryColorHexes(ANALYSIS)).toEqual(['#1a1a1a']);
-    expect(secondaryColorHexes({})).toEqual([]);
+  it('parses comma-separated lists', () => {
     expect(parseTags(' work , , classic ')).toEqual(['work', 'classic']);
+  });
+});
+
+describe('end-to-end: Qwen2.5-VL response → auto-filled form', () => {
+  it('parses a realistic vision JSON and fills every detectable field', () => {
+    const raw = JSON.stringify({
+      suggestedName: 'Camisa azul oscuro manga larga',
+      garmentType: 'Camisa',
+      category: 'tops',
+      primaryColor: '#1b2a4a',
+      primaryColorName: 'Azul oscuro',
+      secondaryColors: ['#ffffff'],
+      material: 'Algodón',
+      sleeve: 'Manga larga',
+      neckline: 'Cuello clásico',
+      pattern: 'Liso',
+      style: 'Formal',
+      formality: 7,
+      season: 'all-season',
+      occasions: ['trabajo', 'formal'],
+      tags: ['oficina', 'clásico'],
+    });
+    const analysis = parseGarmentVisionResponse(raw) as unknown as GarmentAnalysisDTO;
+    const draft = analysisToDraft(analysis);
+    expect(draft.name).toBe('Camisa azul oscuro manga larga');
+    expect(draft.garmentType).toBe('Camisa');
+    expect(draft.colorHex).toBe('#1b2a4a');
+    expect(draft.colorName).toBe('Azul oscuro');
+    expect(draft.secondaryColors).toEqual(['#ffffff']);
+    expect(draft.material).toBe('Algodón');
+    expect(draft.sleeve).toBe('Manga larga');
+    expect(draft.neckline).toBe('Cuello clásico');
+    expect(draft.pattern).toBe('Liso');
+    expect(draft.style).toBe('Formal');
+    expect(draft.formality).toBe('7');
+    expect(draft.season).toBe('all-season');
+    expect(draft.occasions).toBe('trabajo, formal');
+    expect(draft.tags).toEqual(['oficina', 'clásico']);
+  });
+
+  it('fills what it detects (Spanish keys) and leaves the rest empty', () => {
+    const raw = JSON.stringify({ tipo: 'Pantalón', color_principal: 'Beige', material: 'Lino' });
+    const analysis = parseGarmentVisionResponse(raw) as unknown as GarmentAnalysisDTO;
+    const draft = analysisToDraft(analysis);
+    expect(draft.garmentType).toBe('Pantalón');
+    expect(draft.colorName).toBe('Beige');
+    expect(draft.material).toBe('Lino');
+    // Undetected attributes stay empty — never guessed.
+    expect(draft.sleeve).toBe('');
+    expect(draft.neckline).toBe('');
+    expect(draft.pattern).toBe('');
+    expect(draft.season).toBe('');
+    expect(draft.formality).toBe('');
   });
 });

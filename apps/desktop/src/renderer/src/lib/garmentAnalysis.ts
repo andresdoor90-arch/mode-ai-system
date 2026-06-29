@@ -7,23 +7,49 @@
  * metadata bag persisted on the garment. They are framework-free and fully unit
  * tested, so the analysis→UI→persistence contract is verified offline.
  *
- * Guiding rule: never invent. Unknown fields simply do not appear; only
- * category/subcategory/colour carry safe UI defaults (the user always reviews
- * before saving), and those defaults are NOT written as analysis facts.
+ * Guiding rule: never invent. Unknown fields simply do not appear and are left
+ * empty in the form; only the colour-picker widget keeps a neutral placeholder
+ * (the native control cannot be value-less), which is NOT recorded as a fact.
  */
 import type { AnalyzedFieldDTO, GarmentAnalysisDTO } from '@shared/ipc';
 
-import { SUBCATEGORY_OPTIONS } from '../data/wardrobeOptions';
-
-/** Editable values backing the preview/confirm form. */
+/**
+ * Editable values backing the preview/confirm form. Every attribute Qwen2.5-VL
+ * can detect has a first-class, EDITABLE field here; the dialog renders one
+ * control per field and pre-fills it from the analysis. Category/subcategory are
+ * NOT part of the draft — they are chosen from the user's SQLite taxonomy in the
+ * dialog itself.
+ */
 export interface GarmentDraft {
+  /** Suggested name (from the model, or derived from type + colour). */
   name: string;
-  category: string;
-  subcategory: string;
+  /** Kind of garment ("camisa", "pantalón", …). */
+  garmentType: string;
+  /** Primary colour hex (the colour baseline almost always supplies one). */
   colorHex: string;
+  /** Human name for the primary colour. */
   colorName: string;
+  /** Secondary colour hexes (editable swatch list). */
+  secondaryColors: string[];
   material: string;
+  /** Sleeve type. */
+  sleeve: string;
+  /** Neckline / collar type. */
+  neckline: string;
+  /** Pattern or print. */
+  pattern: string;
+  /** Style descriptor. */
+  style: string;
+  /** Formality on the 0–10 domain scale, as a string ('' when undetermined). */
+  formality: string;
+  /** Season slug ('' when undetermined). */
   season: string;
+  /** Recommended occasions, comma-separated free text. */
+  occasions: string;
+  /** Brand (optional, model rarely detects it reliably). */
+  brand: string;
+  /** Free observations (optional). */
+  notes: string;
   tags: string[];
 }
 
@@ -83,28 +109,35 @@ export const sourceLabel = (source: AnalyzedFieldDTO<unknown>['source']): string
   }
 };
 
-const firstSubcategory = (category: string): string =>
-  SUBCATEGORY_OPTIONS[category]?.[0]?.value ?? '';
+/** A safe neutral grey used ONLY so the `<input type="color">` widget always has
+ * a valid value. The colour baseline almost always provides a real hex, so this
+ * fallback is essentially never shown; it is not recorded as a detected fact. */
+const COLOR_WIDGET_FALLBACK = '#cccccc';
 
 /**
- * Build the editable draft from an analysis. Category/subcategory/colour fall
- * back to safe UI defaults (reviewed before save); everything else is left
- * blank when the analysis did not determine it.
+ * Build the editable draft from an analysis. NOTHING is invented: every field
+ * the analysis did not determine is left empty so the user sees a blank control
+ * (only the colour-picker widget keeps a neutral placeholder, since the native
+ * control cannot be value-less). The user reviews/edits before saving.
  */
-export const analysisToDraft = (analysis: GarmentAnalysisDTO): GarmentDraft => {
-  const category = analysis.category?.value ?? 'tops';
-  const subcategory = analysis.subcategory?.value ?? firstSubcategory(category);
-  return {
-    name: analysis.suggestedName?.value ?? analysis.garmentType?.value ?? '',
-    category,
-    subcategory,
-    colorHex: analysis.primaryColor?.value ?? '#9aa0a6',
-    colorName: analysis.primaryColorName?.value ?? '',
-    material: analysis.material?.value ?? '',
-    season: analysis.season?.value ?? 'all-season',
-    tags: [...(analysis.suggestedTags?.value ?? [])],
-  };
-};
+export const analysisToDraft = (analysis: GarmentAnalysisDTO): GarmentDraft => ({
+  name: analysis.suggestedName?.value ?? analysis.garmentType?.value ?? '',
+  garmentType: analysis.garmentType?.value ?? '',
+  colorHex: analysis.primaryColor?.value ?? COLOR_WIDGET_FALLBACK,
+  colorName: analysis.primaryColorName?.value ?? '',
+  secondaryColors: [...(analysis.secondaryColors?.value ?? [])],
+  material: analysis.material?.value ?? '',
+  sleeve: analysis.sleeve?.value ?? '',
+  neckline: analysis.neckline?.value ?? '',
+  pattern: analysis.pattern?.value ?? '',
+  style: analysis.style?.value ?? '',
+  formality: analysis.formality?.value !== undefined ? String(analysis.formality.value) : '',
+  season: analysis.season?.value ?? '',
+  occasions: (analysis.occasions?.value ?? []).join(', '),
+  brand: '',
+  notes: '',
+  tags: [...(analysis.suggestedTags?.value ?? [])],
+});
 
 /** The detected attributes to display, in a stable order (only populated). */
 export const describeAnalysis = (analysis: GarmentAnalysisDTO): AttributeRow[] => {
@@ -152,45 +185,62 @@ export const describeAnalysis = (analysis: GarmentAnalysisDTO): AttributeRow[] =
 };
 
 /**
- * Flatten the rich analysis into a string metadata bag persisted on the garment
- * (only fields that have no first-class column). Secondary colours and the
- * overall confidence are recorded too. Skips anything not determined.
+ * Flatten the EDITED draft into the string metadata bag persisted on the
+ * garment (only fields that have no first-class column). This is what saves the
+ * user's corrections — values come from the draft, not the raw analysis. Empty
+ * fields are skipped, so an undetermined/cleared attribute is simply absent.
  */
-export const buildGarmentMetadata = (
-  analysis: GarmentAnalysisDTO,
+export const draftToMetadata = (
+  draft: GarmentDraft,
   overallConfidence: number,
 ): Record<string, string> => {
   const meta: Record<string, string> = {};
-  const put = (key: string, field: AnalyzedFieldDTO<string | number> | undefined): void => {
-    if (field !== undefined && String(field.value).length > 0) {
-      meta[key] = String(field.value);
+  const put = (key: string, value: string): void => {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      meta[key] = trimmed;
     }
   };
-  put('garmentType', analysis.garmentType);
-  put('pattern', analysis.pattern);
-  put('texture', analysis.texture);
-  put('sleeve', analysis.sleeve);
-  put('length', analysis.length);
-  put('neckline', analysis.neckline);
-  put('fit', analysis.fit);
-  put('style', analysis.style);
-  put('formality', analysis.formality);
-  put('gender', analysis.gender);
-  if (analysis.occasions !== undefined && analysis.occasions.value.length > 0) {
-    meta['occasions'] = analysis.occasions.value.join(',');
+  put('garmentType', draft.garmentType);
+  put('pattern', draft.pattern);
+  put('sleeve', draft.sleeve);
+  put('neckline', draft.neckline);
+  put('style', draft.style);
+  put('formality', draft.formality);
+  const occasions = parseTags(draft.occasions);
+  if (occasions.length > 0) {
+    meta['occasions'] = occasions.join(',');
   }
-  if (analysis.secondaryColors !== undefined && analysis.secondaryColors.value.length > 0) {
-    meta['secondaryColors'] = analysis.secondaryColors.value.join(',');
+  if (draft.secondaryColors.length > 0) {
+    meta['secondaryColors'] = draft.secondaryColors.join(',');
   }
   meta['analysisConfidence'] = overallConfidence.toFixed(2);
   return meta;
 };
 
-/** Secondary colour hexes from the analysis (empty when none detected). */
-export const secondaryColorHexes = (analysis: GarmentAnalysisDTO): string[] =>
-  analysis.secondaryColors !== undefined ? [...analysis.secondaryColors.value] : [];
+/**
+ * Detected attributes Qwen can return that have no dedicated editable control
+ * (texture, length, fit, gender). They are preserved verbatim from the analysis
+ * so no detected information is lost; the detail view surfaces them. Skipped
+ * when not determined.
+ */
+export const analysisPassthroughMetadata = (
+  analysis: GarmentAnalysisDTO,
+): Record<string, string> => {
+  const meta: Record<string, string> = {};
+  const put = (key: string, field: AnalyzedFieldDTO<string | number> | undefined): void => {
+    if (field !== undefined && String(field.value).trim().length > 0) {
+      meta[key] = String(field.value).trim();
+    }
+  };
+  put('texture', analysis.texture);
+  put('length', analysis.length);
+  put('fit', analysis.fit);
+  put('gender', analysis.gender);
+  return meta;
+};
 
-/** Split/normalise a comma-separated tag string into a clean list. */
+/** Split/normalise a comma-separated string into a clean, trimmed list. */
 export const parseTags = (raw: string): string[] =>
   raw
     .split(',')
