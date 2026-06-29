@@ -55,6 +55,53 @@ describe('parseGarmentVisionResponse', () => {
     expect(parseGarmentVisionResponse('')).toEqual({});
   });
 
+  it('tolerates Spanish keys, snake_case and a colour given as a name', () => {
+    const a = parseGarmentVisionResponse(
+      JSON.stringify({
+        tipo: 'Camisa',
+        color_principal: 'Azul marino',
+        material: 'Algodón',
+        manga: 'Manga larga',
+        cuello: 'Cuello mao',
+        patron: 'Rayas',
+        formalidad: '8',
+        temporada: 'verano',
+        ocasiones: 'iglesia, trabajo',
+      }),
+    );
+    expect(a.garmentType?.value).toBe('Camisa');
+    expect(a.category?.value).toBe('tops'); // inferred from "Camisa"
+    expect(a.primaryColorName?.value).toBe('Azul marino');
+    expect(a.material?.value).toBe('Algodón');
+    expect(a.sleeve?.value).toBe('Manga larga');
+    expect(a.neckline?.value).toBe('Cuello mao');
+    expect(a.pattern?.value).toBe('Rayas');
+    expect(a.formality?.value).toBe(8);
+    expect(a.season?.value).toBe('summer');
+    expect(a.occasions?.value).toEqual(['iglesia', 'trabajo']);
+  });
+
+  it('resolves attributes nested one level deep', () => {
+    const a = parseGarmentVisionResponse(
+      JSON.stringify({ prenda: { tipo: 'Jean', material: 'Denim' } }),
+    );
+    expect(a.garmentType?.value).toBe('Jean');
+    expect(a.category?.value).toBe('bottoms');
+    expect(a.material?.value).toBe('Denim');
+  });
+
+  it('maps category and season synonyms to domain slugs', () => {
+    expect(
+      parseGarmentVisionResponse(JSON.stringify({ category: 'zapatos' })).category?.value,
+    ).toBe('shoes');
+    expect(
+      parseGarmentVisionResponse(JSON.stringify({ category: 'chaqueta' })).category?.value,
+    ).toBe('outerwear');
+    expect(parseGarmentVisionResponse(JSON.stringify({ season: 'invierno' })).season?.value).toBe(
+      'winter',
+    );
+  });
+
   it('omits fields the model did not determine', () => {
     const a = parseGarmentVisionResponse(JSON.stringify({ garmentType: 'Polo' }));
     expect(a.garmentType?.value).toBe('Polo');
