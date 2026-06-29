@@ -139,9 +139,9 @@ export class GarmentAnalysisService {
     // authoritative than the weakest fact it is built from.
     const source = sources.reduce<AnalysisSource>(
       (lowest, s) => (sourceRank(s) < sourceRank(lowest) ? s : lowest),
-      sources[0],
+      sources[0] ?? 'baseline',
     );
-    const confidence = sources.length > 0 ? (source === 'user' ? 0.8 : 0.5) : 0.5;
+    const confidence = source === 'user' ? 0.8 : 0.5;
     return { ...analysis, suggestedName: { value: name, confidence, source } };
   }
 }

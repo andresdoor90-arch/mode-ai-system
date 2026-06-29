@@ -38,10 +38,11 @@ export class BaselineVisionProvider implements IVisionProvider {
       return {};
     }
     const colors = this.colorExtractor.extract(samples, 4);
-    if (colors.length === 0) {
+    const primary = colors[0];
+    if (primary === undefined) {
       return {};
     }
-    const [primary, ...secondary] = colors;
+    const secondary = colors.slice(1);
     const analysis: Record<string, unknown> = {
       primaryColor: { value: primary, confidence: 0.6, source: 'baseline' },
     };

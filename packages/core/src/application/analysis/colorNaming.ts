@@ -47,7 +47,7 @@ const PALETTE: readonly NamedColor[] = [
 /** Parse a #rrggbb string into RGB; returns null when malformed. */
 const parseHex = (hex: string): { r: number; g: number; b: number } | null => {
   const m = /^#?([0-9a-fA-F]{6})$/.exec(hex.trim());
-  if (m === null) {
+  if (m === null || m[1] === undefined) {
     return null;
   }
   const int = Number.parseInt(m[1], 16);
@@ -63,7 +63,7 @@ export const nameForHex = (hex: string): string | null => {
   if (rgb === null) {
     return null;
   }
-  let best = PALETTE[0];
+  let best: NamedColor | undefined;
   let bestDist = Number.POSITIVE_INFINITY;
   for (const c of PALETTE) {
     // Perceptual-ish weighting (eyes are more sensitive to green).
@@ -76,5 +76,5 @@ export const nameForHex = (hex: string): string | null => {
       best = c;
     }
   }
-  return best.name;
+  return best?.name ?? null;
 };

@@ -22,7 +22,6 @@ import type {
   GarmentDTO,
   GarmentSearchPayload,
   HistorySearchPayload,
-  OutfitHistoryEntryDTO,
   OutfitHistoryPageDTO,
   OutfitHistoryStatisticsDTO,
   OutfitSuggestionDTO,
