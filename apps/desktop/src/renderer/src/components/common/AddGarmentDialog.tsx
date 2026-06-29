@@ -63,15 +63,12 @@ export function AddGarmentDialog(): JSX.Element {
     setDraft((prev) => (prev === null ? prev : { ...prev, [key]: value }));
 
   const reset = useCallback((): void => {
-    if (processed !== null) {
-      URL.revokeObjectURL(processed.previewUrl);
-    }
     setProcessed(null);
     setResult(null);
     setDraft(null);
     setDragging(false);
     setPhase('await-photo');
-  }, [processed]);
+  }, []);
 
   const handleOpenChange = (next: boolean): void => {
     setOpen(next);
@@ -296,7 +293,7 @@ export function AddGarmentDialog(): JSX.Element {
             <div className="space-y-3">
               <div className="relative aspect-[3/4] overflow-hidden rounded-xl bg-muted">
                 <img
-                  src={processed.previewUrl}
+                  src={processed.previewDataUrl}
                   alt="Prenda seleccionada"
                   className="h-full w-full object-cover"
                   draggable={false}

@@ -1,14 +1,19 @@
 /**
  * Browser-side image processing for the photo-first flow.
  *
- * Runs in the Electron renderer (real Chromium, so `Image`, `<canvas>` and
- * WebP encoding are available). It performs the work that must happen close to
- * the pixels:
- *   - read the original bytes as base64 (to persist the untouched original),
- *   - sample a downscaled grid of opaque pixels for the offline colour baseline,
- *   - render an optimized WebP thumbnail (so the catalog never loads full-res).
+ * Decoding happens entirely in the Electron renderer (real Chromium). The
+ * image is decoded with `createImageBitmap(file)`, which reads the Blob/File
+ * bytes DIRECTLY through Chromium's native decoders (PNG, JPEG, WEBP, GIF,
+ * AVIF). This deliberately avoids `new Image()` + `blob:`/object URLs and the
+ * `<img>` element load path, which is governed by CSP `img-src` and is fragile
+ * in a packaged `file://` sandboxed renderer. `createImageBitmap` is not an
+ * element load and is not subject to `img-src`, so a valid image always
+ * decodes regardless of CSP or origin.
  *
- * No fabrication and no network: everything is derived from the actual image.
+ * From the decoded bitmap we sample a small grid of opaque pixels (for the
+ * offline colour baseline) and render an optimized thumbnail. The original
+ * bytes are read once as base64 (to persist the untouched original and to show
+ * a CSP-safe `data:` preview). No network, no fabrication, no fallbacks.
  */
 import type { RgbSampleDTO } from '@shared/ipc';
 
@@ -21,18 +26,21 @@ export interface ProcessedImage {
   readonly extension: string;
   /** Sampled opaque pixels for the colour baseline. */
   readonly colorSamples: RgbSampleDTO[];
-  /** Base64 of the optimized WebP thumbnail (no prefix). */
+  /** Base64 of the optimized thumbnail (no prefix). */
   readonly thumbnailBase64: string;
-  /** Object URL for immediate on-screen preview (revoke when done). */
-  readonly previewUrl: string;
+  /** CSP-safe `data:` URL for immediate on-screen preview. */
+  readonly previewDataUrl: string;
+  readonly width: number;
+  readonly height: number;
 }
 
-const EXT_BY_MIME: Readonly<Record<string, string>> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-  'image/avif': 'avif',
+const MIME_BY_EXT: Readonly<Record<string, string>> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+  avif: 'image/avif',
 };
 
 const extensionFor = (file: File): string => {
@@ -42,8 +50,12 @@ const extensionFor = (file: File): string => {
   if (fromName.length > 0) {
     return fromName === 'jpeg' ? 'jpg' : fromName;
   }
-  return EXT_BY_MIME[file.type] ?? 'png';
+  const fromMime = Object.entries(MIME_BY_EXT).find(([, mime]) => mime === file.type)?.[0];
+  return fromMime ?? 'png';
 };
+
+const mimeFor = (file: File, extension: string): string =>
+  file.type.length > 0 ? file.type : (MIME_BY_EXT[extension] ?? 'image/png');
 
 const stripDataUrlPrefix = (dataUrl: string): string => {
   const comma = dataUrl.indexOf(',');
@@ -53,29 +65,21 @@ const stripDataUrlPrefix = (dataUrl: string): string => {
 const readAsDataUrl = (file: Blob): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file.'));
+    reader.onerror = () => reject(reader.error ?? new Error('No se pudo leer el archivo.'));
     reader.onload = () => resolve(String(reader.result));
     reader.readAsDataURL(file);
   });
 
-const loadImage = (url: string): Promise<HTMLImageElement> =>
-  new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('The selected file is not a readable image.'));
-    img.src = url;
-  });
-
 /** Sample a downscaled grid of opaque pixels (most informative for colour). */
-function sampleColors(img: HTMLImageElement, grid = 48): RgbSampleDTO[] {
+function sampleColors(bitmap: ImageBitmap, grid = 48): RgbSampleDTO[] {
   const canvas = document.createElement('canvas');
-  const w = (canvas.width = Math.max(1, Math.min(grid, img.naturalWidth || grid)));
-  const h = (canvas.height = Math.max(1, Math.min(grid, img.naturalHeight || grid)));
+  const w = (canvas.width = Math.max(1, Math.min(grid, bitmap.width || grid)));
+  const h = (canvas.height = Math.max(1, Math.min(grid, bitmap.height || grid)));
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (ctx === null) {
     return [];
   }
-  ctx.drawImage(img, 0, 0, w, h);
+  ctx.drawImage(bitmap, 0, 0, w, h);
   const { data } = ctx.getImageData(0, 0, w, h);
   const samples: RgbSampleDTO[] = [];
   for (let i = 0; i < data.length; i += 4) {
@@ -88,14 +92,11 @@ function sampleColors(img: HTMLImageElement, grid = 48): RgbSampleDTO[] {
   return samples;
 }
 
-/** Render an optimized WebP thumbnail; falls back to JPEG if WebP is absent. */
-function makeThumbnail(img: HTMLImageElement, maxDim = 512, quality = 0.82): string {
-  const ratio = Math.min(
-    1,
-    maxDim / Math.max(img.naturalWidth || maxDim, img.naturalHeight || maxDim),
-  );
-  const w = Math.max(1, Math.round((img.naturalWidth || maxDim) * ratio));
-  const h = Math.max(1, Math.round((img.naturalHeight || maxDim) * ratio));
+/** Render an optimized thumbnail (WebP, falling back to JPEG) from the bitmap. */
+function makeThumbnail(bitmap: ImageBitmap, maxDim = 512, quality = 0.82): string {
+  const ratio = Math.min(1, maxDim / Math.max(bitmap.width || maxDim, bitmap.height || maxDim));
+  const w = Math.max(1, Math.round((bitmap.width || maxDim) * ratio));
+  const h = Math.max(1, Math.round((bitmap.height || maxDim) * ratio));
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
@@ -103,7 +104,7 @@ function makeThumbnail(img: HTMLImageElement, maxDim = 512, quality = 0.82): str
   if (ctx === null) {
     return '';
   }
-  ctx.drawImage(img, 0, 0, w, h);
+  ctx.drawImage(bitmap, 0, 0, w, h);
   let dataUrl = canvas.toDataURL('image/webp', quality);
   if (!dataUrl.startsWith('data:image/webp')) {
     dataUrl = canvas.toDataURL('image/jpeg', quality);
@@ -112,19 +113,59 @@ function makeThumbnail(img: HTMLImageElement, maxDim = 512, quality = 0.82): str
 }
 
 /**
- * Prepare a picked image file: read bytes, sample colours and build a
- * thumbnail. The caller is responsible for revoking `previewUrl`.
+ * Prepare a picked image file: decode it, sample colours and build a thumbnail.
+ * Throws a clear error only if the bytes are genuinely not a decodable image.
  */
 export async function processImageFile(file: File): Promise<ProcessedImage> {
-  const dataUrl = await readAsDataUrl(file);
-  const previewUrl = URL.createObjectURL(file);
-  const img = await loadImage(previewUrl);
-  return {
-    base64: stripDataUrlPrefix(dataUrl),
-    mimeType: file.type.length > 0 ? file.type : 'image/png',
-    extension: extensionFor(file),
-    colorSamples: sampleColors(img),
-    thumbnailBase64: makeThumbnail(img),
-    previewUrl,
-  };
+  const extension = extensionFor(file);
+  const mimeType = mimeFor(file, extension);
+
+  // Diagnostic trace of exactly what the renderer received.
+  // eslint-disable-next-line no-console
+  console.info('[addGarment] processing image', {
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    extension,
+    mimeType,
+  });
+
+  if (typeof createImageBitmap !== 'function') {
+    throw new Error('Este entorno no soporta la decodificación de imágenes.');
+  }
+
+  const base64 = stripDataUrlPrefix(await readAsDataUrl(file));
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch (cause) {
+    // eslint-disable-next-line no-console
+    console.error('[addGarment] createImageBitmap failed', {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      cause,
+    });
+    throw new Error('No se pudo decodificar la imagen seleccionada.');
+  }
+
+  try {
+    // eslint-disable-next-line no-console
+    console.info('[addGarment] decoded bitmap', { width: bitmap.width, height: bitmap.height });
+    const colorSamples = sampleColors(bitmap);
+    const thumbnailBase64 = makeThumbnail(bitmap);
+    return {
+      base64,
+      mimeType,
+      extension,
+      colorSamples,
+      thumbnailBase64,
+      previewDataUrl: `data:${mimeType};base64,${base64}`,
+      width: bitmap.width,
+      height: bitmap.height,
+    };
+  } finally {
+    bitmap.close();
+  }
 }
