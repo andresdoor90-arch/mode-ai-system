@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, phase-8-polish-distribution]
   pull_request:
-    branches: [main]
+    branches: [main, phase-7-persistence-plugins]
 
 # Cancel superseded runs on the same ref to save CI minutes.
 concurrency:
