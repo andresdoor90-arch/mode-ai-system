@@ -12,7 +12,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-import { DEFAULT_THEME_PREFERENCE, nextThemePreference, type ThemePreference } from '../theme/theme';
+import {
+  DEFAULT_THEME_PREFERENCE,
+  nextThemePreference,
+  type ThemePreference,
+} from '../theme/theme';
 import { addToast, dismissToast, type Toast, type ToastInput } from './logic/uiLogic';
 
 /** How long (ms) a toast stays before auto-dismissing. */

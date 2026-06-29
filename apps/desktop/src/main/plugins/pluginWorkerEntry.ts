@@ -32,7 +32,10 @@ if (port === null) {
 const { manifest, main } = workerData as WorkerData;
 
 let callSeq = 0;
-const pendingCalls = new Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>();
+const pendingCalls = new Map<
+  number,
+  { resolve: (v: unknown) => void; reject: (e: Error) => void }
+>();
 const contributions = new Map<number, Record<string, unknown>>();
 let contributionSeq = 0;
 let plugin: PluginModule | undefined;

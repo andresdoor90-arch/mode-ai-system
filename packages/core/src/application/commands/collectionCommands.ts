@@ -21,9 +21,10 @@ export class CreateCollectionCommand implements Command<CollectionId> {
   public constructor(public readonly input: CreateCollectionInput) {}
 }
 
-export class CreateCollectionHandler
-  implements RequestHandler<CreateCollectionCommand, CollectionId>
-{
+export class CreateCollectionHandler implements RequestHandler<
+  CreateCollectionCommand,
+  CollectionId
+> {
   public constructor(
     private readonly garments: IGarmentRepository,
     private readonly collections: ICollectionRepository,

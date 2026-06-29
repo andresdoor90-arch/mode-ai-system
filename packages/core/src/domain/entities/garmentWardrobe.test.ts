@@ -15,11 +15,15 @@ const photo = (id: string, order = 0, primary = false): Photograph =>
 describe('Photograph value object', () => {
   it('validates rotation and crop bounds', () => {
     expect(Photograph.create({ id: toId('p'), storageKey: '' }).ok).toBe(false);
+    expect(Photograph.create({ id: toId('p'), storageKey: 'k', rotation: 45 as never }).ok).toBe(
+      false,
+    );
     expect(
-      Photograph.create({ id: toId('p'), storageKey: 'k', rotation: 45 as never }).ok,
-    ).toBe(false);
-    expect(
-      Photograph.create({ id: toId('p'), storageKey: 'k', crop: { x: 0.5, y: 0, width: 0.7, height: 1 } }).ok,
+      Photograph.create({
+        id: toId('p'),
+        storageKey: 'k',
+        crop: { x: 0.5, y: 0, width: 0.7, height: 1 },
+      }).ok,
     ).toBe(false);
     expect(Photograph.create({ id: toId('p'), storageKey: 'k', crop: FULL_CROP }).ok).toBe(true);
   });
@@ -27,7 +31,9 @@ describe('Photograph value object', () => {
   it('rotates non-destructively in 90° steps', () => {
     const p = photo('a');
     expect(p.rotateClockwise().rotation).toBe(90);
-    expect(p.rotateClockwise().rotateClockwise().rotateClockwise().rotateClockwise().rotation).toBe(0);
+    expect(p.rotateClockwise().rotateClockwise().rotateClockwise().rotateClockwise().rotation).toBe(
+      0,
+    );
   });
 
   it('starts in the original (un-processed) stage', () => {

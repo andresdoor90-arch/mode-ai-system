@@ -273,7 +273,11 @@ describe('history use cases', () => {
     );
 
     const accepted = await handler.handle(
-      new RecordOutfitFeedbackCommand({ garmentIds: [g1.id], accepted: true, context: { role: 'singer' } }),
+      new RecordOutfitFeedbackCommand({
+        garmentIds: [g1.id],
+        accepted: true,
+        context: { role: 'singer' },
+      }),
     );
     expect(accepted.ok && accepted.value.historyEntryId !== null).toBe(true);
     expect(await history.count()).toBe(1);
@@ -295,14 +299,24 @@ describe('history use cases', () => {
     await garments.save(g1);
     await garments.save(g2);
     const ids = new SequentialIdGenerator('h');
-    const record = new RecordOutfitUsageHandler(garments, history, ids, () => '2026-07-01T09:00:00.000Z');
+    const record = new RecordOutfitUsageHandler(
+      garments,
+      history,
+      ids,
+      () => '2026-07-01T09:00:00.000Z',
+    );
     const first = await record.handle(
       new RecordOutfitUsageCommand([g1.id, g2.id], { role: 'preacher' }),
     );
     expect(first.ok).toBe(true);
     const entryId = first.ok ? first.value : undefined;
 
-    const repeat = new RepeatOutfitHandler(garments, history, ids, () => '2026-07-20T09:00:00.000Z');
+    const repeat = new RepeatOutfitHandler(
+      garments,
+      history,
+      ids,
+      () => '2026-07-20T09:00:00.000Z',
+    );
     const res = await repeat.handle(new RepeatOutfitCommand({ entryId: entryId! }));
     expect(res.ok).toBe(true);
     expect(await history.count()).toBe(2);

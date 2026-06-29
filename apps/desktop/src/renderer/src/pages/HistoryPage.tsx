@@ -10,14 +10,7 @@ import { History, Star } from 'lucide-react';
 
 import { EmptyState } from '../components/common/EmptyState';
 import { PageHeader } from '../components/common/PageHeader';
-import {
-  Badge,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '../components/ui';
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui';
 import { formatDate, titleCase } from '../lib/format';
 import { useOutfitStore } from '../store/outfitStore';
 
@@ -34,7 +27,11 @@ export function HistoryPage(): JSX.Element {
       <PageHeader title="Historial" description="Conjuntos que has usado, con sus valoraciones." />
 
       {history.length === 0 ? (
-        <EmptyState icon={History} title="Sin historial" description="Tus conjuntos aparecerán aquí." />
+        <EmptyState
+          icon={History}
+          title="Sin historial"
+          description="Tus conjuntos aparecerán aquí."
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {history.map((outfit) => (

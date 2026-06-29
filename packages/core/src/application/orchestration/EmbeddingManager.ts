@@ -67,10 +67,7 @@ export class EmbeddingManager {
    * Empty when the manager is unavailable, so callers can blend it
    * unconditionally without branching.
    */
-  public async scoreByQuery(
-    query: string,
-    topK: number,
-  ): Promise<ReadonlyMap<string, number>> {
+  public async scoreByQuery(query: string, topK: number): Promise<ReadonlyMap<string, number>> {
     const scores = new Map<string, number>();
     if (this.embedder === undefined || this.index === undefined || query.trim().length === 0) {
       return scores;

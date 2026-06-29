@@ -30,15 +30,47 @@ import {
 type HostBound =
   | { readonly type: 'activate' }
   | { readonly type: 'deactivate' }
-  | { readonly type: 'host-call-result'; readonly callId: number; readonly ok: boolean; readonly value?: unknown; readonly error?: string }
-  | { readonly type: 'contribution-invoke'; readonly invokeId: number; readonly contributionId: number; readonly method: string; readonly args: readonly unknown[] };
+  | {
+      readonly type: 'host-call-result';
+      readonly callId: number;
+      readonly ok: boolean;
+      readonly value?: unknown;
+      readonly error?: string;
+    }
+  | {
+      readonly type: 'contribution-invoke';
+      readonly invokeId: number;
+      readonly contributionId: number;
+      readonly method: string;
+      readonly args: readonly unknown[];
+    };
 
 type WorkerBound =
   | { readonly type: 'ready' }
-  | { readonly type: 'lifecycle-result'; readonly phase: 'activate' | 'deactivate'; readonly ok: boolean; readonly error?: string }
-  | { readonly type: 'host-call'; readonly callId: number; readonly path: readonly string[]; readonly args: readonly unknown[] }
-  | { readonly type: 'register'; readonly contributionId: number; readonly descriptor: SerializedContribution }
-  | { readonly type: 'contribution-invoke-result'; readonly invokeId: number; readonly ok: boolean; readonly value?: unknown; readonly error?: string };
+  | {
+      readonly type: 'lifecycle-result';
+      readonly phase: 'activate' | 'deactivate';
+      readonly ok: boolean;
+      readonly error?: string;
+    }
+  | {
+      readonly type: 'host-call';
+      readonly callId: number;
+      readonly path: readonly string[];
+      readonly args: readonly unknown[];
+    }
+  | {
+      readonly type: 'register';
+      readonly contributionId: number;
+      readonly descriptor: SerializedContribution;
+    }
+  | {
+      readonly type: 'contribution-invoke-result';
+      readonly invokeId: number;
+      readonly ok: boolean;
+      readonly value?: unknown;
+      readonly error?: string;
+    };
 
 /** A contribution with its function members replaced by method-name markers. */
 interface SerializedContribution {
@@ -90,7 +122,11 @@ class WorkerHandle implements SandboxHandle {
     return new Promise<SandboxOutcome>((resolve) => {
       const timer = setTimeout(() => {
         this._faulted = true;
-        resolve({ ok: false, error: new Error(`${phase} timed out`), durationMs: Date.now() - start });
+        resolve({
+          ok: false,
+          error: new Error(`${phase} timed out`),
+          durationMs: Date.now() - start,
+        });
       }, this.maxCallMs);
 
       const onMsg = (msg: WorkerBound): void => {

@@ -120,13 +120,11 @@ const parseComparator = (token: string): Comparator | null => {
       return (v) => compareSemVer(v, target) === 0;
     case '^': {
       const upper = caretUpper(target);
-      return (v) =>
-        allowsPre(v) && compareSemVer(v, target) >= 0 && compareSemVer(v, upper) < 0;
+      return (v) => allowsPre(v) && compareSemVer(v, target) >= 0 && compareSemVer(v, upper) < 0;
     }
     case '~': {
       const upper = tildeUpper(target);
-      return (v) =>
-        allowsPre(v) && compareSemVer(v, target) >= 0 && compareSemVer(v, upper) < 0;
+      return (v) => allowsPre(v) && compareSemVer(v, target) >= 0 && compareSemVer(v, upper) < 0;
     }
     default:
       return null;
@@ -143,7 +141,10 @@ export const satisfies = (version: string, range: string): boolean => {
   if (v === null) return false;
   const alternatives = range.split('||');
   for (const alt of alternatives) {
-    const tokens = alt.trim().split(/\s+/).filter((s) => s.length > 0);
+    const tokens = alt
+      .trim()
+      .split(/\s+/)
+      .filter((s) => s.length > 0);
     if (tokens.length === 0) continue;
     const comparators = tokens.map(parseComparator);
     if (comparators.some((c) => c === null)) continue; // skip malformed alternative.

@@ -36,8 +36,17 @@ export function Header(): JSX.Element {
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-background/85 px-4 backdrop-blur">
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" onClick={toggleSidebar} aria-label="Alternar barra lateral">
-            {collapsed ? <Menu className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleSidebar}
+            aria-label="Alternar barra lateral"
+          >
+            {collapsed ? (
+              <Menu className="h-[18px] w-[18px]" />
+            ) : (
+              <PanelLeftClose className="h-[18px] w-[18px]" />
+            )}
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom">{collapsed ? 'Expandir' : 'Contraer'}</TooltipContent>

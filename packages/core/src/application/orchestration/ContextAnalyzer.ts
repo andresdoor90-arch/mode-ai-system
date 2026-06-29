@@ -19,14 +19,78 @@ import { type RecommendationContext, type RecommendationRequest } from './types'
 
 /** Bilingual (es/en) keyword → occasion mapping, most-specific first. */
 const OCCASION_KEYWORDS: ReadonlyArray<readonly [readonly string[], Occasion]> = [
-  [['boda', 'wedding', 'gala', 'black tie', 'etiqueta', 'ceremonia', 'graduación', 'graduation'], Occasion.Formal],
-  [['oficina', 'office', 'trabajo', 'work', 'reunión', 'reunion', 'meeting', 'negocios', 'business', 'entrevista', 'interview', 'presentación', 'presentation'], Occasion.Business],
+  [
+    ['boda', 'wedding', 'gala', 'black tie', 'etiqueta', 'ceremonia', 'graduación', 'graduation'],
+    Occasion.Formal,
+  ],
+  [
+    [
+      'oficina',
+      'office',
+      'trabajo',
+      'work',
+      'reunión',
+      'reunion',
+      'meeting',
+      'negocios',
+      'business',
+      'entrevista',
+      'interview',
+      'presentación',
+      'presentation',
+    ],
+    Occasion.Business,
+  ],
   [['cita', 'date', 'cena romántica', 'romantic'], Occasion.Date],
-  [['fiesta', 'party', 'cumpleaños', 'birthday', 'celebración', 'celebration', 'discoteca', 'club', 'noche', 'night out'], Occasion.Party],
-  [['gimnasio', 'gym', 'deporte', 'sport', 'correr', 'running', 'entrenar', 'workout', 'yoga', 'pilates'], Occasion.Sport],
-  [['viaje', 'travel', 'aeropuerto', 'airport', 'vuelo', 'flight', 'turismo', 'excursión', 'hiking'], Occasion.Travel],
+  [
+    [
+      'fiesta',
+      'party',
+      'cumpleaños',
+      'birthday',
+      'celebración',
+      'celebration',
+      'discoteca',
+      'club',
+      'noche',
+      'night out',
+    ],
+    Occasion.Party,
+  ],
+  [
+    [
+      'gimnasio',
+      'gym',
+      'deporte',
+      'sport',
+      'correr',
+      'running',
+      'entrenar',
+      'workout',
+      'yoga',
+      'pilates',
+    ],
+    Occasion.Sport,
+  ],
+  [
+    [
+      'viaje',
+      'travel',
+      'aeropuerto',
+      'airport',
+      'vuelo',
+      'flight',
+      'turismo',
+      'excursión',
+      'hiking',
+    ],
+    Occasion.Travel,
+  ],
   [['casa', 'home', 'teletrabajo', 'descanso', 'relax', 'sofá', 'lounge'], Occasion.Home],
-  [['casual', 'informal', 'paseo', 'compras', 'shopping', 'café', 'coffee', 'brunch'], Occasion.Casual],
+  [
+    ['casual', 'informal', 'paseo', 'compras', 'shopping', 'café', 'coffee', 'brunch'],
+    Occasion.Casual,
+  ],
 ];
 
 /** Bilingual keyword → season mapping. */
@@ -37,11 +101,45 @@ const SEASON_KEYWORDS: ReadonlyArray<readonly [readonly string[], Season]> = [
   [['otoño', 'otono', 'autumn', 'fall'], Season.Autumn],
 ];
 
-const FORMAL_CUES = ['elegante', 'elegant', 'formal', 'arreglado', 'arreglada', 'sofisticado', 'sofisticada', 'chic'];
-const COMFORT_CUES = ['cómodo', 'comodo', 'cómoda', 'comoda', 'comfortable', 'comfy', 'relajado', 'relajada', 'casual', 'suelto'];
-const MOBILITY_CUES = ['caminar', 'walk', 'walking', 'de pie', 'standing', 'mucho movimiento', 'activo', 'activa', 'active', 'andar', 'mover'];
+const FORMAL_CUES = [
+  'elegante',
+  'elegant',
+  'formal',
+  'arreglado',
+  'arreglada',
+  'sofisticado',
+  'sofisticada',
+  'chic',
+];
+const COMFORT_CUES = [
+  'cómodo',
+  'comodo',
+  'cómoda',
+  'comoda',
+  'comfortable',
+  'comfy',
+  'relajado',
+  'relajada',
+  'casual',
+  'suelto',
+];
+const MOBILITY_CUES = [
+  'caminar',
+  'walk',
+  'walking',
+  'de pie',
+  'standing',
+  'mucho movimiento',
+  'activo',
+  'activa',
+  'active',
+  'andar',
+  'mover',
+];
 
-const TIME_KEYWORDS: ReadonlyArray<readonly [readonly string[], RecommendationContext['timeOfDay']]> = [
+const TIME_KEYWORDS: ReadonlyArray<
+  readonly [readonly string[], RecommendationContext['timeOfDay']]
+> = [
   [['mañana', 'manana', 'morning', 'desayuno', 'breakfast'], 'morning'],
   [['tarde', 'afternoon', 'mediodía', 'noon', 'almuerzo', 'lunch'], 'afternoon'],
   [['noche', 'evening', 'cena', 'dinner'], 'evening'],

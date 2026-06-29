@@ -35,8 +35,7 @@ export type ScoringWeights = typeof DEFAULT_SCORING_WEIGHTS;
  * persisted outfit-history layer so freshness / recent-repetition reasoning uses
  * ONE canonical definition (no rule duplication).
  */
-export const signatureOfIds = (ids: readonly string[]): string =>
-  [...ids].sort().join('|');
+export const signatureOfIds = (ids: readonly string[]): string => [...ids].sort().join('|');
 
 /** Optional context that refines a score when available. */
 export interface ScoringContext {
@@ -198,10 +197,7 @@ export class OutfitScoringService {
     if (garments.length === 0) {
       return 0;
     }
-    const total = garments.reduce(
-      (sum, g) => sum + g.comfort,
-      0,
-    );
+    const total = garments.reduce((sum, g) => sum + g.comfort, 0);
     return total / garments.length;
   }
 
@@ -210,7 +206,7 @@ export class OutfitScoringService {
       return 1;
     }
     const perGarment = garments.map((g) => {
-      let value = clamp01(1 - Math.min(g.wearCount, 30) / 30 * 0.6);
+      let value = clamp01(1 - (Math.min(g.wearCount, 30) / 30) * 0.6);
       if (referenceDate !== undefined && g.lastWornAt !== undefined) {
         const days = daysBetween(referenceDate, g.lastWornAt);
         if (days <= 2) {
@@ -226,9 +222,7 @@ export class OutfitScoringService {
 
   private visualBalanceScore(garments: readonly Garment[]): number {
     const slots = new Set(garments.map((g) => g.layerSlot));
-    const accessoryCount = garments.filter(
-      (g) => g.layerSlot === LayerSlot.Accessory,
-    ).length;
+    const accessoryCount = garments.filter((g) => g.layerSlot === LayerSlot.Accessory).length;
 
     let score = 1;
     const coreCovered =
@@ -247,9 +241,7 @@ export class OutfitScoringService {
   }
 
   private accessoriesScore(garments: readonly Garment[]): number {
-    const count = garments.filter(
-      (g) => g.layerSlot === LayerSlot.Accessory,
-    ).length;
+    const count = garments.filter((g) => g.layerSlot === LayerSlot.Accessory).length;
     if (count === 1 || count === 2) {
       return 1;
     }
@@ -262,10 +254,7 @@ export class OutfitScoringService {
     return 0.3;
   }
 
-  private userPreferenceScore(
-    garments: readonly Garment[],
-    preference?: StylePreference,
-  ): number {
+  private userPreferenceScore(garments: readonly Garment[], preference?: StylePreference): number {
     if (preference === undefined) {
       return 0.7;
     }

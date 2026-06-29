@@ -47,7 +47,12 @@ describe('list/grid virtualization window', () => {
     expect(grid.startIndex).toBe(0);
     // rows 0..3 are within the window (3 visible + buffer row) → index 15
     expect(grid.endIndex).toBe(15);
-    const empty = computeVirtualWindow({ scrollTop: 0, viewportHeight: 300, itemHeight: 100, total: 0 });
+    const empty = computeVirtualWindow({
+      scrollTop: 0,
+      viewportHeight: 300,
+      itemHeight: 100,
+      total: 0,
+    });
     expect(empty.visibleCount).toBe(0);
     expect(empty.endIndex).toBe(-1);
   });
@@ -106,7 +111,12 @@ describe('background job queue', () => {
     const errors: string[] = [];
     const queue = new BackgroundJobQueue({ concurrency: 1, onError: (id) => errors.push(id) });
     await expect(
-      queue.enqueue({ id: 'bad', run: async () => { throw new Error('boom'); } }),
+      queue.enqueue({
+        id: 'bad',
+        run: async () => {
+          throw new Error('boom');
+        },
+      }),
     ).rejects.toThrow('boom');
     const okResult = await queue.enqueue({ id: 'good', run: async () => 42 });
     expect(okResult).toBe(42);

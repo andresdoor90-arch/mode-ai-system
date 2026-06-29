@@ -103,13 +103,48 @@ const garment = (
 
 const seedRepo = async (): Promise<MemGarments> => {
   const repo = new MemGarments();
-  await repo.save(garment('t1', 'Camisa', GarmentCategory.Tops, TopSubcategory.Shirt, '#4d4d4d', 'charcoal'));
-  await repo.save(garment('t2', 'Camiseta', GarmentCategory.Tops, TopSubcategory.TShirt, '#b3b3b3', 'silver'));
-  await repo.save(garment('b1', 'Pantalón', GarmentCategory.Bottoms, BottomSubcategory.Trousers, '#1a1a1a', 'black'));
-  await repo.save(garment('b2', 'Vaqueros', GarmentCategory.Bottoms, BottomSubcategory.Jeans, '#2e2e2e', 'onyx'));
-  await repo.save(garment('s1', 'Zapatos', GarmentCategory.Shoes, ShoeSubcategory.DressShoes, '#1a1a1a', 'black'));
-  await repo.save(garment('s2', 'Zapatillas', GarmentCategory.Shoes, ShoeSubcategory.Sneakers, '#e6e6e6', 'white'));
-  await repo.save(garment('o1', 'Americana', GarmentCategory.Outerwear, OuterwearSubcategory.Blazer, '#2e2e2e', 'onyx'));
+  await repo.save(
+    garment('t1', 'Camisa', GarmentCategory.Tops, TopSubcategory.Shirt, '#4d4d4d', 'charcoal'),
+  );
+  await repo.save(
+    garment('t2', 'Camiseta', GarmentCategory.Tops, TopSubcategory.TShirt, '#b3b3b3', 'silver'),
+  );
+  await repo.save(
+    garment(
+      'b1',
+      'Pantalón',
+      GarmentCategory.Bottoms,
+      BottomSubcategory.Trousers,
+      '#1a1a1a',
+      'black',
+    ),
+  );
+  await repo.save(
+    garment('b2', 'Vaqueros', GarmentCategory.Bottoms, BottomSubcategory.Jeans, '#2e2e2e', 'onyx'),
+  );
+  await repo.save(
+    garment('s1', 'Zapatos', GarmentCategory.Shoes, ShoeSubcategory.DressShoes, '#1a1a1a', 'black'),
+  );
+  await repo.save(
+    garment(
+      's2',
+      'Zapatillas',
+      GarmentCategory.Shoes,
+      ShoeSubcategory.Sneakers,
+      '#e6e6e6',
+      'white',
+    ),
+  );
+  await repo.save(
+    garment(
+      'o1',
+      'Americana',
+      GarmentCategory.Outerwear,
+      OuterwearSubcategory.Blazer,
+      '#2e2e2e',
+      'onyx',
+    ),
+  );
   return repo;
 };
 
@@ -133,7 +168,10 @@ describe('AI engine integration — infrastructure adapters satisfy core ports',
       profiles: new MemProfiles(),
       clock: () => '2026-07-02T09:00:00.000Z',
     });
-    const set = await orchestrator.recommend({ message: 'reunión de oficina', occasion: Occasion.Business });
+    const set = await orchestrator.recommend({
+      message: 'reunión de oficina',
+      occasion: Occasion.Business,
+    });
 
     expect(set.degraded).toBe(true);
     expect(set.providerId).toBeNull();
@@ -143,18 +181,27 @@ describe('AI engine integration — infrastructure adapters satisfy core ports',
 
   it('wires HashingEmbeddingProvider + InMemoryVectorStore + StaticTextProvider for enrichment', async () => {
     const garments = await seedRepo();
-    const embeddings = new EmbeddingManager(new HashingEmbeddingProvider(64), new InMemoryVectorStore(64));
+    const embeddings = new EmbeddingManager(
+      new HashingEmbeddingProvider(64),
+      new InMemoryVectorStore(64),
+    );
     const orchestrator = new AIOrchestrator({
       garments,
       outfits: new MemOutfits(),
       profiles: new MemProfiles(),
       router: new AIProviderRouter([new StaticTextProvider()]),
       embeddings,
-      memory: new MemoryEngine(new InMemoryPreferenceMemoryStore(), () => '2026-07-02T00:00:00.000Z'),
+      memory: new MemoryEngine(
+        new InMemoryPreferenceMemoryStore(),
+        () => '2026-07-02T00:00:00.000Z',
+      ),
       clock: () => '2026-07-02T09:00:00.000Z',
     });
 
-    const set = await orchestrator.recommend({ message: 'algo para la oficina', occasion: Occasion.Business });
+    const set = await orchestrator.recommend({
+      message: 'algo para la oficina',
+      occasion: Occasion.Business,
+    });
 
     expect(set.degraded).toBe(false);
     expect(set.providerId).toBe('static-local');

@@ -40,7 +40,11 @@ export class WeatherCondition extends ValueObject<WeatherConditionProps> {
     windKph?: number;
     humidityPct?: number;
   }): Result<WeatherCondition, ValidationError> {
-    if (!Number.isFinite(input.temperatureC) || input.temperatureC < -60 || input.temperatureC > 60) {
+    if (
+      !Number.isFinite(input.temperatureC) ||
+      input.temperatureC < -60 ||
+      input.temperatureC > 60
+    ) {
       return err(new ValidationError('temperatureC must be between -60 and 60.'));
     }
     const wind = input.windKph ?? 0;

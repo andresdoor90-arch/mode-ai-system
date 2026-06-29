@@ -75,6 +75,7 @@ export const buildStorageKey = (
 ): string => {
   const safeId = id.replace(/[^a-zA-Z0-9_-]/g, '');
   const shard = (safeId.slice(0, 2) || '00').toLowerCase();
-  const ext = extension !== undefined && extension.length > 0 ? `.${extension.replace(/^\./, '')}` : '';
+  const ext =
+    extension !== undefined && extension.length > 0 ? `.${extension.replace(/^\./, '')}` : '';
   return `${namespace}/${shard}/${safeId}${ext}`;
 };

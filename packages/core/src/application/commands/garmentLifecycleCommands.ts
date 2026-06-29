@@ -28,9 +28,7 @@ export class DuplicateGarmentCommand implements Command<GarmentId> {
   ) {}
 }
 
-export class DuplicateGarmentHandler
-  implements RequestHandler<DuplicateGarmentCommand, GarmentId>
-{
+export class DuplicateGarmentHandler implements RequestHandler<DuplicateGarmentCommand, GarmentId> {
   public constructor(
     private readonly garments: IGarmentRepository,
     private readonly ids: IdGenerator,

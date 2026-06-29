@@ -102,8 +102,6 @@ export class AssetManager {
         return accessory;
       }
     }
-    return (
-      this.manifest.garmentMeshByCategory[category] ?? this.manifest.fallbackGarmentMeshKey
-    );
+    return this.manifest.garmentMeshByCategory[category] ?? this.manifest.fallbackGarmentMeshKey;
   }
 }

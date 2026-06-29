@@ -62,10 +62,7 @@ interface CategoryMetadataJson {
  * the Phase 7 migration carry null/default values for the new columns and fall
  * back to the seed taxonomy via the garment's metadata-first getters.
  */
-export const garmentToDomain = (
-  row: GarmentRow,
-  photos: readonly Photograph[] = [],
-): Garment => {
+export const garmentToDomain = (row: GarmentRow, photos: readonly Photograph[] = []): Garment => {
   const color = mustOk(
     Color.fromHex(row.color_hex, row.color_name ?? undefined),
     `garment ${row.id} color`,
@@ -156,9 +153,7 @@ export const garmentToRow = (garment: Garment): GarmentRow => ({
   category: garment.category,
   subcategory: garment.subcategory,
   category_id: (garment.categoryId as string | undefined) ?? null,
-  category_metadata: garment.categoryMetadata
-    ? toJson(garment.categoryMetadata.toJSON())
-    : null,
+  category_metadata: garment.categoryMetadata ? toJson(garment.categoryMetadata.toJSON()) : null,
   color_hex: garment.color.hex,
   color_name: garment.color.name ?? null,
   secondary_colors: toJson(garment.secondaryColors.map(colorToJson)),

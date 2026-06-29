@@ -40,7 +40,11 @@ describe('recommendationToRenderable', () => {
 
 describe('garmentsToRenderable', () => {
   it('maps a loose garment list with an explicit id/label', () => {
-    const outfit = garmentsToRenderable('saved-1', [garment('a', 'shoes', 'sneakers', '#ffffff')], 'Guardado');
+    const outfit = garmentsToRenderable(
+      'saved-1',
+      [garment('a', 'shoes', 'sneakers', '#ffffff')],
+      'Guardado',
+    );
     expect(outfit.id).toBe('saved-1');
     expect(outfit.label).toBe('Guardado');
     expect(outfit.garments[0]?.category).toBe('shoes');

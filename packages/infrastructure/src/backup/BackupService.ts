@@ -139,7 +139,10 @@ export class BackupService {
         this.logger?.info('Restored backup', { id });
         return manifest;
       },
-      (cause) => (cause instanceof BackupError ? cause : new BackupError(`Failed to restore backup "${id}".`, cause)),
+      (cause) =>
+        cause instanceof BackupError
+          ? cause
+          : new BackupError(`Failed to restore backup "${id}".`, cause),
     );
   }
 

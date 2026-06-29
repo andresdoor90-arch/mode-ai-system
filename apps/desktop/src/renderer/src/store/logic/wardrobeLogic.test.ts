@@ -17,7 +17,12 @@ function garment(overrides: Partial<GarmentDTO> = {}): GarmentDTO {
     name: overrides.name ?? 'Sample',
     category: overrides.category ?? 'tops',
     subcategory: overrides.subcategory ?? 'shirt',
-    color: overrides.color ?? { hex: '#000000', name: 'Black', category: 'neutral', isNeutral: true },
+    color: overrides.color ?? {
+      hex: '#000000',
+      name: 'Black',
+      category: 'neutral',
+      isNeutral: true,
+    },
     brand: overrides.brand ?? null,
     seasons: overrides.seasons ?? ['all-season'],
     images: overrides.images ?? [],
@@ -29,9 +34,33 @@ function garment(overrides: Partial<GarmentDTO> = {}): GarmentDTO {
 }
 
 const wardrobe: GarmentDTO[] = [
-  garment({ id: 'a', name: 'Navy Shirt', category: 'tops', brand: 'Atelier', tags: ['work'], wearCount: 5, seasons: ['spring'] }),
-  garment({ id: 'b', name: 'Indigo Jeans', category: 'bottoms', brand: 'Denimco', tags: ['casual'], wearCount: 12, status: 'in-laundry' }),
-  garment({ id: 'c', name: 'Wool Coat', category: 'outerwear', brand: 'Atelier', tags: ['warm'], wearCount: 2, seasons: ['winter'] }),
+  garment({
+    id: 'a',
+    name: 'Navy Shirt',
+    category: 'tops',
+    brand: 'Atelier',
+    tags: ['work'],
+    wearCount: 5,
+    seasons: ['spring'],
+  }),
+  garment({
+    id: 'b',
+    name: 'Indigo Jeans',
+    category: 'bottoms',
+    brand: 'Denimco',
+    tags: ['casual'],
+    wearCount: 12,
+    status: 'in-laundry',
+  }),
+  garment({
+    id: 'c',
+    name: 'Wool Coat',
+    category: 'outerwear',
+    brand: 'Atelier',
+    tags: ['warm'],
+    wearCount: 2,
+    seasons: ['winter'],
+  }),
 ];
 
 describe('filterGarments', () => {
@@ -40,9 +69,15 @@ describe('filterGarments', () => {
   });
 
   it('matches the free-text query across name, brand and tags', () => {
-    expect(filterGarments(wardrobe, { ...DEFAULT_WARDROBE_FILTERS, query: 'navy' })).toHaveLength(1);
-    expect(filterGarments(wardrobe, { ...DEFAULT_WARDROBE_FILTERS, query: 'atelier' })).toHaveLength(2);
-    expect(filterGarments(wardrobe, { ...DEFAULT_WARDROBE_FILTERS, query: 'warm' })).toHaveLength(1);
+    expect(filterGarments(wardrobe, { ...DEFAULT_WARDROBE_FILTERS, query: 'navy' })).toHaveLength(
+      1,
+    );
+    expect(
+      filterGarments(wardrobe, { ...DEFAULT_WARDROBE_FILTERS, query: 'atelier' }),
+    ).toHaveLength(2);
+    expect(filterGarments(wardrobe, { ...DEFAULT_WARDROBE_FILTERS, query: 'warm' })).toHaveLength(
+      1,
+    );
   });
 
   it('filters by category and status', () => {
@@ -50,7 +85,10 @@ describe('filterGarments', () => {
       filterGarments(wardrobe, { ...DEFAULT_WARDROBE_FILTERS, category: 'tops' }),
     ).toHaveLength(1);
     expect(
-      filterGarments(wardrobe, { ...DEFAULT_WARDROBE_FILTERS, status: 'in-laundry' as GarmentStatusDTO }),
+      filterGarments(wardrobe, {
+        ...DEFAULT_WARDROBE_FILTERS,
+        status: 'in-laundry' as GarmentStatusDTO,
+      }),
     ).toHaveLength(1);
   });
 

@@ -43,8 +43,12 @@ export const garments = sqliteTable(
     notes: text('notes'),
     metadata: text('metadata').notNull().default('{}'),
     version: integer('version').notNull().default(1),
-    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
     categoryIdx: index('idx_garments_category').on(table.category),
@@ -64,8 +68,12 @@ export const categories = sqliteTable(
     order: integer('order').notNull().default(0),
     seeded: integer('seeded').notNull().default(0),
     metadata: text('metadata').notNull().default('{}'),
-    createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
-    updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => ({
     parentIdx: index('idx_categories_parent').on(table.parentId),

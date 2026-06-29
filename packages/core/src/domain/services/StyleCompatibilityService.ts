@@ -37,7 +37,8 @@ export class StyleCompatibilityService {
     }
 
     const score = formalityScore * 0.5 + colorScore * 0.5;
-    const compatible = formalityGap <= MAX_FORMALITY_GAP && !this.colorHarmony.hasClash([a.color, b.color]);
+    const compatible =
+      formalityGap <= MAX_FORMALITY_GAP && !this.colorHarmony.hasClash([a.color, b.color]);
     return { compatible, score, reasons };
   }
 

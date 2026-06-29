@@ -5,12 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { LogLevel } from '../logging/Logger';
-import {
-  AIProviderKind,
-  DEFAULT_APP_CONFIG,
-  validateConfig,
-  withDefaults,
-} from './AppConfig';
+import { AIProviderKind, DEFAULT_APP_CONFIG, validateConfig, withDefaults } from './AppConfig';
 import { ConfigStore } from './ConfigStore';
 import { ConfigurationError } from '../errors/InfrastructureError';
 

@@ -3,10 +3,7 @@ import { type CategoryId } from '../../shared/Identifier';
 import { type Result, ok, err } from '../../shared/Result';
 import { ValidationError } from '../../shared/errors';
 import { Guard } from '../../shared/Guard';
-import {
-  CategoryMetadata,
-  type CategoryMetadataInput,
-} from '../value-objects/CategoryMetadata';
+import { CategoryMetadata, type CategoryMetadataInput } from '../value-objects/CategoryMetadata';
 
 /**
  * Derive a stable, machine-friendly slug from a human name. Slugs are used as

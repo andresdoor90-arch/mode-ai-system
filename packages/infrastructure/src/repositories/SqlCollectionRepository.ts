@@ -1,8 +1,4 @@
-import {
-  type CollectionId,
-  type ICollectionRepository,
-  type WardrobeCollection,
-} from '@mas/core';
+import { type CollectionId, type ICollectionRepository, type WardrobeCollection } from '@mas/core';
 
 import { DatabaseError, wrapSync } from '../errors/InfrastructureError';
 import { type SqlDatabase } from '../database/SqlDatabase';
@@ -79,8 +75,7 @@ export class SqlCollectionRepository implements ICollectionRepository {
           )
           .all<{ garment_id: string }>(collectionId)
           .map((r) => r.garment_id),
-      (cause) =>
-        new DatabaseError(`Failed to load members of collection ${collectionId}.`, cause),
+      (cause) => new DatabaseError(`Failed to load members of collection ${collectionId}.`, cause),
     );
   }
 }

@@ -79,7 +79,8 @@ describe('Garment', () => {
 });
 
 describe('Outfit', () => {
-  const top = (): Garment => makeGarment({ category: GarmentCategory.Tops, subcategory: TopSubcategory.Shirt });
+  const top = (): Garment =>
+    makeGarment({ category: GarmentCategory.Tops, subcategory: TopSubcategory.Shirt });
   const bottom = (): Garment =>
     makeGarment({ category: GarmentCategory.Bottoms, subcategory: BottomSubcategory.Trousers });
   const shoe = (): Garment =>
@@ -198,7 +199,11 @@ describe('WardrobeCollection', () => {
 describe('CalendarEvent', () => {
   it('validates the date and tracks suggestions', () => {
     expect(
-      CalendarEvent.create(toId('e1'), { title: 'Gala', date: '2026-13-40', occasion: Occasion.Formal }).ok,
+      CalendarEvent.create(toId('e1'), {
+        title: 'Gala',
+        date: '2026-13-40',
+        occasion: Occasion.Formal,
+      }).ok,
     ).toBe(false);
     const event = unwrap(
       CalendarEvent.create(toId('e2'), {

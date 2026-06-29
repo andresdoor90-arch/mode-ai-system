@@ -58,15 +58,16 @@ class InProcessHandle implements SandboxHandle {
    * {@link SandboxOutcome}. The host stays healthy regardless of what the
    * plugin does.
    */
-  private async contain(
-    label: string,
-    fn: () => void | Promise<void>,
-  ): Promise<SandboxOutcome> {
+  private async contain(label: string, fn: () => void | Promise<void>): Promise<SandboxOutcome> {
     const start = Date.now();
     try {
-      await runWithTimeout(async () => {
-        await fn();
-      }, this.maxCallMs, this.context.manifest.id);
+      await runWithTimeout(
+        async () => {
+          await fn();
+        },
+        this.maxCallMs,
+        this.context.manifest.id,
+      );
       return { ok: true, durationMs: Date.now() - start };
     } catch (cause) {
       this._faulted = true;

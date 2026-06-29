@@ -3,9 +3,7 @@ import { type CategoryId, type GarmentId, type PhotoId } from '../../shared/Iden
 import { type Result, ok, err, unwrapOr } from '../../shared/Result';
 import { ValidationError, InvariantViolationError, NotFoundError } from '../../shared/errors';
 import { type Color } from '../value-objects/Color';
-import {
-  type CategoryMetadata,
-} from '../value-objects/CategoryMetadata';
+import { type CategoryMetadata } from '../value-objects/CategoryMetadata';
 import { categoryLayerSlot, type LayerSlot } from '../value-objects/GarmentCategory';
 import { isSubcategoryOf } from '../value-objects/GarmentSubcategory';
 import { Photograph } from '../value-objects/Photograph';
@@ -141,10 +139,7 @@ export class Garment extends Entity<'Garment'> {
     this._metadata = { ...props.metadata };
   }
 
-  public static create(
-    id: GarmentId,
-    input: CreateGarmentInput,
-  ): Result<Garment, ValidationError> {
+  public static create(id: GarmentId, input: CreateGarmentInput): Result<Garment, ValidationError> {
     if (typeof input.name !== 'string' || input.name.trim().length === 0) {
       return err(new ValidationError('Garment name must be a non-empty string.'));
     }
