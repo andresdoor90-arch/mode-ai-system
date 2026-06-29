@@ -39,9 +39,26 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
+
+      # Cache pnpm's store manually (keyed on package.json) so caching does NOT
+      # require a committed pnpm-lock.yaml. `cache: pnpm` on setup-node was
+      # removed because it hard-fails ("Dependencies lock file is not found")
+      # when the lockfile is absent.
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
+        # `pnpm install` writes pnpm-lock.yaml during this step on the networked
+        # runner (no committed lockfile required).
         run: pnpm install --no-frozen-lockfile
 
       - name: Build workspace packages
