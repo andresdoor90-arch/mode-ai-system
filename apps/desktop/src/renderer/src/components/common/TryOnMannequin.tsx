@@ -146,13 +146,38 @@ function AccessoryLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
     );
   }
   if (/tie|corbata|bow/.test(layer.subcategory)) {
+    // Tie sits at the neck and runs down the chest.
     return <path d="M110 96 L104 140 L110 150 L116 140 Z" fill={layer.colorHex} {...STROKE} />;
+  }
+  if (/watch|reloj/.test(layer.subcategory)) {
+    // Wristwatch on the LEFT wrist (bottom of the left-drawn arm, x≈52–72).
+    return (
+      <g>
+        <rect x={54} y={181} width={16} height={6} rx={2} fill={MANNEQUIN_DARK} />
+        <circle cx={62} cy={184} r={5.5} fill={layer.colorHex} {...STROKE} />
+        <circle cx={62} cy={184} r={2} fill={layer.patternColorHex} opacity={0.7} />
+      </g>
+    );
   }
   if (/scarf|bufanda/.test(layer.subcategory)) {
     return <rect x={92} y={88} width={36} height={12} rx={6} fill={layer.colorHex} {...STROKE} />;
   }
-  // Generic accessory: a small chest emblem.
-  return <circle cx={110} cy={150} r={6} fill={layer.colorHex} {...STROKE} />;
+  if (/glass|gafa|lente|sunglass/.test(layer.subcategory)) {
+    // Eyewear on the face.
+    return (
+      <g>
+        <circle cx={100} cy={44} r={6} fill="none" stroke={layer.colorHex} strokeWidth={2} />
+        <circle cx={120} cy={44} r={6} fill="none" stroke={layer.colorHex} strokeWidth={2} />
+        <line x1={106} y1={44} x2={114} y2={44} stroke={layer.colorHex} strokeWidth={2} />
+      </g>
+    );
+  }
+  if (/bag|bolso|mochila|backpack/.test(layer.subcategory)) {
+    // Bag carried at the side.
+    return <rect x={158} y={150} width={20} height={26} rx={4} fill={layer.colorHex} {...STROKE} />;
+  }
+  // Unknown accessory: a discreet wrist band (never on the torso/abdomen).
+  return <rect x={54} y={182} width={16} height={5} rx={2} fill={layer.colorHex} {...STROKE} />;
 }
 
 const SLOT_RENDERERS: Record<
