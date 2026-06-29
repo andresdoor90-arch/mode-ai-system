@@ -7,15 +7,14 @@
  * to support more (e.g. a future detached preview) without changing callers.
  */
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { app, BrowserWindow } from 'electron';
 
 const isDev = !app.isPackaged;
 
-/** Resolve the compiled preload script next to the main bundle. */
+/** Resolve the compiled (CommonJS) preload script next to the main bundle. */
 function preloadPath(): string {
-  return fileURLToPath(new URL('../preload/index.mjs', import.meta.url));
+  return join(__dirname, '../preload/index.js');
 }
 
 /** Tracks the primary window so it can be focused/recreated on demand. */

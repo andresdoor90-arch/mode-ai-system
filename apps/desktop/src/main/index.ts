@@ -31,7 +31,13 @@ if (!gotLock) {
   void app.whenReady().then(async () => {
     installSecurityPolicies();
 
-    const container = await AppContainer.create({ dataDir: app.getPath('userData') });
+    const container = await AppContainer.create({
+      dataDir: app.getPath('userData'),
+      // A real product starts empty: never seed a demonstration wardrobe. The
+      // user builds their own wardrobe from scratch (the default category
+      // taxonomy is still available as editable starting categories).
+      skipDemoSeed: true,
+    });
     registerIpcHandlers(container);
 
     createMainWindow();

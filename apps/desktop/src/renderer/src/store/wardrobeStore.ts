@@ -7,16 +7,15 @@
  * client-side cache and view-model. Filtering/sorting are delegated to the pure
  * helpers in `./logic/wardrobeLogic`.
  *
- * `add`/`remove` perform the command over IPC then refresh from source. If the
- * bridge is unavailable (e.g. a browser preview) the store falls back to sample
- * content so the UI is never empty.
+ * `add`/`remove` perform the command over IPC then refresh from source. The
+ * wardrobe always reflects the real persisted data — there is no sample/mock
+ * fallback; a brand-new install simply shows an empty wardrobe.
  */
 import { create } from 'zustand';
 
 import type { AddGarmentPayload, CollectionDTO, GarmentDTO } from '@shared/ipc';
 
 import { ipc, isBridgeAvailable } from '../ipc/client';
-import { sampleGarments } from '../data/sampleData';
 import {
   DEFAULT_WARDROBE_FILTERS,
   filterGarments,
@@ -56,7 +55,7 @@ export const useWardrobeStore = create<WardrobeState>((set, get) => ({
   load: async () => {
     set({ loading: true, error: null });
     if (!isBridgeAvailable()) {
-      set({ garments: sampleGarments, collections: [], loading: false, loaded: true });
+      set({ garments: [], collections: [], loading: false, loaded: true });
       return;
     }
     try {
@@ -69,7 +68,7 @@ export const useWardrobeStore = create<WardrobeState>((set, get) => ({
       });
     } catch (error) {
       set({
-        garments: sampleGarments,
+        garments: [],
         loading: false,
         loaded: true,
         error: error instanceof Error ? error.message : 'Failed to load wardrobe.',

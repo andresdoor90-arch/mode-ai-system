@@ -32,6 +32,13 @@ export default defineConfig({
       outDir: 'out/main',
       rollupOptions: {
         input: { index: resolve(__dirname, 'src/main/index.ts') },
+        // Emit CommonJS with a deterministic name so the main entry is exactly
+        // out/main/index.js (matches package.json "main").
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].js',
+          chunkFileNames: 'chunks/[name].js',
+        },
       },
     },
   },
@@ -41,6 +48,14 @@ export default defineConfig({
       outDir: 'out/preload',
       rollupOptions: {
         input: { index: resolve(__dirname, 'src/preload/index.ts') },
+        // CommonJS, named index.js. A sandboxed Electron preload MUST be
+        // CommonJS (ESM/.mjs preloads silently fail under sandbox:true), and the
+        // window references this exact path.
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].js',
+          chunkFileNames: 'chunks/[name].js',
+        },
       },
     },
   },
