@@ -32,7 +32,7 @@ This installs all workspace dependencies and links the `@mas/*` packages.
 pnpm lint          # ESLint, zero warnings
 pnpm format:check  # Prettier
 pnpm typecheck     # tsc across every package
-pnpm test          # the full Vitest suite (445 tests)
+pnpm test          # the full Vitest suite (448 tests)
 pnpm build         # build packages + the electron-vite app bundle
 ```
 
