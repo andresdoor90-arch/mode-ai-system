@@ -504,6 +504,8 @@ export interface RgbSampleDTO {
 export interface AnalyzeGarmentPayload {
   readonly colorSamples?: readonly RgbSampleDTO[];
   readonly freeText?: string;
+  /** Image bytes for vision providers (e.g. Ollama). */
+  readonly image?: { readonly base64: string; readonly mimeType: string };
 }
 
 /** Request to persist image bytes (original + optional thumbnail). */

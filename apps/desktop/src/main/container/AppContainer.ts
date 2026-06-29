@@ -138,6 +138,9 @@ import {
   InMemoryVectorStore,
   LocalFileStorage,
   MigrationRunner,
+  OllamaClient,
+  OllamaProvider,
+  OllamaVisionProvider,
   type SqlDatabase,
   createSqliteDatabase,
 } from '@mas/infrastructure';
@@ -162,6 +165,35 @@ export interface AppContainerOptions {
    * lightweight smoke tests that do not need durability.
    */
   readonly inMemory?: boolean;
+}
+
+/** Resolved Ollama settings. */
+interface OllamaConfig {
+  readonly enabled: boolean;
+  readonly host: string;
+  readonly visionModel: string;
+  readonly textModel: string;
+  readonly embeddingModel: string;
+}
+
+/**
+ * Resolve Ollama settings from environment variables with sensible defaults.
+ *
+ * Enabled by default so a running local Ollama "just works"; set
+ * `MAS_OLLAMA_DISABLED=1` to force offline-only behaviour. The providers still
+ * self-gate via `isAvailable()`, so enabling this never breaks anything when no
+ * Ollama server is present — the app behaves exactly as the offline baseline.
+ */
+function resolveOllamaConfig(): OllamaConfig {
+  const env = process.env;
+  const disabled = env.MAS_OLLAMA_DISABLED === '1' || env.MAS_OLLAMA_DISABLED === 'true';
+  return {
+    enabled: !disabled,
+    host: env.MAS_OLLAMA_URL ?? 'http://localhost:11434',
+    visionModel: env.MAS_OLLAMA_VISION_MODEL ?? 'llava',
+    textModel: env.MAS_OLLAMA_TEXT_MODEL ?? 'llama3.1',
+    embeddingModel: env.MAS_OLLAMA_EMBED_MODEL ?? 'nomic-embed-text',
+  };
 }
 
 /**
@@ -203,10 +235,21 @@ export class AppContainer {
     const imagesRoot = options.dataDir ?? join(tmpdir(), 'mas-images');
     this.images = new ImageStorageService(new LocalFileStorage(imagesRoot, 'images'));
 
-    // Garment photo analysis: the always-on offline colour baseline today; a
-    // real vision provider (OpenAI/Ollama) layers on top here with no other
-    // change required.
-    this.analysis = new GarmentAnalysisService([new BaselineVisionProvider()]);
+    // Garment photo analysis: the always-on offline colour baseline, plus an
+    // optional local Ollama vision model. Both providers self-gate via
+    // isAvailable(), so when Ollama is not running the behaviour is identical to
+    // the colour-only baseline (graceful degradation, zero regression).
+    const ollama = resolveOllamaConfig();
+    const visionProviders = [new BaselineVisionProvider()];
+    if (ollama.enabled) {
+      visionProviders.push(
+        new OllamaVisionProvider({
+          client: new OllamaClient({ baseUrl: ollama.host }),
+          model: ollama.visionModel,
+        }),
+      );
+    }
+    this.analysis = new GarmentAnalysisService(visionProviders);
 
     // Preference memory persists through an infrastructure store so the engine
     // genuinely learns across sessions; falls back to volatile memory when no
@@ -217,9 +260,13 @@ export class AppContainer {
         : new InMemoryPreferenceMemoryStore();
     this.memory = new MemoryEngine(memoryStore);
 
-    // No provider configured by default ⇒ graceful degradation (rules only).
-    // Real providers are registered here once the user configures them.
-    this.router = new AIProviderRouter([]);
+    // Text provider: a local Ollama model enriches explanations/disambiguation
+    // when reachable. The router probes isAvailable(), so without Ollama the
+    // engine runs purely on its offline domain rules (no behaviour change).
+    const textProviders = ollama.enabled
+      ? [new OllamaProvider({ baseUrl: ollama.host, defaultTextModel: ollama.textModel })]
+      : [];
+    this.router = new AIProviderRouter(textProviders);
 
     this.orchestrator = new AIOrchestrator({
       garments: this.repositories.garments,

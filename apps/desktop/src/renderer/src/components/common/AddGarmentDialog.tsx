@@ -81,7 +81,10 @@ export function AddGarmentDialog(): JSX.Element {
     async (image: ProcessedImage): Promise<void> => {
       setPhase('analyzing');
       try {
-        const analysis = await ipc.analyzeGarment({ colorSamples: image.colorSamples });
+        const analysis = await ipc.analyzeGarment({
+          colorSamples: image.colorSamples,
+          image: { base64: image.base64, mimeType: image.mimeType },
+        });
         setResult(analysis);
         setDraft(analysisToDraft(analysis.analysis));
       } catch (error) {

@@ -539,10 +539,14 @@ export function registerIpcHandlers(container: AppContainer): void {
     const p = payload as {
       colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[];
       freeText?: string;
+      image?: { base64: string; mimeType: string };
     };
     const input = {
       ...(p.colorSamples !== undefined ? { colorSamples: p.colorSamples } : {}),
       ...(p.freeText !== undefined ? { freeText: p.freeText } : {}),
+      ...(p.image !== undefined
+        ? { image: { base64: p.image.base64, mimeType: p.image.mimeType } }
+        : {}),
     };
     const result = await container.analysis.analyze(input);
     // VisionAnalysisResult is structurally identical to GarmentAnalysisResultDTO.

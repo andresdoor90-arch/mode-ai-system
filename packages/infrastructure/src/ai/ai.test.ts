@@ -8,10 +8,26 @@ import { OllamaProvider } from './providers/OllamaProvider';
 import { OpenAIProvider } from './providers/OpenAIProvider';
 
 describe('AI provider scaffolding', () => {
-  it('OllamaProvider is available when a base URL is set', async () => {
-    const provider = new OllamaProvider({ baseUrl: 'http://127.0.0.1:11434' });
-    expect(provider.id).toBe('ollama');
-    expect(await provider.isAvailable()).toBe(true);
+  it('OllamaProvider probes the server to determine availability', async () => {
+    const reachable = new OllamaProvider({
+      baseUrl: 'http://127.0.0.1:11434',
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({}),
+        text: async () => '{}',
+      }),
+    });
+    expect(reachable.id).toBe('ollama');
+    expect(await reachable.isAvailable()).toBe(true);
+
+    const unreachable = new OllamaProvider({
+      baseUrl: 'http://127.0.0.1:11434',
+      fetchImpl: async () => {
+        throw new Error('ECONNREFUSED');
+      },
+    });
+    expect(await unreachable.isAvailable()).toBe(false);
   });
 
   it('OpenAIProvider exposes its embedding dimension and id', () => {
@@ -25,8 +41,10 @@ describe('AI provider scaffolding', () => {
     expect(provider.id).toBe('anthropic');
   });
 
-  it('base adapters throw "not implemented" for model calls', async () => {
-    const provider = new OllamaProvider({ baseUrl: 'http://127.0.0.1:11434' });
+  it('un-implemented base adapters still throw "not implemented" for model calls', async () => {
+    // OpenAI/Anthropic remain scaffolds (no live keys/SDK in this phase), so the
+    // BaseAIProvider defaults must surface a clear AIProviderError.
+    const provider = new OpenAIProvider({ apiKey: 'sk-test' });
     await expect(provider.complete([{ role: 'user', content: 'hi' }])).rejects.toBeInstanceOf(
       AIProviderError,
     );

@@ -1,0 +1,124 @@
+import { describe, expect, it } from 'vitest';
+
+import { OllamaClient, type OllamaFetch, type OllamaHttpResponse } from './OllamaClient';
+import {
+  buildGarmentVisionMessages,
+  OllamaVisionProvider,
+  parseGarmentVisionResponse,
+} from './OllamaVisionProvider';
+
+const response = (ok: boolean, status: number, json: unknown): OllamaHttpResponse => ({
+  ok,
+  status,
+  json: async () => json,
+  text: async () => JSON.stringify(json),
+});
+
+describe('parseGarmentVisionResponse', () => {
+  it('maps model JSON to vision-sourced analysis fields', () => {
+    const a = parseGarmentVisionResponse(
+      JSON.stringify({
+        garmentType: 'Camisa',
+        category: 'tops',
+        subcategory: 'shirt',
+        primaryColor: '1A2B3C',
+        primaryColorName: 'Azul oscuro',
+        secondaryColors: ['#ffffff', 'nope'],
+        material: 'Algodón',
+        pattern: 'rayas',
+        sleeve: 'Manga larga',
+        formality: 7,
+        season: 'all-season',
+        tags: ['trabajo', '  '],
+        suggestedName: 'Camisa azul oscuro manga larga',
+      }),
+    );
+    expect(a.garmentType?.value).toBe('Camisa');
+    expect(a.garmentType?.source).toBe('vision');
+    expect(a.primaryColor?.value).toBe('#1a2b3c');
+    expect(a.secondaryColors?.value).toEqual(['#ffffff']);
+    expect(a.formality?.value).toBe(7);
+    expect(a.suggestedTags?.value).toEqual(['trabajo']);
+    expect(a.suggestedName?.value).toContain('Camisa');
+  });
+
+  it('tolerates prose/markdown around the JSON and clamps formality', () => {
+    const a = parseGarmentVisionResponse(
+      'Aquí tienes:\n```json\n{"garmentType":"Pantalón","formality":99}\n```\nGracias',
+    );
+    expect(a.garmentType?.value).toBe('Pantalón');
+    expect(a.formality?.value).toBe(10);
+  });
+
+  it('returns empty for non-JSON or empty output (never fabricates)', () => {
+    expect(parseGarmentVisionResponse('no idea')).toEqual({});
+    expect(parseGarmentVisionResponse('')).toEqual({});
+  });
+
+  it('omits fields the model did not determine', () => {
+    const a = parseGarmentVisionResponse(JSON.stringify({ garmentType: 'Polo' }));
+    expect(a.garmentType?.value).toBe('Polo');
+    expect(a.material).toBeUndefined();
+    expect(a.sleeve).toBeUndefined();
+  });
+});
+
+describe('buildGarmentVisionMessages', () => {
+  it('puts the base64 image on the user message', () => {
+    const msgs = buildGarmentVisionMessages('B64');
+    expect(msgs[0]?.role).toBe('system');
+    expect(msgs[1]?.images).toEqual(['B64']);
+  });
+});
+
+const fetchReturning =
+  (json: unknown, ok = true): OllamaFetch =>
+  async () =>
+    response(ok, ok ? 200 : 500, json);
+
+describe('OllamaVisionProvider', () => {
+  it('is available only when the configured model is installed', async () => {
+    const present = new OllamaVisionProvider({
+      client: new OllamaClient({
+        baseUrl: 'http://x',
+        fetchImpl: fetchReturning({ models: [{ name: 'llava:latest' }] }),
+      }),
+      model: 'llava',
+    });
+    expect(await present.isAvailable()).toBe(true);
+
+    const absent = new OllamaVisionProvider({
+      client: new OllamaClient({
+        baseUrl: 'http://x',
+        fetchImpl: fetchReturning({ models: [{ name: 'llama3.1' }] }),
+      }),
+      model: 'llava',
+    });
+    expect(await absent.isAvailable()).toBe(false);
+  });
+
+  it('analyses an image and returns vision fields', async () => {
+    const client = new OllamaClient({
+      baseUrl: 'http://x',
+      fetchImpl: fetchReturning({
+        message: { content: '{"garmentType":"Saco","category":"outerwear"}' },
+      }),
+    });
+    const provider = new OllamaVisionProvider({ client, model: 'llava' });
+    const result = await provider.analyze({ image: { base64: 'B64', mimeType: 'image/png' } });
+    expect(result.garmentType?.value).toBe('Saco');
+    expect(result.category?.value).toBe('outerwear');
+  });
+
+  it('returns empty (defers to baseline) when there is no image', async () => {
+    const client = new OllamaClient({ baseUrl: 'http://x', fetchImpl: fetchReturning({}) });
+    const provider = new OllamaVisionProvider({ client, model: 'llava' });
+    expect(await provider.analyze({ colorSamples: [] })).toEqual({});
+  });
+
+  it('returns empty when the model call fails (no crash, no guess)', async () => {
+    const client = new OllamaClient({ baseUrl: 'http://x', fetchImpl: fetchReturning({}, false) });
+    const provider = new OllamaVisionProvider({ client, model: 'llava' });
+    expect(await provider.analyze({ image: { base64: 'B64' } })).toEqual({});
+  });
+});
