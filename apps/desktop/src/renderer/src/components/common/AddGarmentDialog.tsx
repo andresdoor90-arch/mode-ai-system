@@ -14,11 +14,11 @@
  * empty for the user. The flow degrades gracefully without the desktop bridge.
  */
 import { ImagePlus, Loader2, Plus, Sparkles, Upload } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { AddGarmentPayload, GarmentAnalysisResultDTO } from '@shared/ipc';
+import type { AddGarmentPayload, CategoryNodeDTO, GarmentAnalysisResultDTO } from '@shared/ipc';
 
-import { CATEGORY_OPTIONS, SEASON_OPTIONS, SUBCATEGORY_OPTIONS } from '../../data/wardrobeOptions';
+import { SEASON_OPTIONS } from '../../data/wardrobeOptions';
 import { useToast } from '../../hooks/useToast';
 import { ipc, isBridgeAvailable } from '../../ipc/client';
 import { cn } from '../../lib/cn';
@@ -47,6 +47,21 @@ import {
 
 type Phase = 'await-photo' | 'processing' | 'analyzing' | 'ready' | 'saving';
 
+/**
+ * Maps a vision-detected coarse category to the structural body zone
+ * (domain LayerSlot). Used ONLY to pre-select the best-matching user category
+ * after analysis — never to fabricate a category. If nothing matches, the user
+ * picks one of their own categories.
+ */
+const DETECTED_CATEGORY_TO_LAYER_SLOT: Readonly<Record<string, string>> = {
+  tops: 'upper-body',
+  dresses: 'full-body',
+  bottoms: 'lower-body',
+  outerwear: 'outer',
+  shoes: 'feet',
+  accessories: 'accessory',
+};
+
 export function AddGarmentDialog(): JSX.Element {
   const { toast } = useToast();
   const reloadWardrobe = useWardrobeStore((state) => state.load);
@@ -59,6 +74,54 @@ export function AddGarmentDialog(): JSX.Element {
   const [result, setResult] = useState<GarmentAnalysisResultDTO | null>(null);
   const [draft, setDraft] = useState<GarmentDraft | null>(null);
 
+  // Categories come exclusively from SQLite (user-created). No fixed list.
+  const [categories, setCategories] = useState<readonly CategoryNodeDTO[]>([]);
+  const [selectedTopId, setSelectedTopId] = useState<string>('');
+  const [selectedSubId, setSelectedSubId] = useState<string>('');
+
+  const topNode = categories.find((n) => n.category.id === selectedTopId) ?? null;
+  const subOptions = topNode?.children ?? [];
+
+  // Load the user's category tree whenever the dialog opens.
+  useEffect(() => {
+    if (!open || !isBridgeAvailable()) {
+      return;
+    }
+    let active = true;
+    void ipc
+      .getCategoryTree()
+      .then((tree) => {
+        if (active) {
+          setCategories(tree);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCategories([]);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [open]);
+
+  // After an analysis completes, pre-select the user category whose zone best
+  // matches the detected coarse category. Never invents a category.
+  useEffect(() => {
+    if (result === null || categories.length === 0 || selectedTopId !== '') {
+      return;
+    }
+    const detected = result.analysis.category?.value;
+    const wantSlot = detected !== undefined ? DETECTED_CATEGORY_TO_LAYER_SLOT[detected] : undefined;
+    const match =
+      wantSlot !== undefined
+        ? categories.find((n) => n.category.metadata.layerSlot === wantSlot)
+        : undefined;
+    if (match !== undefined) {
+      setSelectedTopId(match.category.id);
+    }
+  }, [result, categories, selectedTopId]);
+
   const setField = <K extends keyof GarmentDraft>(key: K, value: GarmentDraft[K]): void =>
     setDraft((prev) => (prev === null ? prev : { ...prev, [key]: value }));
 
@@ -67,6 +130,8 @@ export function AddGarmentDialog(): JSX.Element {
     setResult(null);
     setDraft(null);
     setDragging(false);
+    setSelectedTopId('');
+    setSelectedSubId('');
     setPhase('await-photo');
   }, []);
 
@@ -191,6 +256,16 @@ export function AddGarmentDialog(): JSX.Element {
       });
       return;
     }
+    const top = topNode?.category;
+    if (top === undefined) {
+      toast({
+        title: 'Falta la categoría',
+        description: 'Elige una categoría para la prenda.',
+        variant: 'warning',
+      });
+      return;
+    }
+    const sub = subOptions.find((c) => c.id === selectedSubId);
     setPhase('saving');
     try {
       const saved = await ipc.saveImage({
@@ -204,15 +279,21 @@ export function AddGarmentDialog(): JSX.Element {
 
       const payload: AddGarmentPayload = {
         name: draft.name.trim(),
-        category: draft.category,
-        subcategory: draft.subcategory,
+        category: top.slug,
+        subcategory: sub?.slug ?? top.slug,
+        categoryId: sub?.id ?? top.id,
         colorHex: draft.colorHex,
         ...(draft.colorName.trim().length > 0 ? { colorName: draft.colorName.trim() } : {}),
         seasons: [draft.season],
         ...(draft.material.trim().length > 0 ? { material: draft.material.trim() } : {}),
         ...(draft.tags.length > 0 ? { tags: draft.tags } : {}),
         secondaryColorHexes: secondaryColorHexes(result.analysis),
-        metadata: buildGarmentMetadata(result.analysis, result.overallConfidence),
+        // Carry the category's structural zone so the 2D try-on places the
+        // garment correctly (e.g. a watch on the wrist, a shirt on the torso).
+        metadata: {
+          ...buildGarmentMetadata(result.analysis, result.overallConfidence),
+          layerSlot: top.metadata.layerSlot,
+        },
       };
 
       const { id } = await ipc.addGarment(payload);
@@ -239,8 +320,8 @@ export function AddGarmentDialog(): JSX.Element {
     }
   };
 
-  const subcategories = draft !== null ? (SUBCATEGORY_OPTIONS[draft.category] ?? []) : [];
   const busy = phase === 'processing' || phase === 'analyzing';
+  const noCategories = categories.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -331,6 +412,13 @@ export function AddGarmentDialog(): JSX.Element {
 
             {draft !== null && result !== null ? (
               <div className="space-y-5">
+                {noCategories && (
+                  <div className="rounded-md bg-warning/15 px-3 py-2 text-xs text-warning">
+                    Aún no tienes categorías. Crea al menos una en la sección{' '}
+                    <span className="font-semibold">Categorías</span> para poder guardar esta
+                    prenda.
+                  </div>
+                )}
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <FormField label="Nombre" htmlFor="g-name" required className="sm:col-span-2">
                     <Input
@@ -343,18 +431,17 @@ export function AddGarmentDialog(): JSX.Element {
                   <FormField label="Categoría" htmlFor="g-category">
                     <Select
                       id="g-category"
-                      value={draft.category}
+                      value={selectedTopId}
                       onChange={(e) => {
-                        const category = e.target.value;
-                        const first = SUBCATEGORY_OPTIONS[category]?.[0]?.value ?? '';
-                        setDraft((prev) =>
-                          prev === null ? prev : { ...prev, category, subcategory: first },
-                        );
+                        setSelectedTopId(e.target.value);
+                        setSelectedSubId('');
                       }}
+                      disabled={noCategories}
                     >
-                      {CATEGORY_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
+                      <option value="">Selecciona una categoría…</option>
+                      {categories.map((node) => (
+                        <option key={node.category.id} value={node.category.id}>
+                          {node.category.name}
                         </option>
                       ))}
                     </Select>
@@ -362,12 +449,16 @@ export function AddGarmentDialog(): JSX.Element {
                   <FormField label="Subcategoría" htmlFor="g-subcategory">
                     <Select
                       id="g-subcategory"
-                      value={draft.subcategory}
-                      onChange={(e) => setField('subcategory', e.target.value)}
+                      value={selectedSubId}
+                      onChange={(e) => setSelectedSubId(e.target.value)}
+                      disabled={selectedTopId === '' || subOptions.length === 0}
                     >
-                      {subcategories.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
+                      <option value="">
+                        {subOptions.length === 0 ? 'Sin subcategorías' : 'Sin subcategoría'}
+                      </option>
+                      {subOptions.map((child) => (
+                        <option key={child.id} value={child.id}>
+                          {child.name}
                         </option>
                       ))}
                     </Select>
@@ -470,7 +561,7 @@ export function AddGarmentDialog(): JSX.Element {
           <Button
             type="button"
             onClick={() => void handleSave()}
-            disabled={phase !== 'ready' || draft === null}
+            disabled={phase !== 'ready' || draft === null || selectedTopId === ''}
           >
             {phase === 'saving' ? (
               <>

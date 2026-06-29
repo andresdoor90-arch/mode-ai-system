@@ -35,14 +35,41 @@ const garment = (over: Partial<GarmentDTO>): GarmentDTO =>
   }) as GarmentDTO;
 
 describe('slotForGarment', () => {
-  it('maps categories to body slots', () => {
+  it('maps the fixed taxonomy categories to body slots', () => {
     expect(slotForGarment({ category: 'tops', subcategory: 'shirt' })).toBe('top');
     expect(slotForGarment({ category: 'bottoms', subcategory: 'jeans' })).toBe('bottom');
     expect(slotForGarment({ category: 'outerwear', subcategory: 'blazer' })).toBe('outerwear');
     expect(slotForGarment({ category: 'shoes', subcategory: 'sneakers' })).toBe('shoes');
     expect(slotForGarment({ category: 'accessories', subcategory: 'belt' })).toBe('belt');
     expect(slotForGarment({ category: 'accessories', subcategory: 'hat' })).toBe('accessory');
-    expect(slotForGarment({ category: 'unknown', subcategory: 'x' })).toBeNull();
+  });
+
+  it('prefers the explicit category layer slot (user-defined categories)', () => {
+    expect(
+      slotForGarment({ category: 'mi-categoria', subcategory: '', metadata: { layerSlot: 'upper-body' } }),
+    ).toBe('top');
+    expect(
+      slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'lower-body' } }),
+    ).toBe('bottom');
+    expect(
+      slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'outer' } }),
+    ).toBe('outerwear');
+    expect(slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'feet' } })).toBe(
+      'shoes',
+    );
+    expect(
+      slotForGarment({ category: 'x', subcategory: 'cinturon', metadata: { layerSlot: 'accessory' } }),
+    ).toBe('belt');
+    expect(
+      slotForGarment({ category: 'x', subcategory: 'reloj', metadata: { layerSlot: 'accessory' } }),
+    ).toBe('accessory');
+  });
+
+  it('infers the slot from a user-named category when no layer slot is set', () => {
+    expect(slotForGarment({ category: 'Camisas de iglesia', subcategory: '' })).toBe('top');
+    expect(slotForGarment({ category: 'Zapatos formales', subcategory: '' })).toBe('shoes');
+    expect(slotForGarment({ category: 'Cinturones', subcategory: '' })).toBe('belt');
+    expect(slotForGarment({ category: 'Ocasión especial', subcategory: '' })).toBeNull();
   });
 });
 

@@ -45,12 +45,56 @@ const stripDiacritics = (text: string): string =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
-/** Map a garment's category/subcategory to the body slot it occupies. */
+/** Map a category's structural layer slot (CategoryMetadata.layerSlot) to a try-on slot. */
+const LAYER_SLOT_TO_SLOT: Readonly<Record<string, SlotId>> = {
+  'upper-body': 'top',
+  'full-body': 'top',
+  'lower-body': 'bottom',
+  outer: 'outerwear',
+  feet: 'shoes',
+  accessory: 'accessory',
+};
+
+/** Keyword inference from a free (user-named) category/subcategory. */
+const inferSlotFromText = (text: string): SlotId | null => {
+  if (/cinturon|correa|belt/.test(text)) return 'belt';
+  if (/zapat|tenis|zapatill|sneaker|bota|boot|mocasin|sandal|calzado|shoe/.test(text)) return 'shoes';
+  if (/chaqueta|saco|blazer|abrigo|coat|jacket|parka|cardigan|chaleco|gabardina|outer/.test(text))
+    return 'outerwear';
+  if (/pantalon|jean|short|falda|skirt|chino|legging|trouser|pant|bottom/.test(text)) return 'bottom';
+  if (/camis|shirt|polo|blus|sueter|sweater|hoodie|sudadera|tank|vestido|dress|top/.test(text))
+    return 'top';
+  if (/corbata|tie|gorra|hat|sombrero|reloj|watch|bufanda|scarf|bolso|bag|gafa|lente|accesori/.test(text))
+    return 'accessory';
+  return null;
+};
+
+/**
+ * Resolve which body slot a garment occupies for the 2D try-on.
+ *
+ * Order of resolution: (1) the explicit `layerSlot` carried in the garment's
+ * metadata from the user's category — the authoritative source for fully
+ * user-defined categories; (2) the structural category slug (seed/legacy
+ * garments using the fixed taxonomy); (3) keyword inference from the
+ * category/subcategory text, so type-named user categories still place even if
+ * no layer slot was set.
+ */
 export const slotForGarment = (
-  garment: Pick<GarmentDTO, 'category' | 'subcategory'>,
+  garment: Pick<GarmentDTO, 'category' | 'subcategory' | 'metadata'>,
 ): SlotId | null => {
-  const category = stripDiacritics(garment.category);
   const subcategory = stripDiacritics(garment.subcategory);
+
+  // 1) Explicit layer slot from the user's category.
+  const layerSlot = garment.metadata?.layerSlot;
+  if (layerSlot !== undefined) {
+    const mapped = LAYER_SLOT_TO_SLOT[layerSlot];
+    if (mapped !== undefined) {
+      return mapped === 'accessory' && /belt|cinturon|correa/.test(subcategory) ? 'belt' : mapped;
+    }
+  }
+
+  // 2) Structural fixed-taxonomy slug.
+  const category = stripDiacritics(garment.category);
   switch (category) {
     case 'tops':
     case 'dresses':
@@ -64,8 +108,11 @@ export const slotForGarment = (
     case 'accessories':
       return subcategory === 'belt' ? 'belt' : 'accessory';
     default:
-      return null;
+      break;
   }
+
+  // 3) Keyword inference from the (user-named) category/subcategory text.
+  return inferSlotFromText(`${category} ${subcategory}`);
 };
 
 /** Normalise a free-form pattern label (Spanish or English) to a PatternId. */

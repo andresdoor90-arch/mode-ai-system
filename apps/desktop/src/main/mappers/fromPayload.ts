@@ -6,7 +6,14 @@
  * value objects the use cases expect, raising a descriptive error when a value
  * is not a member of its domain enum.
  */
-import { Color, GarmentCategory, Occasion, Season, type CreateGarmentInput } from '@mas/core';
+import {
+  Color,
+  GarmentCategory,
+  Occasion,
+  Season,
+  type CategoryId,
+  type CreateGarmentInput,
+} from '@mas/core';
 
 import type { AddGarmentPayload } from '../../shared/ipc';
 
@@ -60,6 +67,7 @@ export function toCreateGarmentInput(payload: AddGarmentPayload): CreateGarmentI
     subcategory: payload.subcategory,
     color: toColor(payload.colorHex, payload.colorName),
     seasons,
+    ...(payload.categoryId !== undefined ? { categoryId: payload.categoryId as CategoryId } : {}),
     ...(secondaryColors.length > 0 ? { secondaryColors } : {}),
     ...(payload.brand !== undefined ? { brand: payload.brand } : {}),
     ...(payload.material !== undefined ? { material: payload.material } : {}),

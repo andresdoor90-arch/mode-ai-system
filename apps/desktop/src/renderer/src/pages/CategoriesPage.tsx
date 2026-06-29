@@ -16,15 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, FolderPlus, LayoutGrid, Plus, Trash2 } from 'lucide-react';
 
 import { PageHeader } from '../components/common/PageHeader';
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Input,
-} from '../components/ui';
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input } from '../components/ui';
 import { useToast } from '../hooks/useToast';
 import { ipc, isBridgeAvailable } from '../ipc/client';
 import {
@@ -35,6 +27,25 @@ import {
 } from '../store/logic/categoriesLogic';
 import type { CategoryDTO, CategoryNodeDTO } from '@shared/ipc';
 
+/**
+ * The structural "zone" a top-level category occupies on the 2D try-on
+ * mannequin. This maps 1:1 to the domain {@link LayerSlot} and is the ONLY
+ * structural fact the user supplies; everything else about a category is free.
+ * Garments inherit their category's zone so the try-on places them correctly
+ * (e.g. a watch on the wrist, a shirt on the torso) without any fixed taxonomy.
+ */
+const ZONE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'upper-body', label: 'Parte superior (camisas, tops)' },
+  { value: 'lower-body', label: 'Parte inferior (pantalones, faldas)' },
+  { value: 'outer', label: 'Abrigo / saco / chaqueta' },
+  { value: 'feet', label: 'Calzado' },
+  { value: 'accessory', label: 'Accesorio (corbata, reloj, correa…)' },
+  { value: 'full-body', label: 'Cuerpo completo' },
+];
+
+const zoneLabel = (slot: string): string =>
+  ZONE_OPTIONS.find((z) => z.value === slot)?.label.split(' (')[0] ?? slot;
+
 export function CategoriesPage(): JSX.Element {
   const { toast } = useToast();
   const [tree, setTree] = useState<readonly CategoryNodeDTO[]>([]);
@@ -42,6 +53,7 @@ export function CategoriesPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
   const [newParent, setNewParent] = useState<string | null>(null);
+  const [newSlot, setNewSlot] = useState<string>('upper-body');
   const [errors, setErrors] = useState<CategoryFormErrors>({});
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -78,7 +90,13 @@ export function CategoriesPage(): JSX.Element {
       return;
     }
     try {
-      await ipc.createCategory({ name: newName.trim(), parentId: newParent });
+      await ipc.createCategory({
+        name: newName.trim(),
+        parentId: newParent,
+        // Only top-level categories carry a structural zone; subcategories
+        // inherit their parent's zone (garments use the top category's slot).
+        ...(newParent === null ? { metadata: { layerSlot: newSlot } } : {}),
+      });
       setNewName('');
       toast({ title: 'Categoría creada' });
       await refresh();
@@ -153,6 +171,21 @@ export function CategoriesPage(): JSX.Element {
               </option>
             ))}
           </select>
+          {newParent === null && (
+            <select
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={newSlot}
+              onChange={(e) => setNewSlot(e.target.value)}
+              aria-label="Zona en el probador"
+              title="Dónde se ubica esta categoría en el probador 2D"
+            >
+              {ZONE_OPTIONS.map((z) => (
+                <option key={z.value} value={z.value}>
+                  {z.label}
+                </option>
+              ))}
+            </select>
+          )}
           <Button onClick={() => void handleCreate()}>
             <Plus className="h-4 w-4" /> Crear
           </Button>
@@ -179,7 +212,7 @@ export function CategoriesPage(): JSX.Element {
                         </span>
                         <CardTitle className="text-base">{root.name}</CardTitle>
                         {root.seeded && <Badge variant="secondary">predeterminada</Badge>}
-                        <Badge variant="outline">formalidad {root.metadata.formality}</Badge>
+                        <Badge variant="outline">{zoneLabel(root.metadata.layerSlot)}</Badge>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button
