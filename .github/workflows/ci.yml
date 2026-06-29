@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, phase-8-polish-distribution]
   pull_request:
-    branches: [main]
+    branches: [main, phase-7-persistence-plugins]
 
 # Cancel superseded runs on the same ref to save CI minutes.
 concurrency:
@@ -32,14 +32,30 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
+
+      # Cache pnpm's content-addressable store manually, keyed on the
+      # package.json files. This does NOT require a committed pnpm-lock.yaml.
+      # `actions/setup-node` with `cache: pnpm` was removed on purpose: it
+      # hard-fails ("Dependencies lock file is not found") when no lockfile is
+      # present, which is the case here until one is generated on a runner.
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PNPM_STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        # A pnpm-lock.yaml is not committed yet (the project was authored in an
-        # offline sandbox without registry access). Until one is generated and
-        # committed from a networked environment, do not require a frozen
-        # lockfile — otherwise CI cannot install. Once committed, switch this
-        # back to `--frozen-lockfile`.
+        # No pnpm-lock.yaml is committed yet (the project was authored in an
+        # offline sandbox with no registry access, so a valid lockfile could not
+        # be generated there). `pnpm install` resolves and WRITES pnpm-lock.yaml
+        # during this step on the networked runner. Once a lockfile is committed
+        # to the repo root, switch this back to `--frozen-lockfile`.
         run: pnpm install --no-frozen-lockfile
 
       - name: Lint
