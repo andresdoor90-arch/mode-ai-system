@@ -14,7 +14,7 @@ import { AppContainer } from './AppContainer';
 describe('Profile persistence (offline, bun:sqlite injected)', () => {
   it('starts with no profile, creates one, renames it and survives a restart', async () => {
     const db = await createTestSqlDatabase();
-    const container = await AppContainer.create({ database: db, skipDemoSeed: true });
+    const container = await AppContainer.create({ database: db });
 
     // Fresh install → no profile yet (the app shows onboarding).
     const before = await container.queries.ask(new GetCurrentProfileQuery());
@@ -35,7 +35,7 @@ describe('Profile persistence (offline, bun:sqlite injected)', () => {
     expect(afterRename.ok ? afterRename.value?.name : null).toBe('Andrea');
 
     // Simulate an app restart: a brand-new container on the SAME database.
-    const reopened = await AppContainer.create({ database: db, skipDemoSeed: true });
+    const reopened = await AppContainer.create({ database: db });
     const current = await reopened.queries.ask(new GetCurrentProfileQuery());
     expect(current.ok ? current.value?.name : null).toBe('Andrea');
 

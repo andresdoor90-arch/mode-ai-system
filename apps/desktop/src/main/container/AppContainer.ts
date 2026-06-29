@@ -22,7 +22,6 @@
  * populating the {@link AIProviderRouter} here — the domain never changes.
  */
 import {
-  AddGarmentCommand,
   AddGarmentHandler,
   ADD_GARMENT,
   AddPhotosHandler,
@@ -33,7 +32,6 @@ import {
   ANNOTATE_OUTFIT_HISTORY,
   ArchiveGarmentHandler,
   ARCHIVE_GARMENT,
-  Color,
   CommandBus,
   ConfirmGarmentTagsHandler,
   CONFIRM_GARMENT_TAGS,
@@ -48,7 +46,6 @@ import {
   DELETE_CATEGORY,
   DuplicateGarmentHandler,
   DUPLICATE_GARMENT,
-  GarmentCategory,
   GetCategoriesHandler,
   GET_CATEGORIES,
   GetCategoryTreeHandler,
@@ -93,12 +90,10 @@ import {
   REORDER_PHOTOS,
   RestoreGarmentHandler,
   RESTORE_GARMENT,
-  Season,
   SearchGarmentsHandler,
   SEARCH_GARMENTS,
   SearchOutfitHistoryHandler,
   SEARCH_OUTFIT_HISTORY,
-  SeedDefaultTaxonomyCommand,
   SeedDefaultTaxonomyHandler,
   SEED_DEFAULT_TAXONOMY,
   SemanticIndexProjection,
@@ -107,12 +102,6 @@ import {
   SET_PREFERENCES,
   SuggestGarmentTagsHandler,
   SUGGEST_GARMENT_TAGS,
-  TopSubcategory,
-  BottomSubcategory,
-  OuterwearSubcategory,
-  ShoeSubcategory,
-  AccessorySubcategory,
-  DressSubcategory,
   TransformPhotoHandler,
   TRANSFORM_PHOTO,
   UpdateCategoryHandler,
@@ -125,9 +114,7 @@ import {
   GET_CURRENT_PROFILE,
   UpdateProfileHandler,
   UPDATE_PROFILE,
-  unwrap,
   WardrobeSyncCoordinator,
-  type CreateGarmentInput,
   type EmbeddingVectorResult,
   type GarmentId,
   type GarmentSnapshot,
@@ -168,8 +155,6 @@ export interface AppContainerOptions {
    * lightweight smoke tests that do not need durability.
    */
   readonly inMemory?: boolean;
-  /** Skip seeding demo garments (the taxonomy is still seeded when empty). */
-  readonly skipDemoSeed?: boolean;
 }
 
 /**
@@ -189,7 +174,6 @@ export class AppContainer {
   private readonly memory: MemoryEngine;
   private readonly sync: WardrobeSyncCoordinator;
   private readonly database: SqlDatabase | undefined;
-  private readonly skipDemoSeed: boolean;
 
   private constructor(
     persistence: Persistence,
@@ -199,7 +183,6 @@ export class AppContainer {
     this.ids = new SequentialIdGenerator('mas');
     this.repositories = persistence;
     this.database = database;
-    this.skipDemoSeed = options.skipDemoSeed ?? false;
 
     this.events = new InMemoryEventBus();
 
@@ -288,7 +271,7 @@ export class AppContainer {
       persistence = createSqlPersistence(database);
     } else if (options.dataDir !== undefined) {
       // Production path: a durable, file-backed SQLite database under userData.
-      database = await createSqliteDatabase(`${options.dataDir}/mas.db`);
+      database = await createSqliteDatabase(`${options.dataDir}/wardrobe.db`);
       persistence = createSqlPersistence(database);
     } else {
       // No durable location and no injected DB ⇒ volatile fallback.
@@ -304,7 +287,6 @@ export class AppContainer {
     }
 
     const container = new AppContainer(persistence, options, database);
-    await container.seed();
     return container;
   }
 
@@ -380,137 +362,6 @@ export class AppContainer {
       .register(GET_RECENT_REPETITIONS, new GetRecentRepetitionsHandler(history))
       .register(GET_GARMENT_USAGE_HISTORY, new GetGarmentUsageHistoryHandler(history))
       .register(GET_CURRENT_PROFILE, new GetCurrentProfileHandler(profiles));
-  }
-
-  /**
-   * Seed demonstration garments through the real `AddGarment` use case, so the
-   * wired query path (wardrobe, analysis, suggestions) returns realistic data
-   * out of the box. This is sample content for the Phase 4 UI, not fixtures.
-   */
-  private async seed(): Promise<void> {
-    // Module 1: seed the default taxonomy as user-editable category DATA. This
-    // is the enum→data migration in action — nothing is hardcoded; the user can
-    // edit, regroup, reorder or delete any of it. Idempotent: the command is a
-    // no-op when categories already exist, so it is safe on every startup.
-    await this.commands.send(new SeedDefaultTaxonomyCommand());
-
-    // Only seed demonstration garments on a FRESH store. With durable SQLite
-    // persistence this guard prevents the demo set from being re-added on every
-    // restart; existing user data is left untouched.
-    if (this.skipDemoSeed || (await this.repositories.garments.count()) > 0) {
-      return;
-    }
-
-    const c = (hex: string, name: string): Color => unwrap(Color.fromHex(hex, name));
-
-    const samples: CreateGarmentInput[] = [
-      {
-        name: 'Oxford Cotton Shirt',
-        category: GarmentCategory.Tops,
-        subcategory: TopSubcategory.Shirt,
-        color: c('#1d3f72', 'Navy'),
-        seasons: [Season.AllSeason],
-        brand: 'Atelier',
-        tags: ['work', 'classic'],
-      },
-      {
-        name: 'Merino Crew Sweater',
-        category: GarmentCategory.Tops,
-        subcategory: TopSubcategory.Sweater,
-        color: c('#6b705c', 'Sage'),
-        seasons: [Season.Autumn, Season.Winter],
-        brand: 'NordKnit',
-        tags: ['cozy'],
-      },
-      {
-        name: 'Linen Tee',
-        category: GarmentCategory.Tops,
-        subcategory: TopSubcategory.TShirt,
-        color: c('#f2f0e6', 'Ivory'),
-        seasons: [Season.Spring, Season.Summer],
-        tags: ['casual'],
-      },
-      {
-        name: 'Tailored Wool Trousers',
-        category: GarmentCategory.Bottoms,
-        subcategory: BottomSubcategory.Trousers,
-        color: c('#3a3a3a', 'Charcoal'),
-        seasons: [Season.AllSeason],
-        brand: 'Atelier',
-        tags: ['work'],
-      },
-      {
-        name: 'Slim Indigo Jeans',
-        category: GarmentCategory.Bottoms,
-        subcategory: BottomSubcategory.Jeans,
-        color: c('#2a3b55', 'Indigo'),
-        seasons: [Season.AllSeason],
-        tags: ['casual', 'everyday'],
-      },
-      {
-        name: 'Pleated Midi Skirt',
-        category: GarmentCategory.Bottoms,
-        subcategory: BottomSubcategory.Skirt,
-        color: c('#7a2e3b', 'Burgundy'),
-        seasons: [Season.Autumn],
-        tags: ['date'],
-      },
-      {
-        name: 'Wrap Day Dress',
-        category: GarmentCategory.Dresses,
-        subcategory: DressSubcategory.Casual,
-        color: c('#2f6b5e', 'Emerald'),
-        seasons: [Season.Spring, Season.Summer],
-        brand: 'Lumière',
-        tags: ['date', 'party'],
-      },
-      {
-        name: 'Wool Overcoat',
-        category: GarmentCategory.Outerwear,
-        subcategory: OuterwearSubcategory.Coat,
-        color: c('#4a3b2f', 'Camel'),
-        seasons: [Season.Winter],
-        brand: 'NordKnit',
-        tags: ['warm'],
-      },
-      {
-        name: 'Structured Blazer',
-        category: GarmentCategory.Outerwear,
-        subcategory: OuterwearSubcategory.Blazer,
-        color: c('#23262b', 'Onyx'),
-        seasons: [Season.AllSeason],
-        brand: 'Atelier',
-        tags: ['work', 'formal'],
-      },
-      {
-        name: 'Leather Derby Shoes',
-        category: GarmentCategory.Shoes,
-        subcategory: ShoeSubcategory.DressShoes,
-        color: c('#3b2417', 'Cognac'),
-        seasons: [Season.AllSeason],
-        tags: ['work', 'formal'],
-      },
-      {
-        name: 'Canvas Sneakers',
-        category: GarmentCategory.Shoes,
-        subcategory: ShoeSubcategory.Sneakers,
-        color: c('#e9e9e9', 'Off-white'),
-        seasons: [Season.Spring, Season.Summer],
-        tags: ['casual'],
-      },
-      {
-        name: 'Silk Pocket Square',
-        category: GarmentCategory.Accessories,
-        subcategory: AccessorySubcategory.Scarf,
-        color: c('#b08968', 'Bronze'),
-        seasons: [Season.AllSeason],
-        tags: ['formal'],
-      },
-    ];
-
-    for (const input of samples) {
-      await this.commands.send(new AddGarmentCommand(input));
-    }
   }
 }
 
