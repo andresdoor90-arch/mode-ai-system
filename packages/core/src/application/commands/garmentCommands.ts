@@ -59,6 +59,8 @@ export interface UpdateGarmentInput {
   readonly color?: Color;
   readonly tags?: readonly string[];
   readonly status?: GarmentStatus;
+  /** Toggle the garment's favourite flag (persisted in metadata). */
+  readonly favorite?: boolean;
 }
 
 /** Mutate an existing garment's editable attributes. */
@@ -74,7 +76,7 @@ export class UpdateGarmentHandler implements RequestHandler<UpdateGarmentCommand
   ) {}
 
   public async handle(command: UpdateGarmentCommand): Promise<Result<void>> {
-    const { id, name, color, tags, status } = command.input;
+    const { id, name, color, tags, status, favorite } = command.input;
     const garment = await this.garments.findById(id);
     if (garment === null) {
       return { ok: false, error: new NotFoundError(`Garment ${id} not found.`) };
@@ -90,6 +92,9 @@ export class UpdateGarmentHandler implements RequestHandler<UpdateGarmentCommand
     }
     if (tags !== undefined) {
       garment.retag(tags);
+    }
+    if (favorite !== undefined) {
+      garment.mergeMetadata({ favorite: favorite ? 'true' : 'false' });
     }
     if (status !== undefined) {
       const changed = garment.changeStatus(status);
