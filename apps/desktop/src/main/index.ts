@@ -16,6 +16,7 @@ import { app, BrowserWindow } from 'electron';
 import { AppContainer } from './container/AppContainer';
 import { registerIpcHandlers, unregisterIpcHandlers } from './ipc/registerIpcHandlers';
 import { installSecurityPolicies } from './security';
+import { initAutoUpdates } from './updater';
 import { createMainWindow, focusMainWindow } from './window';
 
 // Enforce a single running instance; focus the existing window otherwise.
@@ -34,6 +35,9 @@ if (!gotLock) {
     registerIpcHandlers(container);
 
     createMainWindow();
+
+    // Kick off background auto-updates (no-op in dev; never blocks startup).
+    void initAutoUpdates();
 
     app.on('activate', () => {
       // macOS: re-create a window when the dock icon is clicked and none exist.

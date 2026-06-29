@@ -10,6 +10,7 @@
 > ✅ Completed 2026-06-28 (Sprint 1). Awaiting approval before Phase 2.
 
 ### P0 - Monorepo & Build Configuration
+
 - [x] Initialize pnpm workspace with `pnpm-workspace.yaml`
 - [x] Create root `package.json` with workspace scripts
 - [x] Set up TypeScript base config (`tsconfig.base.json`)
@@ -22,6 +23,7 @@
 - [x] Set up environment variables handling (`.env`, `.env.local`)
 
 ### P0 - Code Quality & Standards
+
 - [x] Configure ESLint with TypeScript rules
 - [x] Configure Prettier for consistent formatting
 - [x] Set up Husky pre-commit hooks
@@ -30,6 +32,7 @@
 - [x] Create `.editorconfig` for editor consistency
 
 ### P1 - Testing Infrastructure
+
 - [x] Set up Vitest as test runner
 - [x] Configure test coverage reporting
 - [x] Set up testing utilities (React Testing Library)
@@ -37,6 +40,7 @@
 - [x] Configure Playwright for E2E tests (Electron)
 
 ### P2 - CI/CD Pipeline
+
 - [x] Create GitHub Actions workflow for PR checks
 - [x] Add build verification step
 - [x] Add test execution step
@@ -50,6 +54,7 @@
 > ✅ Completed 2026-06-29 (Sprint 2). Pure, framework-agnostic domain. Awaiting approval before Phase 3.
 
 ### P0 - Domain Entities
+
 - [x] `Garment` entity (id, name, category, subcategory, color, brand, size, season, images, tags, metadata)
 - [x] `Outfit` entity (id, name, garments, occasion, season, rating, notes, createdAt)
 - [x] `UserProfile` entity (id, name, bodyMeasurements, stylePreferences, colorPalette)
@@ -59,6 +64,7 @@
 - [x] `Wardrobe` aggregate root (unique garments, no dangling collection references)
 
 ### P0 - Value Objects
+
 - [x] `Color` value object (hex, rgb, hsl, name, category, season)
 - [x] `Size` value object (system, value, measurements)
 - [x] `Season` enum (Spring, Summer, Autumn, Winter, AllSeason)
@@ -71,6 +77,7 @@
 - [x] `ColorPalette` value object (primary, secondary, accent, neutral)
 
 ### P0 - Repository Interfaces
+
 - [x] `IGarmentRepository` (CRUD + query methods)
 - [x] `IOutfitRepository` (CRUD + query methods)
 - [x] `IUserProfileRepository`
@@ -79,6 +86,7 @@
 - [x] `ICalendarEventRepository`
 
 ### P1 - Domain Services
+
 - [x] `ColorHarmonyService` (complementary, analogous, triadic analysis)
 - [x] `StyleCompatibilityService` (garment pairing rules)
 - [x] `SeasonalRecommendationService`
@@ -86,6 +94,7 @@
 - [x] `OutfitScoringService` (rate outfit combinations 0–100 across ten weighted factors + smart rules)
 
 ### P1 - Application Layer (Use Cases / CQRS)
+
 - [x] **Commands**: AddGarment, UpdateGarment, RemoveGarment, CreateOutfit, RateOutfit
 - [x] **Commands**: UpdateProfile, SetPreferences, CreateCollection
 - [x] **Queries**: GetWardrobe, GetOutfitSuggestions, GetGarmentsByCategory
@@ -100,6 +109,7 @@
 > ✅ Completed 2026-06-30 (Sprint 3). Concrete adapters behind `@mas/core` ports; no business rules. Awaiting approval before Phase 4.
 
 ### P0 - Database Layer
+
 - [x] Set up SQLite with better-sqlite3 (connection factory + pragmas: WAL, foreign_keys, synchronous, busy_timeout)
 - [x] Configure Drizzle ORM schema definitions (typed source of truth + drizzle-kit config)
 - [x] Create migration system (SQL migrations folder + idempotent `MigrationRunner` over the SQL port)
@@ -113,6 +123,7 @@
 - [x] Create database seeding scripts (demo data)
 
 ### P0 - Vector Database (infrastructure plumbing only — no recommendation logic)
+
 - [x] Provider-agnostic `IVectorStore` port (upsert / query / delete / count)
 - [x] ChromaDB embedded client configuration + adapter (`ChromaVectorStore`)
 - [x] Define embedding collection schema for garments
@@ -121,6 +132,7 @@
 - [ ] Create vector indexing pipeline (deferred — higher-level phase)
 
 ### P1 - Image Processing
+
 - [ ] Implement Sharp-based image pipeline (deferred — later phase)
 - [ ] Background removal service (deferred)
 - [ ] Color extraction from garment images (deferred)
@@ -129,6 +141,7 @@
 - [ ] Garment category detection preprocessing (deferred)
 
 ### P1 - File Storage
+
 - [x] Implement local file storage service (`IFileStorage` + `LocalFileStorage`)
 - [x] Image file management (save, retrieve, delete) — `ImageStorageService` (storage I/O only)
 - [x] Storage path configuration
@@ -136,11 +149,13 @@
 - [x] Storage cleanup and garbage collection (`pruneOrphans`)
 
 ### P1 - AI Provider Abstractions (interfaces + base adapters only)
+
 - [x] Provider-agnostic `IAITextProvider` and `IEmbeddingProvider` ports
 - [x] `BaseAIProvider` scaffolding + Ollama/OpenAI/Anthropic adapter stubs (no model calls)
 - [x] Deterministic hashing embedding provider (test/offline plumbing)
 
 ### P1 - Cross-Cutting Infrastructure Services
+
 - [x] Persistent configuration system (typed `AppConfig` + defaults + validation + `ConfigStore`)
 - [x] Logging system (`ILogger` port + structured `ConsoleLogger` + sinks)
 - [x] Event system (`IEventBus` + `InMemoryEventBus` pub/sub)
@@ -150,6 +165,7 @@
 - [x] UUID-backed `IdGenerator` implementation
 
 ### P2 - External Service Adapters
+
 - [ ] Weather API adapter (OpenWeatherMap or similar) (deferred — P2)
 - [ ] Calendar sync adapter (Google Calendar, Outlook) (deferred — P2)
 - [ ] Cloud storage adapter (optional backup) (deferred — P2)
@@ -161,6 +177,7 @@
 > ✅ Core scope completed 2026-07-01 (Sprint 4). Secure Electron shell, typed IPC → application layer, and the definitive React UI (layout, navigation, design system, theming, global state). NO AI engine, recommendations, avatar or plugins. Awaiting approval before Phase 5.
 
 ### P0 - Electron Main Process
+
 - [x] Configure Electron main entry point
 - [x] Implement window creation and management
 - [x] Set up IPC (Inter-Process Communication) channels
@@ -171,7 +188,9 @@
 - [x] Configure app security (CSP, node integration)
 
 ### P0 - Embedded Backend (Fastify)
+
 > Superseded for now by a typed IPC bridge (renderer → IPC → main → CQRS buses); see ADR-009. A Fastify layer remains optional/deferred.
+
 - [ ] Initialize Fastify server in main process
 - [ ] Define API route structure
 - [ ] Implement garment CRUD endpoints
@@ -184,6 +203,7 @@
 - [ ] Implement WebSocket for real-time updates
 
 ### P0 - Frontend Shell (React)
+
 - [x] Set up React 18 with TypeScript
 - [x] Configure React Router for navigation
 - [x] Set up Zustand store architecture
@@ -194,6 +214,7 @@
 - [x] Set up dark/light theme switching
 
 ### P1 - Frontend Pages & Features
+
 - [x] **Dashboard**: Overview, quick actions, recent outfits, rules-based suggestions (weather widget deferred)
 - [x] **Wardrobe**: Grid view, filters, search (bulk actions deferred)
 - [x] **Categorías**: Category overview with live counts and quick filtering
@@ -210,6 +231,7 @@
 - [ ] **Plugin Manager**: Browse, install, configure plugins — out of scope (Phase 7)
 
 ### P1 - State Management (Zustand)
+
 - [x] Wardrobe store (garments, collections, filters)
 - [x] Outfit store (outfits, suggestions, history)
 - [x] User store (profile, preferences, settings)
@@ -219,6 +241,7 @@
 - [x] Implement optimistic updates (optimistic garment removal; reconciled over IPC)
 
 ### P2 - UI Components (Shadcn/ui + Custom)
+
 - [x] GarmentCard component (thumbnail, info, actions, context menu)
 - [ ] OutfitPreview component (layered garment display) — deferred
 - [x] ColorSwatch component (ColorDot + color picker in the add-garment form)
@@ -237,6 +260,7 @@
 > ✅ Completed 2026-07-02 (Sprint 5). Provider-agnostic cognitive AI Orchestrator in `@mas/core` (intelligence = M-A-S; models = interchangeable providers); graceful offline degradation; persistent preference memory; no business rule in any provider. Awaiting approval before Phase 6.
 
 ### P0 - LangChain.js Setup
+
 - [x] Configure LangChain.js with multiple providers (lazy `@langchain/*` adapters behind ports — ADR-014)
 - [x] Implement model abstraction layer (core `ITextProvider`/`IEmbedder`/`IVectorIndex` ports + AI Provider Router)
 - [x] Create prompt templates for fashion analysis (Explanation Generator — provider only rephrases domain-decided facts)
@@ -244,6 +268,7 @@
 - [~] Set up conversation memory for context (persistent **preference** memory implemented; chat/conversation memory deferred)
 
 ### P0 - Ollama Integration (Local AI)
+
 - [~] Detect Ollama installation and available models (LangChain `ChatOllama` adapter + availability check; live detection UI deferred)
 - [ ] Implement model download/management UI (deferred — settings/UX phase)
 - [x] Create local inference service (`LangChainTextProvider`/`LangChainEmbeddingProvider` for Ollama, lazy-loaded; `StaticTextProvider` offline default)
@@ -251,6 +276,7 @@
 - [ ] Handle model loading/unloading for memory management (deferred — runtime/ops concern)
 
 ### P1 - Cloud AI Integration
+
 - [x] OpenAI API connector (LangChain `ChatOpenAI`/`OpenAIEmbeddings` adapter behind the port)
 - [x] Anthropic API connector (LangChain `ChatAnthropic` adapter behind the port)
 - [~] API key management and secure storage (config carries provider/model; key handling wired via config, secure OS keystore deferred)
@@ -258,6 +284,7 @@
 - [x] Fallback chain (local -> cloud) (AI Provider Router: priority-ordered availability with offline → rules-only fallback)
 
 ### P1 - AI Pipelines
+
 - [~] Garment analysis pipeline (image -> attributes) (text/attribute embeddings via Embedding Manager; image analysis deferred — needs Sharp/vision)
 - [x] Style recommendation chain (profile + wardrobe -> outfits) — the full 10-step Orchestrator pipeline
 - [x] Color harmony analysis chain (domain `ColorHarmonyService` via `OutfitScoringService`)
@@ -266,6 +293,7 @@
 - [ ] Style transfer suggestions ("Dress like [celebrity/style]") (deferred)
 
 ### P2 - AI Features
+
 - [x] Outfit explanation (why this combination works) — Explanation Generator (template offline, provider-enhanced online)
 - [ ] Shopping recommendations (wardrobe gaps) (deferred)
 - [ ] Trend analysis and suggestions (deferred)
@@ -279,6 +307,7 @@
 > ✅ Completed 2026-07-03 (Sprint 6). Engine-agnostic visualisation core in the new `@mas/rendering` package (ten managers + abstraction, no Three.js/React/AI import) with a swappable Three.js/React-Three-Fiber adapter in `apps/desktop`. Driven by the REAL garments of the recommended outfit; decoupled from the AI engine; no business rules in the renderer; fully replaceable graphics engine. Awaiting approval before Phase 7.
 
 ### P1 - 3D Avatar System
+
 - [x] Set up React Three Fiber renderer (Three.js/R3F adapter over `@mas/rendering`; WebGL render runtime/CI-deferred)
 - [x] Create parametric body model (primitive-based mannequin via the pure `Avatar Manager` + `primitives.ts`; GLTF base model is a data-only extension point)
 - [~] Implement body measurement customization (body-type switching — neutral/feminine/masculine/athletic/plus — done; precise measurement-driven morphs deferred)
@@ -286,6 +315,7 @@
 - [x] Implement camera controls (orbit, zoom) (`Camera Controller`: 360° orbit, clamped zoom, front/back/side view presets)
 
 ### P1 - Garment Rendering
+
 - [x] 2D garment overlay on 3D model (per-garment primitive layers placed by body region over the avatar)
 - [x] Garment positioning and scaling (region-based geometry, scales with avatar)
 - [x] Layer ordering (underwear -> outer) (`Outfit Renderer` draw-order: full-body → lower → upper → feet → outer → accessory; full-body suppresses separates)
@@ -293,6 +323,7 @@
 - [ ] Basic physics simulation (draping) (deferred — needs cloth sim)
 
 ### P2 - Advanced Features
+
 - [x] Multiple angle views (front/back/left/right/three-quarter presets)
 - [x] Screenshot/export functionality (`Screenshot Manager` + canvas read-back; downloads a timestamped PNG/JPEG)
 - [~] Animation (turntable rotation) (manual 360° rotation done; auto-turntable animation deferred)
@@ -300,6 +331,7 @@
 - [ ] AR preview (future - mobile companion) (deferred)
 
 ### Supporting work (Phase 6)
+
 - [x] New `@mas/rendering` workspace package (pure, engine-agnostic; wired into tsconfig paths, project references and the Vitest workspace)
 - [x] `IRenderEngine`/`IScreenshotSink` ports + `SceneDescription` as the replaceable-engine seam (ADR-015)
 - [x] `Render Cache` (order-independent keying, LRU eviction, per-outfit invalidation on recommendation change)
@@ -313,6 +345,7 @@
 > ✅ Completed 2026-07-04 (Sprint 7). Approved roadmap extension (does NOT replace Phase 7). Fully dynamic, user-defined categories (no hardcoded categories), full garment + photo + metadata management, AI-assisted tagging (confirmation-gated), and automatic event-driven cognitive sync. Monorepo offline total 314 → 368 passed / 0 failed, no regressions. Awaiting approval before Phase 7.
 
 ### P0 - Module 1: Dynamic categories (enum → data migration, ADR-017)
+
 - [x] `Category` aggregate (id, name, slug, parentId for unlimited subcategories, group, order, `CategoryMetadata`)
 - [x] `CategoryMetadata` value object (layer slot, formality, comfort, heavy-outerwear, extensible attributes)
 - [x] `ICategoryRepository` port + in-memory implementations (core test support + desktop)
@@ -321,41 +354,50 @@
 - [x] CQRS use cases: Create / Update (rename/regroup/move) / Reorder / Delete / SeedDefaultTaxonomy + GetCategories / GetCategoryTree
 
 ### P0 - Module 2: Garment lifecycle
+
 - [x] Duplicate / Archive / Restore use cases (create/edit/delete already existed) — stable persistent id
 - [x] Pure search / filter / sort + pagination (`searchGarments`, `SearchGarmentsQuery`)
 
 ### P0 - Module 3: Photographs
+
 - [x] `Photograph` value object with non-destructive transforms (rotation, crop, order, primary, stage)
 - [x] Add / Remove / Reorder / Transform / Set-primary use cases
 - [x] `PhotoProcessingPipeline` + `IBackgroundRemover`/`IGarmentSegmenter`/`IImageEnhancer` ports as no-op stages (architecture only, ADR-018)
 
 ### P0 - Module 4: Smart metadata
+
 - [x] Secondary colours, material, purchase date, notes + extensible `attributes` bag (formality from category metadata)
 
 ### P0 - Module 5: AI-assisted tagging (never auto-applied, ADR-020)
+
 - [x] `IGarmentTagSuggester` port + `Suggestion`/`GarmentTagSuggestion` types
 - [x] `SuggestGarmentTagsQuery` (returns only) + `ConfirmGarmentTagsCommand` (applies only approved subset)
 - [x] `DeferredVisionTagSuggester` (vision deferred) + offline `BaselineColorExtractor`
 
 ### P0 - Module 6: Event-driven cognitive sync (ADR-019)
+
 - [x] Wardrobe domain events + `IDomainEventPublisher`/`IDomainEventSubscriber` ports (IEventBus-compatible)
 - [x] `WardrobeSyncCoordinator` fanning out to inventory / semantic index + embeddings / cache / history / preference memory
 - [x] Use cases publish events; `AppContainer` wires the coordinator + seeds the taxonomy at startup
 
 ### P1 - Module 7: UX (pure logic + dynamic categories page)
+
 - [x] Multi-select (incl. shift-range), select-all, bulk-action availability, management sort, status indicators
 - [x] Dynamic categories logic (tree, group, drag-reorder, name validation, delete guard) + `CategoriesPage` manager
 - [ ] Full media-grade grid/list with drag-and-drop upload, zoom/crop editor, side properties panel, quick view (React presentation — CI/runtime-deferred)
 
 ### P1 - Module 8: Performance
+
 - [x] Pagination + list/grid virtualization windowing
 - [x] Thumbnail cache keys + bounded `LruCache`
 - [x] Bounded-concurrency `BackgroundJobQueue`
 
 ### P0 - Module 9: Architecture
+
 - [x] New IPC channels + contract + DTOs + handlers + preload + client for categories/lifecycle/photos/tagging/search (React → IPC → Application → Domain → Infrastructure preserved)
 
 ### P0 - Module 10: Quality
+
 - [x] 54 new offline tests; no regressions (314 → 368 passed / 0 failed)
 - [x] PROJECT_PROGRESS.md, TODO.md, CHANGELOG.md updated; ADR-017…020 recorded
 - [x] `SqlCategoryRepository` + schema migration for category/photo/metadata columns (delivered in Phase 7 Part A — ADR-021/023)
@@ -368,6 +410,7 @@
 > ✅ Completed 2026-07-05 (Sprint 8). Definitive SQL persistence for the dynamic wardrobe + the intelligent outfit history. Monorepo offline total 368 → 394 passed / 0 failed, no regressions. The plugin system (Parts C/D/E) is a separate later delegation and was NOT started. Awaiting approval.
 
 ### P0 - Part A: Definitive wardrobe persistence
+
 - [x] Migration `0001_wardrobe_persistence.sql` (tracked + idempotent): dynamic categories, unlimited subcategories (self-referential `parent_id`), garment photographs, extended metadata, garment↔photo relation, modification/audit history, basic versioning
 - [x] Extend the Drizzle `schema.ts` to match (categories, photographs, garment_history, outfit_history, extended garments)
 - [x] `SqlCategoryRepository` (implements `ICategoryRepository`: CRUD, slug lookup, root/children trees, reorder, cascade delete)
@@ -377,6 +420,7 @@
 - [x] Offline verification: create/edit/delete category, subcategories, add photographs, edit metadata, versioning/audit, **restart-persistence simulation** (reopen DB, data survives)
 
 ### P0 - Part B: Intelligent outfit history
+
 - [x] `OutfitHistoryEntry` domain entity (outfit + date/time/place/event/occasion/weather/temperature/free-text role/comments/satisfaction + extension bag) + `IOutfitHistoryRepository` port (SQL + in-memory)
 - [x] Every ACCEPTED recommendation auto-recorded via the unified `RecordOutfitFeedbackCommand` (also feeds the Phase 5 preference Memory Engine); `RecordOutfitUsage`, `RepeatOutfit`, `AnnotateOutfitHistory`
 - [x] Pure `OutfitHistoryService`: search, filter, sort, pagination, usage statistics, recent-repetition detection
@@ -392,6 +436,7 @@
 > ✅ Completed 2026-07-06 (Sprint 9). The definitive `@mas/plugin-sdk` (pure host kernel) + Extension API + security, with a desktop `PluginHost` bridge. Monorepo offline total 394 → 445 passed / 0 failed, no regressions. Phase 7 is now FULLY complete (A+B+C+D+E+F+G). Awaiting approval before Phase 8.
 
 ### P1 - Plugin SDK
+
 - [x] Define plugin manifest schema (id, name, version, schema version, engine ranges, permissions, contributes) + total validator
 - [x] Create plugin API surface (capability-gated `HostApi`: wardrobe read, recommendations, plugin storage, log, `register`)
 - [x] Implement plugin lifecycle hooks (`PluginModule.activate`/`deactivate` + `PluginContext`)
@@ -399,6 +444,7 @@
 - [ ] Build plugin development CLI tool (deferred — tooling/ecosystem, out of scope this phase)
 
 ### P1 - Plugin Runtime
+
 - [x] Implement Worker Thread sandbox (`IPluginSandbox` port + offline `InProcessPluginSandbox`; `WorkerThreadPluginSandbox` adapter CI/runtime-deferred, ADR-026)
 - [x] Create message passing protocol (main ↔ plugin) — host-API RPC bridge + contribution-invoke proxy in the worker adapter (runtime-deferred)
 - [x] Implement permission system (capability vocabulary, `PermissionGuard` enforced on every API call + contribution registration, ADR-028)
@@ -406,12 +452,14 @@
 - [x] Implement plugin state persistence (plugin-scoped key/value storage via the `storage:plugin` capability + `InMemoryPluginStorageProvider`)
 
 ### Plugin versioning, compatibility & security (Parts C/E)
+
 - [x] Plugin versioning + host/SDK compatibility validation (semver parser/range + `CompatibilityChecker` against declared `engines.mas`/`engines.sdk`)
 - [x] Plugin signing + verification (Ed25519 over canonical package bytes; Verified/Unsigned/Invalid/Untrusted + policy; tamper detection)
 - [x] Safe error handling (faulting plugin contained → `Failed`, contributions withdrawn, host stays healthy)
 - [x] Activity logging / audit trail (`ActivityLog` → `PluginActivityLogger`, infra `ILogger`-compatible)
 
 ### P1 - Extension API (Part D — extend WITHOUT modifying the core)
+
 - [x] AI providers + embedders (→ Phase-5 `ITextProvider`/`IEmbedder` via `AIProviderRouter`)
 - [x] Rendering engines (→ Phase-6 `IRenderEngine` seam)
 - [x] Analyzers, importers, exporters, image formats
@@ -420,6 +468,7 @@
 - [x] New garment types + new category types (leveraging Phase-6.5 dynamic categories)
 
 ### P2 - Plugin Ecosystem
+
 - [x] Create plugin template/boilerplate (the `createInProcessSource` helper + the sample plugin serve as the reference template)
 - [ ] Build plugin marketplace UI (local directory) — out of scope (later)
 - [~] Write sample plugins:
@@ -434,45 +483,55 @@
 
 ## Phase 8: Polish, Testing & Distribution
 
+> 🚧 In progress (Sprint 10, started 2026-06-29). Distribution pipeline + production-defect fixes delivered; the real installer is produced in CI (`release.yml`) / a networked machine since the offline sandbox cannot download Electron binaries.
+
 ### P1 - Testing
-- [ ] Unit tests for domain entities and services (>80% coverage)
-- [ ] Unit tests for infrastructure repositories
-- [ ] Integration tests for API endpoints
-- [ ] Integration tests for AI pipelines (mocked)
-- [ ] E2E tests for critical user flows (Playwright)
-- [ ] Visual regression tests for UI components
-- [ ] Performance benchmarks
+
+- [x] Unit tests for domain entities and services (>80% coverage) — 146 core tests
+- [x] Unit tests for infrastructure repositories — 93 infra tests (incl. embedded-migration drift/apply)
+- [~] Integration tests for API endpoints — IPC/CQRS integration covered (AppContainer SQL); HTTP API superseded by IPC (ADR-009)
+- [x] Integration tests for AI pipelines (mocked) — orchestrator end-to-end with deterministic providers
+- [ ] E2E tests for critical user flows (Playwright) — config present; run needs the packaged app (CI/runtime)
+- [ ] Visual regression tests for UI components — pending
+- [ ] Performance benchmarks — pending
 
 ### P1 - Performance
+
 - [ ] Implement lazy loading for images
-- [ ] Add virtualized lists for large wardrobes
-- [ ] Optimize SQLite queries with indices
-- [ ] Implement service worker for caching
+- [x] Add virtualized lists for large wardrobes (pure windowing logic — Phase 6.5 Module 8)
+- [x] Optimize SQLite queries with indices (migration `0002_performance_indexes.sql`)
+- [ ] Implement service worker for caching (N/A for Electron; deferred)
 - [ ] Profile and optimize memory usage
-- [ ] Reduce Electron bundle size
+- [x] Reduce Electron bundle size (workspace `@mas/*` bundled into main; native deps externalized + asar-unpacked)
 
 ### P2 - Accessibility & i18n
+
 - [ ] WCAG 2.1 AA compliance audit
 - [ ] Keyboard navigation support
 - [ ] Screen reader announcements
 - [ ] High contrast theme
-- [ ] i18n setup (English, Spanish initially)
+- [ ] i18n setup (English, Spanish initially) — UI currently Spanish; i18n framework deferred
 - [ ] RTL language support preparation
 
 ### P2 - Distribution
-- [ ] Configure electron-builder for Windows
-- [ ] Create NSIS installer
-- [ ] Implement auto-update (electron-updater + GitHub Releases)
-- [ ] Code signing certificate setup
-- [ ] Create portable version (no install)
-- [ ] Write installation documentation
+
+- [x] Configure electron-builder for Windows (+ macOS, Linux) — `electron-builder.yml`
+- [x] Create NSIS installer (+ portable target)
+- [x] Implement auto-update (electron-updater + GitHub Releases) — `src/main/updater.ts` + `publish` feed
+- [~] Code signing certificate setup — documented (env-var driven); pending real certificates
+- [x] Create portable version (no install) — Windows portable target
+- [x] Write installation documentation — `docs/DISTRIBUTION.md`
+- [x] Release CI workflow (tagged `v*` → GitHub Release on win/mac/linux) — `.github/workflows/release.yml`
+- [x] Fix CI install (relaxed frozen-lockfile until a lockfile is committed)
 
 ### P3 - Documentation
-- [ ] API documentation (internal Fastify routes)
+
+- [ ] API documentation (internal Fastify routes) — N/A (IPC bridge; ADR-009)
 - [ ] Plugin SDK developer guide
 - [ ] User manual / help system
-- [ ] Architecture documentation (C4 diagrams)
+- [ ] Architecture documentation (C4 diagrams) — ADRs documented in PROJECT_PROGRESS
 - [ ] Contributing guide
+- [x] Distribution / build documentation (`docs/DISTRIBUTION.md`)
 
 ---
 
@@ -491,4 +550,4 @@
 
 ---
 
-*Last updated: 2026-07-06*
+_Last updated: 2026-07-06_

@@ -1,0 +1,83 @@
+# electron-builder configuration — M-A-S desktop distribution (Phase 8).
+#
+# Produces installable/portable artifacts for Windows, macOS and Linux from the
+# electron-vite output in `out/`. Run AFTER `pnpm --filter @mas/desktop build`
+# (which populates `out/main`, `out/preload`, `out/renderer`).
+#
+# NOTE: native modules (better-sqlite3) are unpacked from the asar archive so
+# the bundled `.node` binary can be loaded at runtime.
+appId: com.modeaisystem.app
+productName: Mode AI System
+copyright: Copyright © 2026 M-A-S
+
+directories:
+  output: release
+  buildResources: build
+
+# Only the electron-vite output and the manifest are needed inside the app —
+# the renderer/main/preload are already bundled, and the workspace `@mas/*`
+# packages are bundled into the main bundle (see electron.vite.config.ts).
+files:
+  - out/**/*
+  - package.json
+
+# Keep native binaries outside the asar so they can be dlopen'd at runtime.
+asar: true
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**'
+  - '**/*.node'
+
+# Rebuild native deps against the bundled Electron's ABI when packaging.
+npmRebuild: true
+
+# ---- Auto-update feed (GitHub Releases) ----
+publish:
+  provider: github
+  owner: andresdoor90-arch
+  repo: mode-ai-system
+  releaseType: release
+
+# ---- Windows ----
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Mode AI System
+  deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
+
+# ---- macOS ----
+mac:
+  category: public.app-category.lifestyle
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+# ---- Linux ----
+linux:
+  category: Utility
+  target:
+    - target: AppImage
+      arch: [x64]
+  maintainer: M-A-S
+  artifactName: ${productName}-${version}-${arch}.${ext}

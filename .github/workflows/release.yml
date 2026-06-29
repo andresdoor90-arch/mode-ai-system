@@ -1,0 +1,79 @@
+name: Release
+
+# Builds and publishes the desktop installers (Windows/macOS/Linux) when a
+# version tag is pushed (e.g. `v1.0.0`), and uploads them to a GitHub Release.
+# This is the canonical path to a distributable executable: GitHub-hosted
+# runners have registry/network access, so `pnpm install` and the Electron
+# binary download work here (unlike the offline authoring sandbox).
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+env:
+  PNPM_VERSION: 9.7.1
+  NODE_VERSION: 22
+
+jobs:
+  release:
+    name: Package ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build workspace packages
+        run: pnpm build:packages
+
+      - name: Package (Windows)
+        if: matrix.os == 'windows-latest'
+        run: pnpm --filter @mas/desktop package:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package (macOS)
+        if: matrix.os == 'macos-latest'
+        run: pnpm --filter @mas/desktop package:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: pnpm --filter @mas/desktop package:linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installers as workflow artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.zip
+          if-no-files-found: ignore
+          retention-days: 14

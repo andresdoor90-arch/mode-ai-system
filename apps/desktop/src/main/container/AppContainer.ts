@@ -134,6 +134,7 @@ import {
 } from '@mas/core';
 
 import {
+  EMBEDDED_MIGRATIONS,
   FilePreferenceMemoryStore,
   InMemoryEventBus,
   InMemoryPreferenceMemoryStore,
@@ -141,15 +142,9 @@ import {
   MigrationRunner,
   type SqlDatabase,
   createSqliteDatabase,
-  defaultMigrationsDir,
-  loadMigrations,
 } from '@mas/infrastructure';
 
-import {
-  createInMemoryPersistence,
-  createSqlPersistence,
-  type Persistence,
-} from './persistence';
+import { createInMemoryPersistence, createSqlPersistence, type Persistence } from './persistence';
 
 /** The wired repository ports (SQL-backed in production, swappable for tests). */
 export type Repositories = Persistence;
@@ -297,9 +292,11 @@ export class AppContainer {
     }
 
     // Apply migrations to whatever real database backs us (idempotent + tracked).
+    // Use the embedded migration SQL (not filesystem reads) so this works inside
+    // a packaged Electron asar where the raw .sql assets are not available.
     if (database !== undefined) {
       const runner = new MigrationRunner(database);
-      runner.migrate(await loadMigrations(defaultMigrationsDir()));
+      runner.migrate(EMBEDDED_MIGRATIONS);
     }
 
     const container = new AppContainer(persistence, options, database);

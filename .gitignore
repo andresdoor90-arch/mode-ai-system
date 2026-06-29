@@ -8,6 +8,10 @@ out/
 build/
 *.tsbuildinfo
 
+# ...but the desktop electron-builder resources dir is source, not output.
+!apps/desktop/build/
+!apps/desktop/build/**
+
 # Test & coverage
 coverage/
 test-results/
