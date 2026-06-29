@@ -1,0 +1,31 @@
+{
+  "name": "@mas/rendering",
+  "version": "0.6.0",
+  "private": true,
+  "description": "M-A-S engine-agnostic virtual try-on / avatar rendering layer. Pure TypeScript abstraction (managers, scene description, camera/view math, render cache) with NO Three.js, React or DOM import. A graphics engine (Three.js/R3F) is supplied as a swappable adapter in apps/desktop.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rimraf dist *.tsbuildinfo"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
+}

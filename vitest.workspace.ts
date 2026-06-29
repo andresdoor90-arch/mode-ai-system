@@ -10,6 +10,7 @@ import { defineWorkspace } from 'vitest/config';
 export default defineWorkspace([
   'packages/core/vitest.config.ts',
   'packages/infrastructure/vitest.config.ts',
+  'packages/rendering/vitest.config.ts',
   'packages/plugin-sdk/vitest.config.ts',
   'apps/desktop/vitest.config.ts',
 ]);

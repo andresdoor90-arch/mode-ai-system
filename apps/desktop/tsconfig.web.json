@@ -11,10 +11,13 @@
     "baseUrl": ".",
     "paths": {
       "@renderer/*": ["src/renderer/src/*"],
+      "@shared/*": ["src/shared/*"],
       "@mas/core": ["../../packages/core/src/index.ts"],
       "@mas/core/*": ["../../packages/core/src/*"],
       "@mas/infrastructure": ["../../packages/infrastructure/src/index.ts"],
       "@mas/infrastructure/*": ["../../packages/infrastructure/src/*"],
+      "@mas/rendering": ["../../packages/rendering/src/index.ts"],
+      "@mas/rendering/*": ["../../packages/rendering/src/*"],
       "@mas/plugin-sdk": ["../../packages/plugin-sdk/src/index.ts"],
       "@mas/plugin-sdk/*": ["../../packages/plugin-sdk/src/*"]
     }
@@ -22,7 +25,8 @@
   "references": [
     { "path": "../../packages/core" },
     { "path": "../../packages/infrastructure" },
+    { "path": "../../packages/rendering" },
     { "path": "../../packages/plugin-sdk" }
   ],
-  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"]
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "src/shared/**/*.ts", "tests/**/*.ts", "tests/**/*.tsx"]
 }

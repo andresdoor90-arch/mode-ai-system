@@ -15,6 +15,7 @@ export default mergeConfig(
     resolve: {
       alias: {
         '@renderer': resolve(rootDir, 'src/renderer/src'),
+        '@shared': resolve(rootDir, 'src/shared'),
       },
     },
     test: {

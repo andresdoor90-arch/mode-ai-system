@@ -12,11 +12,22 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
  *  - `renderer`: the React single-page app (browser environment)
  *
  * `externalizeDepsPlugin` keeps node/native dependencies out of the main and
- * preload bundles so Electron resolves them at runtime.
+ * preload bundles so Electron resolves them at runtime. The workspace
+ * `@mas/*` packages are explicitly EXCLUDED from externalization (i.e. bundled
+ * in) so the packaged app does not have to resolve pnpm workspace symlinks at
+ * runtime — only genuine third-party/native modules (e.g. better-sqlite3,
+ * electron-updater) stay external and are resolved from node_modules.
  */
+const WORKSPACE_PACKAGES = [
+  '@mas/core',
+  '@mas/infrastructure',
+  '@mas/rendering',
+  '@mas/plugin-sdk',
+];
+
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })],
     build: {
       outDir: 'out/main',
       rollupOptions: {
@@ -25,7 +36,7 @@ export default defineConfig({
     },
   },
   preload: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: WORKSPACE_PACKAGES })],
     build: {
       outDir: 'out/preload',
       rollupOptions: {
@@ -38,6 +49,7 @@ export default defineConfig({
     resolve: {
       alias: {
         '@renderer': resolve(__dirname, 'src/renderer/src'),
+        '@shared': resolve(__dirname, 'src/shared'),
       },
     },
     plugins: [react()],

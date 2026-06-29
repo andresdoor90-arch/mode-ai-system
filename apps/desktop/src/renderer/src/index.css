@@ -1,29 +1,149 @@
-:root {
-  color-scheme: light dark;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens.
+ *
+ * Every colour is an HSL triplet exposed as a CSS custom property so the whole
+ * UI can be retinted by editing this one block. Light is the default; `.dark`
+ * (set on <html> by the ThemeProvider) overrides the same variables. Tailwind
+ * maps these to semantic utilities in tailwind.config.cjs.
+ */
+@layer base {
+  :root {
+    --background: 220 24% 98%;
+    --foreground: 222 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 30% 12%;
+
+    --primary: 244 64% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 16% 94%;
+    --secondary-foreground: 222 25% 20%;
+
+    --muted: 220 16% 94%;
+    --muted-foreground: 220 10% 44%;
+
+    --accent: 244 70% 96%;
+    --accent-foreground: 244 60% 40%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 56% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 38 92% 12%;
+
+    --border: 220 16% 88%;
+    --input: 220 16% 86%;
+    --ring: 244 64% 56%;
+
+    --sidebar: 224 32% 12%;
+    --sidebar-foreground: 220 16% 82%;
+    --sidebar-accent: 244 64% 60%;
+    --sidebar-border: 224 24% 20%;
+
+    --shadow-color: 222 47% 30%;
+
+    --radius: 0.7rem;
+  }
+
+  .dark {
+    --background: 222 28% 8%;
+    --foreground: 220 18% 92%;
+
+    --card: 222 26% 11%;
+    --card-foreground: 220 18% 92%;
+
+    --popover: 222 26% 11%;
+    --popover-foreground: 220 18% 92%;
+
+    --primary: 245 80% 67%;
+    --primary-foreground: 222 40% 8%;
+
+    --secondary: 222 18% 18%;
+    --secondary-foreground: 220 18% 90%;
+
+    --muted: 222 18% 16%;
+    --muted-foreground: 220 12% 60%;
+
+    --accent: 245 40% 22%;
+    --accent-foreground: 245 80% 84%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 50% 46%;
+    --success-foreground: 152 60% 8%;
+
+    --warning: 38 90% 56%;
+    --warning-foreground: 38 92% 10%;
+
+    --border: 222 16% 20%;
+    --input: 222 16% 22%;
+    --ring: 245 80% 67%;
+
+    --sidebar: 224 34% 9%;
+    --sidebar-foreground: 220 16% 78%;
+    --sidebar-accent: 245 80% 67%;
+    --sidebar-border: 224 22% 16%;
+
+    --shadow-color: 0 0% 0%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    margin: 0;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
+
+  /* Refined, low-profile scrollbars consistent with the desktop aesthetic. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-muted-foreground/30;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  min-height: 100vh;
-}
-
-.app-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 2rem;
-  text-align: center;
+@layer components {
+  /* Subtle skeleton shimmer used by the Skeleton component. */
+  .skeleton-shimmer::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full;
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--foreground) / 0.06),
+      transparent
+    );
+    @apply animate-shimmer;
+  }
 }
