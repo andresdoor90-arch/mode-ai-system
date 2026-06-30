@@ -2,6 +2,7 @@ export * from './AIProvider';
 export * from './BaseAIProvider';
 export * from './OllamaClient';
 export * from './OllamaVisionProvider';
+export * from './LlmOutfitPlanner';
 export * from './StaticTextProvider';
 export * from './providers/OllamaProvider';
 export * from './providers/OpenAIProvider';

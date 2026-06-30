@@ -42,7 +42,13 @@ import { PreferenceEngine } from './PreferenceEngine';
 import { MemoryEngine } from './MemoryEngine';
 import { AIProviderRouter } from './AIProviderRouter';
 import { EmbeddingManager } from './EmbeddingManager';
-import { type ITextProvider } from './ports';
+import {
+  type IOutfitPlanner,
+  type ITextProvider,
+  type PlannedOutfit,
+  type PlannerContext,
+  type PlannerGarment,
+} from './ports';
 import {
   RECOMMENDATION_LABELS,
   type OutfitRecommendation,
@@ -65,6 +71,13 @@ export interface AIOrchestratorDeps {
   readonly embeddings?: EmbeddingManager;
   /** Persistent preference memory; absent ⇒ no learning applied. */
   readonly memory?: MemoryEngine;
+  /**
+   * Optional LLM outfit planner. When available it MAKES the styling decision
+   * (selects the garments) and explains it; the orchestrator validates its
+   * choices against the wardrobe and re-scores them, and falls back to the rule
+   * engine when it is unavailable or returns nothing usable.
+   */
+  readonly planner?: IOutfitPlanner;
   /** Override the domain scorer (e.g. custom weights). */
   readonly scoring?: OutfitScoringService;
   /** Injectable clock for deterministic timestamps/reference dates. */
@@ -82,11 +95,13 @@ export class AIOrchestrator {
   private readonly ranking: OutfitRankingEngine;
   private readonly explanations = new ExplanationGenerator();
   private readonly preferences = new PreferenceEngine();
+  private readonly scorer: OutfitScoringService;
 
   public constructor(private readonly deps: AIOrchestratorDeps) {
     this.history = new HistoryAnalyzer(deps.outfits, deps.history);
     this.inventory = new InventoryAnalyzer(deps.garments);
-    this.ranking = new OutfitRankingEngine(deps.scoring ?? new OutfitScoringService());
+    this.scorer = deps.scoring ?? new OutfitScoringService();
+    this.ranking = new OutfitRankingEngine(this.scorer);
   }
 
   /** Run the full pipeline and return up to three explained recommendations. */
@@ -122,6 +137,28 @@ export class AIOrchestrator {
     const inventory = await this.inventory.forContext(context);
     notes.push(`Inventory: ${inventory.all.length} eligible garment(s).`);
 
+    // 6′. LLM-DRIVEN SELECTION (preferred). When an outfit planner (a real LLM,
+    // e.g. local qwen2.5vl via Ollama) is available, let it MAKE the styling
+    // decision and write the explanation, reasoning over the eligible wardrobe.
+    // We validate its choices and re-score them with the domain scorer. If it is
+    // unavailable or returns nothing usable, we fall through to the rule engine.
+    if (this.deps.planner !== undefined) {
+      let plannerAvailable = false;
+      try {
+        plannerAvailable = await this.deps.planner.isAvailable();
+      } catch {
+        plannerAvailable = false;
+      }
+      if (plannerAvailable) {
+        const llm = await this.tryLlmRecommend(context, inventory.all, referenceDate, notes);
+        if (llm !== null) {
+          return llm;
+        }
+      } else {
+        notes.push('LLM planner not available; using domain rules.');
+      }
+    }
+
     // 8a. Decide on a provider up-front (drives explanations + degradation flag).
     const selection = this.deps.router
       ? await this.deps.router.select()
@@ -154,7 +191,10 @@ export class AIOrchestrator {
     const ranked = this.ranking.rank(candidates, context.occasion, context.season, scoringContext, {
       ...(semanticScores !== undefined ? { semanticScores } : {}),
       ...(memorySnapshot !== undefined
-        ? { affinityBias: (g: readonly Garment[]) => this.preferences.affinityBias(g, memorySnapshot) }
+        ? {
+            affinityBias: (g: readonly Garment[]) =>
+              this.preferences.affinityBias(g, memorySnapshot),
+          }
         : {}),
     });
 
@@ -186,8 +226,7 @@ export class AIOrchestrator {
     }
     const pool = ranked.slice(0, SELECTION_POOL);
     const used = new Set<string>();
-    const sig = (c: RankedCandidate): string =>
-      OutfitScoringService.signatureOf(c.garments);
+    const sig = (c: RankedCandidate): string => OutfitScoringService.signatureOf(c.garments);
 
     const pickFrom = (sorted: readonly RankedCandidate[]): RankedCandidate | undefined => {
       for (const candidate of sorted) {
@@ -253,6 +292,153 @@ export class AIOrchestrator {
       });
     }
     return recommendations;
+  }
+
+  /**
+   * Try to produce recommendations via the LLM planner. Returns `null` (so the
+   * caller falls back to rules) when the planner errors, the wardrobe is empty,
+   * or every proposed outfit is unusable (e.g. hallucinated ids). All returned
+   * garments are real wardrobe items and every outfit is re-scored by the domain
+   * scorer; the explanation is the model's own.
+   */
+  private async tryLlmRecommend(
+    context: RecommendationContext,
+    garments: readonly Garment[],
+    referenceDate: string,
+    notes: string[],
+  ): Promise<RecommendationSet | null> {
+    const planner = this.deps.planner;
+    if (planner === undefined || garments.length === 0) {
+      return null;
+    }
+    let planned: readonly PlannedOutfit[];
+    try {
+      planned = await planner.plan(this.toPlannerContext(context), this.toPlannerCatalog(garments));
+    } catch {
+      notes.push('LLM planner errored; falling back to domain rules.');
+      return null;
+    }
+
+    const byId = new Map(garments.map((g) => [g.id, g] as const));
+    const scoringContext: ScoringContext = {
+      ...(context.weather !== undefined ? { weather: context.weather } : {}),
+      referenceDate,
+    };
+
+    const recommendations: OutfitRecommendation[] = [];
+    const usedKinds = new Set<RecommendationKind>();
+    const usedSignatures = new Set<string>();
+    const kindOrder: readonly RecommendationKind[] = ['principal', 'mas-elegante', 'mas-comoda'];
+
+    for (const outfit of planned) {
+      const chosen: Garment[] = [];
+      const seen = new Set<string>();
+      for (const id of outfit.garmentIds) {
+        const garment = byId.get(id);
+        if (garment !== undefined && !seen.has(garment.id)) {
+          seen.add(garment.id);
+          chosen.push(garment);
+        }
+      }
+      if (chosen.length === 0) {
+        continue; // ignore hallucinated / empty selections
+      }
+      const signature = OutfitScoringService.signatureOf(chosen);
+      if (usedSignatures.has(signature)) {
+        continue; // skip duplicate outfits
+      }
+      let kind = this.normalizeKind(outfit.kind);
+      if (kind === null || usedKinds.has(kind)) {
+        kind = kindOrder.find((k) => !usedKinds.has(k)) ?? null;
+      }
+      if (kind === null) {
+        break; // the three roles are filled
+      }
+      usedKinds.add(kind);
+      usedSignatures.add(signature);
+      const breakdown = this.scorer.scoreCombination(
+        chosen,
+        context.occasion,
+        context.season,
+        scoringContext,
+      );
+      const explanation = outfit.explanation.trim();
+      recommendations.push({
+        kind,
+        label: RECOMMENDATION_LABELS[kind],
+        garments: chosen,
+        score: breakdown.score,
+        breakdown,
+        explanation:
+          explanation.length > 0
+            ? explanation
+            : 'Conjunto elegido por el asesor según tu contexto y tu guardarropa.',
+      });
+    }
+
+    if (recommendations.length === 0) {
+      notes.push('LLM planner returned no usable outfit; falling back to domain rules.');
+      return null;
+    }
+
+    notes.push(`Outfits selected and explained by the LLM planner "${planner.id}".`);
+    return {
+      context: { ...context, enrichedByProvider: true },
+      recommendations,
+      providerId: planner.id,
+      degraded: false,
+      candidatesEvaluated: garments.length,
+      notes,
+    };
+  }
+
+  /** Map the eligible inventory into the flat catalog the planner reasons over. */
+  private toPlannerCatalog(garments: readonly Garment[]): PlannerGarment[] {
+    return garments.map((g) => ({
+      id: g.id,
+      name: g.name,
+      category: String(g.category),
+      subcategory: String(g.subcategory),
+      colorName: g.color.name ?? '',
+      colorHex: g.color.hex,
+      formality: garmentFormality(g.subcategory),
+      layerSlot: String(g.layerSlot),
+      seasons: g.seasons.map((s) => String(s)),
+    }));
+  }
+
+  /** Project the derived context into the planner's plain shape. */
+  private toPlannerContext(context: RecommendationContext): PlannerContext {
+    const weather =
+      context.weather?.isHot === true
+        ? 'caluroso'
+        : context.weather?.isCold === true
+          ? 'frío'
+          : undefined;
+    return {
+      message: context.rawMessage,
+      occasion: String(context.occasion),
+      season: String(context.season),
+      targetFormality: context.targetFormality,
+      ...(weather !== undefined ? { weather } : {}),
+      ...(context.timeOfDay !== undefined ? { timeOfDay: context.timeOfDay } : {}),
+      ...(context.activity !== undefined ? { activity: context.activity } : {}),
+    };
+  }
+
+  /** Map a free planner label onto one of the three recommendation roles. */
+  private normalizeKind(raw: string): RecommendationKind | null {
+    const k = raw.toLowerCase();
+    if (/eleg|formal/.test(k)) {
+      return 'mas-elegante';
+    }
+    if (/comod|cómod|casual|relaj|comfort/.test(k)) {
+      return 'mas-comoda';
+    }
+    if (/princip|main|mejor|best/.test(k)) {
+      return 'principal';
+    }
+    return null;
   }
 
   private fallbackContext(request: RecommendationRequest): RecommendationContext {

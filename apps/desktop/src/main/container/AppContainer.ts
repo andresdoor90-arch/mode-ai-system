@@ -137,6 +137,7 @@ import {
   InMemoryPreferenceMemoryStore,
   InMemoryVectorStore,
   LocalFileStorage,
+  LlmOutfitPlanner,
   MigrationRunner,
   OllamaClient,
   OllamaProvider,
@@ -174,6 +175,8 @@ interface OllamaConfig {
   readonly visionModel: string;
   readonly textModel: string;
   readonly embeddingModel: string;
+  /** Model used by the outfit advisor to reason over the wardrobe. */
+  readonly advisorModel: string;
 }
 
 /**
@@ -193,6 +196,10 @@ function resolveOllamaConfig(): OllamaConfig {
     visionModel: env.MAS_OLLAMA_VISION_MODEL ?? 'qwen2.5vl:7b',
     textModel: env.MAS_OLLAMA_TEXT_MODEL ?? 'llama3.1',
     embeddingModel: env.MAS_OLLAMA_EMBED_MODEL ?? 'nomic-embed-text',
+    // The advisor reasons over the wardrobe as TEXT; default to the vision
+    // model the user already has (qwen2.5vl handles text too), so the advisor
+    // works out of the box without requiring a separate text model.
+    advisorModel: env.MAS_OLLAMA_ADVISOR_MODEL ?? env.MAS_OLLAMA_VISION_MODEL ?? 'qwen2.5vl:7b',
   };
 }
 
@@ -270,6 +277,17 @@ export class AppContainer {
       : [];
     this.router = new AIProviderRouter(textProviders);
 
+    // Outfit advisor: when Ollama is enabled, a local LLM (qwen2.5vl by default)
+    // MAKES the styling decision and explains it, reasoning over the real
+    // wardrobe. It self-gates via isAvailable(), so without the model installed
+    // the orchestrator falls back to its offline rule engine (zero regression).
+    const planner = ollama.enabled
+      ? new LlmOutfitPlanner({
+          client: new OllamaClient({ baseUrl: ollama.host, timeoutMs: 180_000 }),
+          model: ollama.advisorModel,
+        })
+      : undefined;
+
     this.orchestrator = new AIOrchestrator({
       garments: this.repositories.garments,
       outfits: this.repositories.outfits,
@@ -279,6 +297,7 @@ export class AppContainer {
       history: this.repositories.history,
       router: this.router,
       memory: this.memory,
+      ...(planner !== undefined ? { planner } : {}),
     });
 
     // Module 6: automatically keep the cognitive subsystems in sync with every

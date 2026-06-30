@@ -53,6 +53,77 @@ export interface ITextProvider {
   isAvailable(): Promise<boolean>;
 }
 
+/**
+ * A single garment, flattened to the plain attributes an LLM needs to reason
+ * about an outfit. Built by the orchestrator from the eligible inventory and
+ * handed to an {@link IOutfitPlanner}; it carries the garment `id` so the
+ * planner's choices can be validated back against the real wardrobe.
+ */
+export interface PlannerGarment {
+  readonly id: string;
+  readonly name: string;
+  readonly category: string;
+  readonly subcategory: string;
+  /** Human colour name when known (e.g. "azul marino"). */
+  readonly colorName: string;
+  readonly colorHex: string;
+  /** Formality on the 0–10 domain scale. */
+  readonly formality: number;
+  /** Structural body zone (LayerSlot value). */
+  readonly layerSlot: string;
+  readonly seasons: readonly string[];
+}
+
+/**
+ * The interpreted context handed to an {@link IOutfitPlanner}. Mirrors the
+ * fields M-A-S already derives from the user's message so the model reasons
+ * with the same understanding the rules use.
+ */
+export interface PlannerContext {
+  /** The user's original free-text message. */
+  readonly message: string;
+  readonly occasion: string;
+  readonly season: string;
+  /** Target formality 0–10 implied by the occasion. */
+  readonly targetFormality: number;
+  /** Short weather hint when known (e.g. "caluroso", "frío"). */
+  readonly weather?: string;
+  readonly timeOfDay?: string;
+  readonly activity?: string;
+}
+
+/**
+ * One outfit the planner proposes: the chosen garment ids (which the
+ * orchestrator validates against the wardrobe) plus a natural-language
+ * explanation. `kind` is a free label the orchestrator maps to a recommendation
+ * role; unknown/missing kinds are assigned by order.
+ */
+export interface PlannedOutfit {
+  readonly kind: string;
+  readonly garmentIds: readonly string[];
+  readonly explanation: string;
+}
+
+/**
+ * Provider-agnostic OUTFIT PLANNING port — the seam that lets a real LLM make
+ * the styling DECISION (which garments to wear) and explain it, instead of the
+ * domain rules. The orchestrator uses it ONLY when available and ALWAYS
+ * validates the returned ids against the real wardrobe and re-scores the chosen
+ * outfit with the domain scorer; when the planner is unavailable or returns
+ * nothing usable, the orchestrator falls back to its rule-based selection. This
+ * keeps the LLM in charge of taste while the domain stays in charge of truth.
+ */
+export interface IOutfitPlanner {
+  readonly id: string;
+  /** Whether the planner (model) is reachable/installed right now. */
+  isAvailable(): Promise<boolean>;
+  /** Propose up to three outfits for the context, choosing from the catalog. */
+  plan(
+    context: PlannerContext,
+    catalog: readonly PlannerGarment[],
+  ): Promise<readonly PlannedOutfit[]>;
+}
+
 /** Result of an embedding request: one vector per input. */
 export interface EmbeddingVectorResult {
   readonly vectors: readonly (readonly number[])[];
@@ -67,7 +138,10 @@ export interface EmbeddingVectorResult {
 export interface IEmbedder {
   readonly id: string;
   readonly dimension: number;
-  embed(inputs: readonly string[], options?: { readonly model?: string }): Promise<EmbeddingVectorResult>;
+  embed(
+    inputs: readonly string[],
+    options?: { readonly model?: string },
+  ): Promise<EmbeddingVectorResult>;
 }
 
 /** A stored vector with arbitrary metadata. */
