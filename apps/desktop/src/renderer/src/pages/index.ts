@@ -1,4 +1,5 @@
 /** Barrel for route page components. */
+export { AdvisorPage } from './AdvisorPage';
 export { DashboardPage } from './DashboardPage';
 export { WardrobePage } from './WardrobePage';
 export { CategoriesPage } from './CategoriesPage';

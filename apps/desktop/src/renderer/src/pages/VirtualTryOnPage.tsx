@@ -8,8 +8,8 @@
  * minimal mannequin, which updates immediately. No 3D, no WebGL: instant and
  * stable.
  */
-import { Shirt, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Shirt, Sparkles, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { EmptyState } from '../components/common/EmptyState';
 import { GarmentImage } from '../components/common/GarmentImage';
@@ -22,10 +22,12 @@ import { thumbnailKeyOf } from '../lib/garmentImages';
 import {
   buildOutfitLayers,
   OUTFIT_SLOTS,
+  selectionFromGarments,
   slotForGarment,
   type OutfitSelection,
   type SlotId,
 } from '../lib/outfitModel';
+import { useRecommendationStore } from '../store/recommendationStore';
 import { useWardrobeStore } from '../store/wardrobeStore';
 
 export function VirtualTryOnPage(): JSX.Element {
@@ -33,13 +35,36 @@ export function VirtualTryOnPage(): JSX.Element {
   const load = useWardrobeStore((s) => s.load);
   const garments = useWardrobeStore((s) => s.garments);
 
+  // The advisor can ask us to dress the mannequin with its chosen outfit. We
+  // apply it ONCE per request (tracked by a nonce) so the user can keep editing.
+  const recoSet = useRecommendationStore((s) => s.set);
+  const recoKind = useRecommendationStore((s) => s.selectedKind);
+  const tryOnRequestId = useRecommendationStore((s) => s.tryOnRequestId);
+
   const [selection, setSelection] = useState<OutfitSelection>({});
+  const [fromAdvisor, setFromAdvisor] = useState(false);
+  const appliedRequestRef = useRef(0);
 
   useEffect(() => {
     if (!loaded) {
       void load();
     }
   }, [loaded, load]);
+
+  useEffect(() => {
+    if (tryOnRequestId === 0 || tryOnRequestId === appliedRequestRef.current) {
+      return;
+    }
+    appliedRequestRef.current = tryOnRequestId;
+    const rec =
+      recoSet?.recommendations.find((r) => r.kind === recoKind) ??
+      recoSet?.recommendations[0] ??
+      null;
+    if (rec !== null && rec !== undefined) {
+      setSelection(selectionFromGarments(rec.garments));
+      setFromAdvisor(true);
+    }
+  }, [tryOnRequestId, recoSet, recoKind]);
 
   // Garments grouped by the body slot they occupy (only wearable ones).
   const bySlot = useMemo(() => {
@@ -63,6 +88,7 @@ export function VirtualTryOnPage(): JSX.Element {
   const layers = useMemo(() => buildOutfitLayers(selection), [selection]);
 
   const assign = (slot: SlotId, garmentId: string): void => {
+    setFromAdvisor(false);
     setSelection((prev) => {
       if (prev[slot]?.id === garmentId) {
         const next = { ...prev };
@@ -74,14 +100,19 @@ export function VirtualTryOnPage(): JSX.Element {
     });
   };
 
-  const clearSlot = (slot: SlotId): void =>
+  const clearSlot = (slot: SlotId): void => {
+    setFromAdvisor(false);
     setSelection((prev) => {
       const next = { ...prev };
       delete next[slot];
       return next;
     });
+  };
 
-  const clearAll = (): void => setSelection({});
+  const clearAll = (): void => {
+    setFromAdvisor(false);
+    setSelection({});
+  };
 
   if (loaded && garments.length === 0) {
     return (
@@ -105,10 +136,18 @@ export function VirtualTryOnPage(): JSX.Element {
         title="Probador virtual"
         description="Elige una prenda por zona y míralas combinadas en el maniquí al instante."
         actions={
-          <Button variant="outline" onClick={clearAll} disabled={layers.length === 0}>
-            <X className="h-4 w-4" />
-            Vaciar conjunto
-          </Button>
+          <div className="flex items-center gap-2">
+            {fromAdvisor && (
+              <Badge variant="secondary">
+                <Sparkles className="h-3.5 w-3.5" />
+                Vestido por el asesor
+              </Badge>
+            )}
+            <Button variant="outline" onClick={clearAll} disabled={layers.length === 0}>
+              <X className="h-4 w-4" />
+              Vaciar conjunto
+            </Button>
+          </div>
         }
       />
 

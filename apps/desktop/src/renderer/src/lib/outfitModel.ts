@@ -58,13 +58,19 @@ const LAYER_SLOT_TO_SLOT: Readonly<Record<string, SlotId>> = {
 /** Keyword inference from a free (user-named) category/subcategory. */
 const inferSlotFromText = (text: string): SlotId | null => {
   if (/cinturon|correa|belt/.test(text)) return 'belt';
-  if (/zapat|tenis|zapatill|sneaker|bota|boot|mocasin|sandal|calzado|shoe/.test(text)) return 'shoes';
+  if (/zapat|tenis|zapatill|sneaker|bota|boot|mocasin|sandal|calzado|shoe/.test(text))
+    return 'shoes';
   if (/chaqueta|saco|blazer|abrigo|coat|jacket|parka|cardigan|chaleco|gabardina|outer/.test(text))
     return 'outerwear';
-  if (/pantalon|jean|short|falda|skirt|chino|legging|trouser|pant|bottom/.test(text)) return 'bottom';
+  if (/pantalon|jean|short|falda|skirt|chino|legging|trouser|pant|bottom/.test(text))
+    return 'bottom';
   if (/camis|shirt|polo|blus|sueter|sweater|hoodie|sudadera|tank|vestido|dress|top/.test(text))
     return 'top';
-  if (/corbata|tie|gorra|hat|sombrero|reloj|watch|bufanda|scarf|bolso|bag|gafa|lente|accesori/.test(text))
+  if (
+    /corbata|tie|gorra|hat|sombrero|reloj|watch|bufanda|scarf|bolso|bag|gafa|lente|accesori/.test(
+      text,
+    )
+  )
     return 'accessory';
   return null;
 };
@@ -176,6 +182,27 @@ export const garmentToLayer = (garment: GarmentDTO): GarmentLayer | null => {
 
 /** A selection of garments by slot (the outfit being assembled). */
 export type OutfitSelection = Partial<Record<SlotId, GarmentDTO>>;
+
+/**
+ * Build an {@link OutfitSelection} from a flat list of garments (e.g. the ones
+ * the AI advisor chose for a recommended outfit). Each garment is placed in the
+ * body slot it occupies; when several garments resolve to the same slot the
+ * FIRST one wins (the engine returns at most one per slot, but this keeps the
+ * mannequin coherent regardless). Garments with no wearable slot are skipped.
+ *
+ * This is the bridge that lets the advisor auto-dress the mannequin: a
+ * recommendation's `garments` → a selection the Try-On already knows how to draw.
+ */
+export const selectionFromGarments = (garments: readonly GarmentDTO[]): OutfitSelection => {
+  const selection: OutfitSelection = {};
+  for (const garment of garments) {
+    const slot = slotForGarment(garment);
+    if (slot !== null && selection[slot] === undefined) {
+      selection[slot] = garment;
+    }
+  }
+  return selection;
+};
 
 /**
  * Resolve a selection into ordered, drawable layers (z-order = OUTFIT_SLOTS

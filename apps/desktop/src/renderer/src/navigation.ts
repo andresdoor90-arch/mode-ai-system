@@ -12,6 +12,7 @@ import {
   History,
   LayoutDashboard,
   LayoutGrid,
+  MessageSquare,
   PersonStanding,
   Settings,
   Shirt,
@@ -61,11 +62,18 @@ export const NAV_ITEMS: readonly NavItem[] = [
     description: 'Vista detallada de cada prenda',
   },
   {
+    path: '/advisor',
+    label: 'Asesor',
+    icon: MessageSquare,
+    group: 'library',
+    description: 'Cuéntame tu plan y armo el outfit con tu guardarropa',
+  },
+  {
     path: '/try-on',
     label: 'Probador',
     icon: PersonStanding,
     group: 'library',
-    description: 'Visualiza el conjunto recomendado sobre un avatar 3D',
+    description: 'Visualiza el conjunto recomendado sobre el maniquí',
   },
   {
     path: '/history',

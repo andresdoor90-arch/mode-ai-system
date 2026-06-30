@@ -16,6 +16,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { AppLayout } from './components/layout/AppLayout';
 import {
+  AdvisorPage,
   CategoriesPage,
   DashboardPage,
   ExportPage,
@@ -40,6 +41,7 @@ function RoutedApp(): JSX.Element {
           <Route path="/wardrobe" element={<WardrobePage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/garments" element={<GarmentsPage />} />
+          <Route path="/advisor" element={<AdvisorPage />} />
           <Route path="/try-on" element={<VirtualTryOnPage />} />
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/profile" element={<ProfilePage />} />

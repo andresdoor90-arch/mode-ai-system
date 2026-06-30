@@ -7,6 +7,7 @@ import {
   contrastColor,
   garmentToLayer,
   normalizePattern,
+  selectionFromGarments,
   slotForGarment,
 } from './outfitModel';
 
@@ -46,7 +47,11 @@ describe('slotForGarment', () => {
 
   it('prefers the explicit category layer slot (user-defined categories)', () => {
     expect(
-      slotForGarment({ category: 'mi-categoria', subcategory: '', metadata: { layerSlot: 'upper-body' } }),
+      slotForGarment({
+        category: 'mi-categoria',
+        subcategory: '',
+        metadata: { layerSlot: 'upper-body' },
+      }),
     ).toBe('top');
     expect(
       slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'lower-body' } }),
@@ -54,11 +59,15 @@ describe('slotForGarment', () => {
     expect(
       slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'outer' } }),
     ).toBe('outerwear');
-    expect(slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'feet' } })).toBe(
-      'shoes',
-    );
     expect(
-      slotForGarment({ category: 'x', subcategory: 'cinturon', metadata: { layerSlot: 'accessory' } }),
+      slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'feet' } }),
+    ).toBe('shoes');
+    expect(
+      slotForGarment({
+        category: 'x',
+        subcategory: 'cinturon',
+        metadata: { layerSlot: 'accessory' },
+      }),
     ).toBe('belt');
     expect(
       slotForGarment({ category: 'x', subcategory: 'reloj', metadata: { layerSlot: 'accessory' } }),
@@ -139,5 +148,28 @@ describe('buildOutfitLayers', () => {
 
   it('is empty for an empty selection', () => {
     expect(buildOutfitLayers({})).toEqual([]);
+  });
+});
+
+describe('selectionFromGarments (advisor auto-dress)', () => {
+  it('places each recommended garment in its body slot (first wins per slot)', () => {
+    const selection = selectionFromGarments([
+      garment({ id: 'shirt', category: 'tops', subcategory: 'shirt' }),
+      garment({ id: 'jeans', category: 'bottoms', subcategory: 'jeans' }),
+      garment({ id: 'oxford', category: 'shoes', subcategory: 'oxford' }),
+      // A second top must NOT displace the first (engine returns one per slot,
+      // but we stay coherent regardless).
+      garment({ id: 'tee', category: 'tops', subcategory: 'tee' }),
+    ]);
+    expect(selection.top?.id).toBe('shirt');
+    expect(selection.bottom?.id).toBe('jeans');
+    expect(selection.shoes?.id).toBe('oxford');
+    // The resulting selection draws as ordered layers on the mannequin.
+    expect(buildOutfitLayers(selection).map((l) => l.slot)).toEqual(['bottom', 'top', 'shoes']);
+  });
+
+  it('skips garments with no wearable slot and yields an empty selection for none', () => {
+    expect(selectionFromGarments([garment({ category: 'unknown', subcategory: 'x' })])).toEqual({});
+    expect(selectionFromGarments([])).toEqual({});
   });
 });

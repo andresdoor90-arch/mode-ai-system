@@ -28,11 +28,19 @@ interface RecommendationState {
   loading: boolean;
   error: string | null;
   loaded: boolean;
+  /**
+   * Monotonic nonce bumped each time the advisor asks the Try-On to dress the
+   * mannequin with the currently selected recommendation. The Try-On watches it
+   * and applies the outfit ONCE per bump, so manual edits afterwards are kept.
+   */
+  tryOnRequestId: number;
 
   /** Request a fresh recommendation set from the engine (or sample offline). */
   recommend: (payload: RecommendationRequestPayload) => Promise<void>;
   /** Select which recommendation to visualise. */
   select: (kind: string) => void;
+  /** Ask the Try-On to dress the mannequin with the current selection. */
+  requestTryOn: () => void;
   /** The currently selected recommendation, if any. */
   current: () => OutfitRecommendationDTO | null;
 }
@@ -46,6 +54,7 @@ export const useRecommendationStore = create<RecommendationState>((rawSet, get) 
   loading: false,
   error: null,
   loaded: false,
+  tryOnRequestId: 0,
 
   recommend: async (payload) => {
     rawSet({ loading: true, error: null });
@@ -78,6 +87,8 @@ export const useRecommendationStore = create<RecommendationState>((rawSet, get) 
       rawSet({ selectedKind: kind });
     }
   },
+
+  requestTryOn: () => rawSet((state) => ({ tryOnRequestId: state.tryOnRequestId + 1 })),
 
   current: () => {
     const { set, selectedKind } = get();
