@@ -288,6 +288,19 @@ export class AppContainer {
         })
       : undefined;
 
+    // Lets the (multimodal) planner SEE garments: resolve a thumbnail storage
+    // key to base64 from the image store. Used only when Ollama is enabled.
+    const imageLoader = ollama.enabled
+      ? async (storageKey: string): Promise<string | null> => {
+          try {
+            const bytes = await this.images.getImage(storageKey);
+            return Buffer.from(bytes).toString('base64');
+          } catch {
+            return null;
+          }
+        }
+      : undefined;
+
     this.orchestrator = new AIOrchestrator({
       garments: this.repositories.garments,
       outfits: this.repositories.outfits,
@@ -298,6 +311,7 @@ export class AppContainer {
       router: this.router,
       memory: this.memory,
       ...(planner !== undefined ? { planner } : {}),
+      ...(imageLoader !== undefined ? { imageLoader } : {}),
     });
 
     // Module 6: automatically keep the cognitive subsystems in sync with every

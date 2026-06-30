@@ -72,7 +72,21 @@ export interface PlannerGarment {
   /** Structural body zone (LayerSlot value). */
   readonly layerSlot: string;
   readonly seasons: readonly string[];
+  /**
+   * Base64 of the garment's thumbnail, when available. Lets a multimodal planner
+   * actually SEE the garment (colour, pattern, cut) instead of relying on text
+   * alone. Absent ⇒ the planner reasons from the textual attributes only.
+   */
+  readonly imageBase64?: string;
 }
+
+/**
+ * Loads the bytes of a stored image as base64, by its opaque storage key.
+ * Supplied by infrastructure (it owns file storage); the orchestrator uses it to
+ * attach garment thumbnails to the planner catalog. Returns `null` when the
+ * image is missing/unreadable so planning degrades to text-only gracefully.
+ */
+export type GarmentImageLoader = (storageKey: string) => Promise<string | null>;
 
 /**
  * The interpreted context handed to an {@link IOutfitPlanner}. Mirrors the

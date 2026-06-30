@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { GarmentCategory } from '../../domain/value-objects/GarmentCategory';
+import { Photograph } from '../../domain/value-objects/Photograph';
+import { type PhotoId } from '../../shared/Identifier';
 import {
   TopSubcategory,
   BottomSubcategory,
@@ -489,5 +491,52 @@ describe('AIOrchestrator — LLM outfit planner', () => {
     const set = await orchestrator.recommend({ message: 'casual' });
 
     expect(set.recommendations.map((r) => r.kind)).toEqual(['principal', 'mas-elegante']);
+  });
+
+  it('attaches the garment thumbnail to the catalog so a multimodal LLM can see it', async () => {
+    const photo = unwrap(
+      Photograph.create({
+        id: 'p1' as PhotoId,
+        storageKey: 'garments/shirt.webp',
+        isPrimary: true,
+        attributes: { thumbnailKey: 'garments/shirt-thumb.webp' },
+      }),
+    );
+    const garments = new InMemoryGarmentRepository();
+    await garments.save(
+      makeGarment({
+        id: 'shirt',
+        name: 'Camisa Oxford',
+        category: GarmentCategory.Tops,
+        subcategory: TopSubcategory.Shirt,
+        color: color('#4d4d4d', 'charcoal'),
+        seasons: [Season.AllSeason],
+        photos: [photo],
+      }),
+    );
+    const outfits = new InMemoryOutfitRepository();
+    const profiles = new InMemoryUserProfileRepository();
+    const planner = new FakeOutfitPlanner([
+      { kind: 'principal', garmentIds: ['shirt'], explanation: 'x' },
+    ]);
+    const loaded: string[] = [];
+
+    const orchestrator = new AIOrchestrator({
+      garments,
+      outfits,
+      profiles,
+      planner,
+      imageLoader: async (key) => {
+        loaded.push(key);
+        return 'THUMB_BASE64';
+      },
+    });
+
+    await orchestrator.recommend({ message: 'algo casual' });
+
+    // The orchestrator resolved the garment's thumbnail key and fed the bytes
+    // into the planner catalog (so the model reasons over the real photo).
+    expect(loaded).toContain('garments/shirt-thumb.webp');
+    expect(planner.lastCatalog.find((g) => g.id === 'shirt')?.imageBase64).toBe('THUMB_BASE64');
   });
 });

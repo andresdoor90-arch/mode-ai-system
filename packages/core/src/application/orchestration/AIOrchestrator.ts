@@ -43,6 +43,7 @@ import { MemoryEngine } from './MemoryEngine';
 import { AIProviderRouter } from './AIProviderRouter';
 import { EmbeddingManager } from './EmbeddingManager';
 import {
+  type GarmentImageLoader,
   type IOutfitPlanner,
   type ITextProvider,
   type PlannedOutfit,
@@ -78,6 +79,11 @@ export interface AIOrchestratorDeps {
    * engine when it is unavailable or returns nothing usable.
    */
   readonly planner?: IOutfitPlanner;
+  /**
+   * Loads garment thumbnails (base64) so the planner can SEE the garments.
+   * Optional: without it the planner reasons from text attributes only.
+   */
+  readonly imageLoader?: GarmentImageLoader;
   /** Override the domain scorer (e.g. custom weights). */
   readonly scoring?: OutfitScoringService;
   /** Injectable clock for deterministic timestamps/reference dates. */
@@ -86,6 +92,13 @@ export interface AIOrchestratorDeps {
 
 /** How many top candidates to consider when picking the three roles. */
 const SELECTION_POOL = 25;
+
+/**
+ * Upper bound on garment thumbnails attached to a single planning prompt.
+ * Keeps the multimodal request within practical model/context limits; extra
+ * garments are still listed as text and remain selectable by id.
+ */
+const MAX_PLANNER_IMAGES = 16;
 
 export class AIOrchestrator {
   private readonly contextAnalyzer = new ContextAnalyzer();
@@ -313,7 +326,10 @@ export class AIOrchestrator {
     }
     let planned: readonly PlannedOutfit[];
     try {
-      planned = await planner.plan(this.toPlannerContext(context), this.toPlannerCatalog(garments));
+      planned = await planner.plan(
+        this.toPlannerContext(context),
+        await this.toPlannerCatalog(garments),
+      );
     } catch {
       notes.push('LLM planner errored; falling back to domain rules.');
       return null;
@@ -392,19 +408,65 @@ export class AIOrchestrator {
     };
   }
 
-  /** Map the eligible inventory into the flat catalog the planner reasons over. */
-  private toPlannerCatalog(garments: readonly Garment[]): PlannerGarment[] {
-    return garments.map((g) => ({
-      id: g.id,
-      name: g.name,
-      category: String(g.category),
-      subcategory: String(g.subcategory),
-      colorName: g.color.name ?? '',
-      colorHex: g.color.hex,
-      formality: garmentFormality(g.subcategory),
-      layerSlot: String(g.layerSlot),
-      seasons: g.seasons.map((s) => String(s)),
-    }));
+  /**
+   * Map the eligible inventory into the flat catalog the planner reasons over.
+   * When an image loader is configured, attach each garment's thumbnail (base64)
+   * so a multimodal planner can SEE the garment. Image loading is bounded by
+   * {@link MAX_PLANNER_IMAGES} to keep the prompt within model limits; garments
+   * beyond the cap (or without a photo) are still listed as text and remain
+   * selectable by id.
+   */
+  private async toPlannerCatalog(garments: readonly Garment[]): Promise<PlannerGarment[]> {
+    const loader = this.deps.imageLoader;
+    const out: PlannerGarment[] = [];
+    let imagesAttached = 0;
+    for (const g of garments) {
+      const base: PlannerGarment = {
+        id: g.id,
+        name: g.name,
+        category: String(g.category),
+        subcategory: String(g.subcategory),
+        colorName: g.color.name ?? '',
+        colorHex: g.color.hex,
+        formality: garmentFormality(g.subcategory),
+        layerSlot: String(g.layerSlot),
+        seasons: g.seasons.map((s) => String(s)),
+      };
+      if (loader !== undefined && imagesAttached < MAX_PLANNER_IMAGES) {
+        const key = AIOrchestrator.thumbnailKey(g);
+        if (key !== undefined) {
+          let base64: string | null = null;
+          try {
+            base64 = await loader(key);
+          } catch {
+            base64 = null;
+          }
+          if (base64 !== null && base64.length > 0) {
+            out.push({ ...base, imageBase64: base64 });
+            imagesAttached += 1;
+            continue;
+          }
+        }
+      }
+      out.push(base);
+    }
+    return out;
+  }
+
+  /** Storage key of the garment's cover thumbnail (primary photo, else first). */
+  private static thumbnailKey(garment: Garment): string | undefined {
+    const photos = garment.photos;
+    if (photos.length === 0) {
+      return undefined;
+    }
+    const primary =
+      photos.find((p) => p.isPrimary) ??
+      [...photos].sort((a, b) => a.order - b.order)[0] ??
+      photos[0];
+    if (primary === undefined) {
+      return undefined;
+    }
+    return primary.attributes['thumbnailKey'] ?? primary.storageKey;
   }
 
   /** Project the derived context into the planner's plain shape. */

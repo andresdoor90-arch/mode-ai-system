@@ -38,15 +38,24 @@ const SYSTEM_PROMPT =
 const catalogLine = (g: PlannerGarment): string => {
   const colour = g.colorName.trim().length > 0 ? `${g.colorName} (${g.colorHex})` : g.colorHex;
   const seasons = g.seasons.length > 0 ? g.seasons.join('/') : 'todo el año';
-  return `- ${g.id} · ${g.name} · ${g.category}/${g.subcategory} · color ${colour} · formalidad ${g.formality}/10 · zona ${g.layerSlot} · temporadas ${seasons}`;
+  return `${g.id} · ${g.name} · ${g.category}/${g.subcategory} · color ${colour} · formalidad ${g.formality}/10 · zona ${g.layerSlot} · temporadas ${seasons}`;
 };
 
-/** Build the chat messages asking the model to assemble outfits. */
-export const buildPlannerMessages = (
-  context: PlannerContext,
-  catalog: readonly PlannerGarment[],
-): OllamaChatMessage[] => {
-  const contextLines = [
+const INSTRUCTION =
+  'Arma hasta 3 outfits completos y combinables para este contexto:\n' +
+  '- "principal": la mejor opción global.\n' +
+  '- "mas-elegante": una alternativa más formal.\n' +
+  '- "mas-comoda": una alternativa más cómoda.\n' +
+  'Cada outfit debe incluir, si existen, una parte superior + una parte inferior ' +
+  '(o una prenda de cuerpo completo), calzado, y abrigo o accesorios cuando aporten. ' +
+  'Fíjate en las FOTOS para evaluar color, patrón y combinación, y respeta la ' +
+  'formalidad, la ocasión y el clima.\n\n' +
+  'Responde SOLO con este JSON (sin texto adicional):\n' +
+  '{"outfits":[{"kind":"principal","garmentIds":["<id>","<id>"],"explicacion":"<por qué, en español>"}]}\n' +
+  'Si el guardarropa no permite armar un outfit, responde {"outfits":[]}.';
+
+const contextBlock = (context: PlannerContext): string =>
+  [
     `- Mensaje: "${context.message}"`,
     `- Ocasión: ${context.occasion}`,
     `- Temporada: ${context.season}`,
@@ -56,26 +65,52 @@ export const buildPlannerMessages = (
     ...(context.activity !== undefined ? [`- Actividad: ${context.activity}`] : []),
   ].join('\n');
 
-  const user =
-    'Contexto:\n' +
-    contextLines +
-    '\n\nGuardarropa disponible (elige únicamente por id):\n' +
-    catalog.map(catalogLine).join('\n') +
-    '\n\nArma hasta 3 outfits completos y combinables para este contexto:\n' +
-    '- "principal": la mejor opción global.\n' +
-    '- "mas-elegante": una alternativa más formal.\n' +
-    '- "mas-comoda": una alternativa más cómoda.\n' +
-    'Cada outfit debe incluir, si existen, una parte superior + una parte inferior ' +
-    '(o una prenda de cuerpo completo), calzado, y abrigo o accesorios cuando aporten. ' +
-    'Combina los colores y respeta la formalidad, la ocasión y el clima.\n\n' +
-    'Responde SOLO con este JSON (sin texto adicional):\n' +
-    '{"outfits":[{"kind":"principal","garmentIds":["<id>","<id>"],"explicacion":"<por qué, en español>"}]}\n' +
-    'Si el guardarropa no permite armar un outfit, responde {"outfits":[]}.';
+/**
+ * Build the chat messages asking the model to assemble outfits.
+ *
+ * When garments carry thumbnails, the request is MULTIMODAL: the images are
+ * attached to the user turn IN THE SAME ORDER as a numbered "con foto" list, so
+ * the model can map each picture to its garment id and judge real colour/pattern.
+ * Garments without a photo are listed as text and stay selectable by id. With no
+ * images at all, this degrades to the original text-only prompt.
+ */
+export const buildPlannerMessages = (
+  context: PlannerContext,
+  catalog: readonly PlannerGarment[],
+): OllamaChatMessage[] => {
+  const withImages = catalog.filter(
+    (g): g is PlannerGarment & { imageBase64: string } =>
+      typeof g.imageBase64 === 'string' && g.imageBase64.length > 0,
+  );
+  const textOnly = catalog.filter((g) => withImages.every((w) => w.id !== g.id));
 
-  return [
-    { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'user', content: user },
-  ];
+  const sections: string[] = ['Contexto:', contextBlock(context), ''];
+
+  if (withImages.length > 0) {
+    sections.push(
+      `Guardarropa CON FOTO (hay ${withImages.length} imágenes adjuntas, en este mismo orden; ` +
+        'la imagen N corresponde a la prenda N):',
+      ...withImages.map((g, i) => `${i + 1}. ${catalogLine(g)}`),
+      '',
+    );
+  }
+  if (textOnly.length > 0) {
+    sections.push(
+      withImages.length > 0
+        ? 'Otras prendas (sin foto, elige por id):'
+        : 'Guardarropa disponible (elige por id):',
+      ...textOnly.map((g) => `- ${catalogLine(g)}`),
+      '',
+    );
+  }
+  sections.push(INSTRUCTION);
+
+  const userMessage: OllamaChatMessage =
+    withImages.length > 0
+      ? { role: 'user', content: sections.join('\n'), images: withImages.map((g) => g.imageBase64) }
+      : { role: 'user', content: sections.join('\n') };
+
+  return [{ role: 'system', content: SYSTEM_PROMPT }, userMessage];
 };
 
 const norm = (s: string): string =>

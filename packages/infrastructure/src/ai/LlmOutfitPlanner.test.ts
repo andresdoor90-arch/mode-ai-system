@@ -101,6 +101,27 @@ describe('buildPlannerMessages', () => {
     expect(user?.content).toContain('mas-elegante');
     expect(user?.content).toContain('mas-comoda');
   });
+
+  it('is text-only (no images) when no garment has a photo', () => {
+    const [, user] = buildPlannerMessages(CONTEXT, CATALOG);
+    expect(user?.images).toBeUndefined();
+  });
+
+  it('builds a MULTIMODAL request: thumbnails attached in the numbered order', () => {
+    const withPhoto: PlannerGarment[] = [
+      { ...CATALOG[0]!, imageBase64: 'IMG_G1' },
+      { ...CATALOG[1]! }, // no photo → listed as text, still selectable
+    ];
+    const [, user] = buildPlannerMessages(CONTEXT, withPhoto);
+    // The image bytes ride on the user turn, in catalog order.
+    expect(user?.images).toEqual(['IMG_G1']);
+    // The text maps image #1 to g1 and lists the photo-less g2 separately.
+    expect(user?.content).toContain('CON FOTO');
+    expect(user?.content).toContain('1. g1');
+    expect(user?.content).toContain('sin foto');
+    expect(user?.content).toContain('g2');
+    expect(user?.content).toContain('Fíjate en las FOTOS');
+  });
 });
 
 describe('LlmOutfitPlanner', () => {
