@@ -11,19 +11,50 @@
  */
 import type { GarmentDTO } from '@shared/ipc';
 
-/** The body region a garment occupies. */
-export type SlotId = 'outerwear' | 'top' | 'bottom' | 'belt' | 'shoes' | 'accessory';
+/**
+ * The body region a garment occupies. Each slot is an INDEPENDENT zone of the
+ * mannequin, so a full look — shirt + tie + belt + watch + pants + shoes (+ a
+ * jacket or coat over the shirt) — can be worn all at once without any piece
+ * displacing another. Accessories are no longer one shared bucket.
+ */
+export type SlotId =
+  | 'fullbody'
+  | 'pants'
+  | 'shirt'
+  | 'belt'
+  | 'tie'
+  | 'jacket'
+  | 'coat'
+  | 'shoes'
+  | 'watch'
+  | 'scarf'
+  | 'glasses'
+  | 'hat'
+  | 'bag'
+  | 'accessory';
 
 /** A simplified pattern the mannequin can render. */
 export type PatternId = 'solid' | 'stripes' | 'checks' | 'dots' | 'print';
 
-/** Ordered slots (also the z-order in which layers are painted). */
+/**
+ * Ordered slots = the z-order layers are painted (back → front). A garment that
+ * resolves to a given slot occupies ONLY that slot, so independent pieces stack
+ * instead of replacing each other.
+ */
 export const OUTFIT_SLOTS: readonly { id: SlotId; label: string }[] = [
-  { id: 'bottom', label: 'Pantalón' },
-  { id: 'top', label: 'Camisa / Top' },
-  { id: 'outerwear', label: 'Chaqueta / Saco' },
+  { id: 'fullbody', label: 'Cuerpo completo' },
+  { id: 'pants', label: 'Pantalón' },
+  { id: 'shirt', label: 'Camisa / Top' },
   { id: 'belt', label: 'Correa' },
-  { id: 'shoes', label: 'Zapatos' },
+  { id: 'tie', label: 'Corbata' },
+  { id: 'jacket', label: 'Chaqueta / Saco' },
+  { id: 'coat', label: 'Abrigo' },
+  { id: 'shoes', label: 'Calzado' },
+  { id: 'scarf', label: 'Bufanda' },
+  { id: 'watch', label: 'Reloj' },
+  { id: 'glasses', label: 'Gafas' },
+  { id: 'hat', label: 'Sombrero / Gorra' },
+  { id: 'bag', label: 'Bolso' },
   { id: 'accessory', label: 'Accesorio' },
 ];
 
@@ -45,80 +76,109 @@ const stripDiacritics = (text: string): string =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
-/** Map a category's structural layer slot (CategoryMetadata.layerSlot) to a try-on slot. */
+/** Map a category's structural zone (CategoryMetadata.layerSlot) to a base slot. */
 const LAYER_SLOT_TO_SLOT: Readonly<Record<string, SlotId>> = {
-  'upper-body': 'top',
-  'full-body': 'top',
-  'lower-body': 'bottom',
-  outer: 'outerwear',
+  'upper-body': 'shirt',
+  'full-body': 'fullbody',
+  'lower-body': 'pants',
+  outer: 'jacket',
   feet: 'shoes',
   accessory: 'accessory',
 };
 
-/** Keyword inference from a free (user-named) category/subcategory. */
-const inferSlotFromText = (text: string): SlotId | null => {
+/** Split an accessory into a specific independent slot (belt/tie/watch/…). */
+const refineAccessory = (text: string): SlotId => {
   if (/cinturon|correa|belt/.test(text)) return 'belt';
-  if (/zapat|tenis|zapatill|sneaker|bota|boot|mocasin|sandal|calzado|shoe/.test(text))
-    return 'shoes';
-  if (/chaqueta|saco|blazer|abrigo|coat|jacket|parka|cardigan|chaleco|gabardina|outer/.test(text))
-    return 'outerwear';
-  if (/pantalon|jean|short|falda|skirt|chino|legging|trouser|pant|bottom/.test(text))
-    return 'bottom';
-  if (/camis|shirt|polo|blus|sueter|sweater|hoodie|sudadera|tank|vestido|dress|top/.test(text))
-    return 'top';
+  if (/corbata|corbatin|necktie|pajarita|\btie\b/.test(text)) return 'tie';
+  if (/reloj|watch|smartwatch|pulsera/.test(text)) return 'watch';
+  if (/gorra|sombrero|\bhat\b|\bcap\b|beanie|boina/.test(text)) return 'hat';
+  if (/gafa|lente|anteojo|sunglass|eyewear|glasses/.test(text)) return 'glasses';
+  if (/bufanda|scarf|chalina|panoleta|panuelo/.test(text)) return 'scarf';
+  if (/bolso|mochila|cartera|maletin|\bbag\b|backpack|tote|rinonera/.test(text)) return 'bag';
+  return 'accessory';
+};
+
+/** Split outerwear into a jacket (default) or a longer coat. */
+const refineOuter = (text: string): SlotId =>
+  /abrigo|overcoat|gabardina|trench|parka|\bcoat\b|tapado/.test(text) ? 'coat' : 'jacket';
+
+/** Last-resort keyword inference when neither layer slot nor taxonomy resolves. */
+const inferSlotFromText = (text: string): SlotId | null => {
+  const accessory = refineAccessory(text);
+  if (accessory !== 'accessory') return accessory;
+  if (/abrigo|chaqueta|saco|blazer|americana|cardigan|chaleco|bomber|jacket|coat/.test(text))
+    return refineOuter(text);
   if (
-    /corbata|tie|gorra|hat|sombrero|reloj|watch|bufanda|scarf|bolso|bag|gafa|lente|accesori/.test(
+    /zapat|tenis|zapatill|sneaker|bota|boot|mocasin|sandal|calzado|shoe|oxford|loafer|derby/.test(
       text,
     )
   )
-    return 'accessory';
+    return 'shoes';
+  if (/pantalon|jean|short|bermuda|falda|skirt|chino|legging|trouser|\bpant/.test(text))
+    return 'pants';
+  if (/vestido|dress|overol|jumpsuit|enterizo|peto/.test(text)) return 'fullbody';
+  if (
+    /camis|shirt|polo|blus|sueter|sweater|hoodie|sudadera|tank|playera|franela|jersey|\btop\b/.test(
+      text,
+    )
+  )
+    return 'shirt';
   return null;
 };
 
 /**
- * Resolve which body slot a garment occupies for the 2D try-on.
+ * Resolve which independent body slot a garment occupies for the 2D try-on.
  *
- * Order of resolution: (1) the explicit `layerSlot` carried in the garment's
- * metadata from the user's category — the authoritative source for fully
- * user-defined categories; (2) the structural category slug (seed/legacy
- * garments using the fixed taxonomy); (3) keyword inference from the
- * category/subcategory text, so type-named user categories still place even if
- * no layer slot was set.
+ * Strategy: the user's STRUCTURAL zone (`metadata.layerSlot`, set when they
+ * created the category) drives the primary slot; keyword refinement is used
+ * only where a structural zone is too coarse — splitting `accessory` into
+ * belt/tie/watch/hat/glasses/scarf/bag and `outer` into jacket/coat. This keeps
+ * the user's own categorisation authoritative (a shirt stays a shirt) while
+ * letting multiple accessories live in distinct slots. Falls back to the seed
+ * taxonomy and then to pure keyword inference for legacy/unsorted garments.
  */
 export const slotForGarment = (
-  garment: Pick<GarmentDTO, 'category' | 'subcategory' | 'metadata'>,
+  garment: Pick<GarmentDTO, 'category' | 'subcategory' | 'metadata'> & { name?: string },
 ): SlotId | null => {
-  const subcategory = stripDiacritics(garment.subcategory);
+  const text = stripDiacritics(
+    [
+      garment.category,
+      garment.subcategory,
+      garment.name ?? '',
+      garment.metadata?.garmentType ?? '',
+      garment.metadata?.subtype ?? '',
+    ].join(' '),
+  );
 
-  // 1) Explicit layer slot from the user's category.
+  // 1) Structural zone from the user's category (authoritative for the base slot).
   const layerSlot = garment.metadata?.layerSlot;
-  if (layerSlot !== undefined) {
-    const mapped = LAYER_SLOT_TO_SLOT[layerSlot];
-    if (mapped !== undefined) {
-      return mapped === 'accessory' && /belt|cinturon|correa/.test(subcategory) ? 'belt' : mapped;
-    }
+  if (layerSlot !== undefined && layerSlot in LAYER_SLOT_TO_SLOT) {
+    const base = LAYER_SLOT_TO_SLOT[layerSlot];
+    if (base === 'accessory') return refineAccessory(text);
+    if (base === 'jacket') return refineOuter(text);
+    return base ?? null;
   }
 
-  // 2) Structural fixed-taxonomy slug.
-  const category = stripDiacritics(garment.category);
-  switch (category) {
+  // 2) Seed/legacy fixed taxonomy slug.
+  switch (stripDiacritics(garment.category)) {
     case 'tops':
+      return 'shirt';
     case 'dresses':
-      return 'top';
+      return 'fullbody';
     case 'bottoms':
-      return 'bottom';
+      return 'pants';
     case 'outerwear':
-      return 'outerwear';
+      return refineOuter(text);
     case 'shoes':
       return 'shoes';
     case 'accessories':
-      return subcategory === 'belt' ? 'belt' : 'accessory';
+      return refineAccessory(text);
     default:
       break;
   }
 
-  // 3) Keyword inference from the (user-named) category/subcategory text.
-  return inferSlotFromText(`${category} ${subcategory}`);
+  // 3) Pure keyword inference (user-named categories without a zone).
+  return inferSlotFromText(text);
 };
 
 /** Normalise a free-form pattern label (Spanish or English) to a PatternId. */

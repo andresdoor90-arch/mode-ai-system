@@ -50,7 +50,10 @@ const INSTRUCTION =
   '- "mas-elegante": una alternativa más formal.\n' +
   '- "mas-comoda": una alternativa más cómoda.\n' +
   'Cada outfit debe incluir, si existen, una parte superior + una parte inferior ' +
-  '(o una prenda de cuerpo completo), calzado, y abrigo o accesorios cuando aporten. ' +
+  '(o una prenda de cuerpo completo), calzado, y COMPLÉTALO con los accesorios y ' +
+  'capas que aporten al look y a la ocasión: correa, corbata, reloj, chaqueta/saco ' +
+  'o abrigo. Cada uno ocupa una zona distinta, así que puedes combinar varios a la ' +
+  'vez (p. ej. camisa + corbata + correa + reloj + pantalón + zapatos). ' +
   'Fíjate en las FOTOS para evaluar color, patrón y combinación, y respeta la ' +
   'formalidad, la ocasión y el clima.\n\n' +
   'En "explicacion" responde como un asesor de imagen de verdad: abre con un ' +

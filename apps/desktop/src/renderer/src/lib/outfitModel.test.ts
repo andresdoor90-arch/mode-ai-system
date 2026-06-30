@@ -37,47 +37,69 @@ const garment = (over: Partial<GarmentDTO>): GarmentDTO =>
 
 describe('slotForGarment', () => {
   it('maps the fixed taxonomy categories to body slots', () => {
-    expect(slotForGarment({ category: 'tops', subcategory: 'shirt' })).toBe('top');
-    expect(slotForGarment({ category: 'bottoms', subcategory: 'jeans' })).toBe('bottom');
-    expect(slotForGarment({ category: 'outerwear', subcategory: 'blazer' })).toBe('outerwear');
+    expect(slotForGarment({ category: 'tops', subcategory: 'shirt' })).toBe('shirt');
+    expect(slotForGarment({ category: 'bottoms', subcategory: 'jeans' })).toBe('pants');
+    expect(slotForGarment({ category: 'outerwear', subcategory: 'blazer' })).toBe('jacket');
+    expect(slotForGarment({ category: 'outerwear', subcategory: 'abrigo largo' })).toBe('coat');
     expect(slotForGarment({ category: 'shoes', subcategory: 'sneakers' })).toBe('shoes');
     expect(slotForGarment({ category: 'accessories', subcategory: 'belt' })).toBe('belt');
-    expect(slotForGarment({ category: 'accessories', subcategory: 'hat' })).toBe('accessory');
+    expect(slotForGarment({ category: 'accessories', subcategory: 'hat' })).toBe('hat');
   });
 
-  it('prefers the explicit category layer slot (user-defined categories)', () => {
+  it('prefers the user structural zone, refining accessories into distinct slots', () => {
     expect(
       slotForGarment({
         category: 'mi-categoria',
         subcategory: '',
         metadata: { layerSlot: 'upper-body' },
       }),
-    ).toBe('top');
+    ).toBe('shirt');
     expect(
       slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'lower-body' } }),
-    ).toBe('bottom');
-    expect(
-      slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'outer' } }),
-    ).toBe('outerwear');
+    ).toBe('pants');
     expect(
       slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'feet' } }),
     ).toBe('shoes');
     expect(
+      slotForGarment({ category: 'x', subcategory: '', metadata: { layerSlot: 'outer' } }),
+    ).toBe('jacket');
+    // The same 'accessory' zone splits into INDEPENDENT slots by keyword, so a
+    // belt, a tie and a watch never collide.
+    expect(
       slotForGarment({
-        category: 'x',
-        subcategory: 'cinturon',
+        category: 'Correas',
+        subcategory: '',
         metadata: { layerSlot: 'accessory' },
       }),
     ).toBe('belt');
     expect(
-      slotForGarment({ category: 'x', subcategory: 'reloj', metadata: { layerSlot: 'accessory' } }),
+      slotForGarment({
+        category: 'Corbatas',
+        subcategory: '',
+        metadata: { layerSlot: 'accessory' },
+      }),
+    ).toBe('tie');
+    expect(
+      slotForGarment({
+        category: 'Relojes',
+        subcategory: '',
+        metadata: { layerSlot: 'accessory' },
+      }),
+    ).toBe('watch');
+    expect(
+      slotForGarment({
+        category: 'Broches y pines',
+        subcategory: '',
+        metadata: { layerSlot: 'accessory' },
+      }),
     ).toBe('accessory');
   });
 
   it('infers the slot from a user-named category when no layer slot is set', () => {
-    expect(slotForGarment({ category: 'Camisas de iglesia', subcategory: '' })).toBe('top');
+    expect(slotForGarment({ category: 'Camisas de iglesia', subcategory: '' })).toBe('shirt');
     expect(slotForGarment({ category: 'Zapatos formales', subcategory: '' })).toBe('shoes');
     expect(slotForGarment({ category: 'Cinturones', subcategory: '' })).toBe('belt');
+    expect(slotForGarment({ category: 'Relojes', subcategory: '' })).toBe('watch');
     expect(slotForGarment({ category: 'Ocasión especial', subcategory: '' })).toBeNull();
   });
 });
@@ -111,7 +133,7 @@ describe('garmentToLayer', () => {
         metadata: { pattern: 'Lunares' },
       }),
     );
-    expect(layer?.slot).toBe('top');
+    expect(layer?.slot).toBe('shirt');
     expect(layer?.pattern).toBe('dots');
     expect(layer?.colorHex).toBe('#ffffff');
     // White base → dark dots by default contrast.
@@ -139,11 +161,11 @@ describe('garmentToLayer', () => {
 describe('buildOutfitLayers', () => {
   it('orders layers by slot z-order and skips empty slots', () => {
     const layers = buildOutfitLayers({
-      top: garment({ id: 'top', category: 'tops', subcategory: 'shirt' }),
-      bottom: garment({ id: 'bottom', category: 'bottoms', subcategory: 'jeans' }),
+      shirt: garment({ id: 'shirt', category: 'tops', subcategory: 'shirt' }),
+      pants: garment({ id: 'pants', category: 'bottoms', subcategory: 'jeans' }),
       shoes: garment({ id: 'shoes', category: 'shoes', subcategory: 'sneakers' }),
     });
-    expect(layers.map((l) => l.slot)).toEqual(['bottom', 'top', 'shoes']);
+    expect(layers.map((l) => l.slot)).toEqual(['pants', 'shirt', 'shoes']);
   });
 
   it('is empty for an empty selection', () => {
@@ -161,11 +183,38 @@ describe('selectionFromGarments (advisor auto-dress)', () => {
       // but we stay coherent regardless).
       garment({ id: 'tee', category: 'tops', subcategory: 'tee' }),
     ]);
-    expect(selection.top?.id).toBe('shirt');
-    expect(selection.bottom?.id).toBe('jeans');
+    expect(selection.shirt?.id).toBe('shirt');
+    expect(selection.pants?.id).toBe('jeans');
     expect(selection.shoes?.id).toBe('oxford');
-    // The resulting selection draws as ordered layers on the mannequin.
-    expect(buildOutfitLayers(selection).map((l) => l.slot)).toEqual(['bottom', 'top', 'shoes']);
+    expect(buildOutfitLayers(selection).map((l) => l.slot)).toEqual(['pants', 'shirt', 'shoes']);
+  });
+
+  it('lets a full look with several accessories coexist (belt + tie + watch)', () => {
+    // The core requirement: independent slots, so accessories never displace
+    // one another — shirt + tie + belt + watch + pants + shoes all at once.
+    const selection = selectionFromGarments([
+      garment({ id: 'sh', category: 'Camisas', metadata: { layerSlot: 'upper-body' } }),
+      garment({ id: 'pa', category: 'Pantalones', metadata: { layerSlot: 'lower-body' } }),
+      garment({ id: 'zp', category: 'Zapatos', metadata: { layerSlot: 'feet' } }),
+      garment({ id: 'co', category: 'Correas', metadata: { layerSlot: 'accessory' } }),
+      garment({ id: 'cb', category: 'Corbatas', metadata: { layerSlot: 'accessory' } }),
+      garment({ id: 'rl', category: 'Relojes', metadata: { layerSlot: 'accessory' } }),
+    ]);
+    expect(selection.shirt?.id).toBe('sh');
+    expect(selection.pants?.id).toBe('pa');
+    expect(selection.shoes?.id).toBe('zp');
+    expect(selection.belt?.id).toBe('co');
+    expect(selection.tie?.id).toBe('cb');
+    expect(selection.watch?.id).toBe('rl');
+    // All six render simultaneously, in z-order.
+    expect(buildOutfitLayers(selection).map((l) => l.slot)).toEqual([
+      'pants',
+      'shirt',
+      'belt',
+      'tie',
+      'shoes',
+      'watch',
+    ]);
   });
 
   it('skips garments with no wearable slot and yields an empty selection for none', () => {

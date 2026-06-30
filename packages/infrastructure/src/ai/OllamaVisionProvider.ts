@@ -59,10 +59,12 @@ export const buildVisionUserPrompt = (categoryNames: readonly string[] = []): st
     '- nombre: nombre corto y útil, p.ej. "Camisa azul oscuro manga larga".\n' +
     '- subtipo: tipo específico de la prenda (p.ej. "analógico" para un reloj, ' +
     '"Oxford" para zapatos, "chino" para un pantalón).\n' +
-    '- colorPrincipal: color dominante de la PRENDA en hex #rrggbb.\n' +
+    '- colorPrincipal: color dominante de la PRENDA en hex #rrggbb (IGNORA el fondo, ' +
+    'la piel y las sombras; fíjate solo en la tela de la prenda).\n' +
     '- colorPrincipalNombre: nombre del color principal.\n' +
-    '- coloresSecundarios: arreglo de hex de los colores secundarios de la prenda.\n' +
+    '- coloresSecundarios: arreglo de hex de los colores secundarios de la prenda (no del fondo).\n' +
     '- material: tejido aproximado (algodón, lino, mezclilla, lana, cuero, …).\n' +
+    '- textura: textura visible del tejido (lisa, rugosa, tejida, acanalada, satinada, …).\n' +
     '- manga: tipo de manga (manga larga, manga corta, sin mangas, …).\n' +
     '- cuello: tipo de cuello o escote (redondo, en V, mao, polo, …).\n' +
     '- patron: liso, rayas, cuadros, lunares o estampado.\n' +

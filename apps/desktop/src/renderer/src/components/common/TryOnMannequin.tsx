@@ -86,6 +86,22 @@ function BottomLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
   );
 }
 
+function FullBodyLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
+  const fill = fillFor(layer);
+  return (
+    <g>
+      {/* torso */}
+      <path d="M76 92 Q110 84 144 92 L150 200 Q110 210 70 200 Z" fill={fill} {...STROKE} />
+      {/* short sleeves */}
+      <rect x={52} y={92} width={20} height={40} rx={8} fill={fill} {...STROKE} />
+      <rect x={148} y={92} width={20} height={40} rx={8} fill={fill} {...STROKE} />
+      {/* legs / skirt */}
+      <rect x={80} y={200} width={26} height={126} rx={7} fill={fill} {...STROKE} />
+      <rect x={114} y={200} width={26} height={126} rx={7} fill={fill} {...STROKE} />
+    </g>
+  );
+}
+
 function TopLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
   const fill = fillFor(layer);
   const sleeveBottom = /t-shirt|polo|tank/.test(layer.subcategory) ? 150 : 188;
@@ -102,7 +118,7 @@ function TopLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
   );
 }
 
-function OuterwearLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
+function JacketLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
   const fill = fillFor(layer);
   return (
     <g>
@@ -114,6 +130,21 @@ function OuterwearLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
       <path d="M150 90 Q130 84 116 90 L114 198 Q132 202 148 196 Z" fill={fill} {...STROKE} />
       {/* lapels */}
       <path d="M104 90 L110 120 L116 90 Z" fill={MANNEQUIN_DARK} opacity={0.35} />
+    </g>
+  );
+}
+
+function CoatLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
+  const fill = fillFor(layer);
+  return (
+    <g>
+      {/* long sleeves */}
+      <rect x={46} y={90} width={24} height={120} rx={9} fill={fill} {...STROKE} />
+      <rect x={150} y={90} width={24} height={120} rx={9} fill={fill} {...STROKE} />
+      {/* long front panels reaching the thighs */}
+      <path d="M68 90 Q90 82 104 90 L106 270 Q86 276 70 270 Z" fill={fill} {...STROKE} />
+      <path d="M152 90 Q130 82 116 90 L114 270 Q134 276 150 270 Z" fill={fill} {...STROKE} />
+      <path d="M104 90 L110 126 L116 90 Z" fill={MANNEQUIN_DARK} opacity={0.35} />
     </g>
   );
 }
@@ -136,47 +167,51 @@ function ShoesLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
   );
 }
 
+/** Tie at the neck, running down the chest. */
+function TieLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
+  return <path d="M110 96 L104 140 L110 152 L116 140 Z" fill={layer.colorHex} {...STROKE} />;
+}
+
+/** Wristwatch on the LEFT wrist (bottom of the left-drawn arm). */
+function WatchLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
+  return (
+    <g>
+      <rect x={54} y={181} width={16} height={6} rx={2} fill={MANNEQUIN_DARK} />
+      <circle cx={62} cy={184} r={5.5} fill={layer.colorHex} {...STROKE} />
+      <circle cx={62} cy={184} r={2} fill={layer.patternColorHex} opacity={0.7} />
+    </g>
+  );
+}
+
+function HatLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
+  return (
+    <g>
+      <rect x={78} y={28} width={64} height={8} rx={4} fill={layer.colorHex} {...STROKE} />
+      <path d="M86 30 Q110 6 134 30 Z" fill={layer.colorHex} {...STROKE} />
+    </g>
+  );
+}
+
+function GlassesLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
+  return (
+    <g>
+      <circle cx={100} cy={44} r={6} fill="none" stroke={layer.colorHex} strokeWidth={2} />
+      <circle cx={120} cy={44} r={6} fill="none" stroke={layer.colorHex} strokeWidth={2} />
+      <line x1={106} y1={44} x2={114} y2={44} stroke={layer.colorHex} strokeWidth={2} />
+    </g>
+  );
+}
+
+function ScarfLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
+  return <rect x={92} y={88} width={36} height={12} rx={6} fill={layer.colorHex} {...STROKE} />;
+}
+
+function BagLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
+  return <rect x={158} y={150} width={20} height={26} rx={4} fill={layer.colorHex} {...STROKE} />;
+}
+
+/** Unknown accessory: a discreet wrist band (never on the torso/abdomen). */
 function AccessoryLayer({ layer }: { layer: GarmentLayer }): JSX.Element {
-  if (/hat|cap|gorr|sombrero|beanie/.test(layer.subcategory)) {
-    return (
-      <g>
-        <rect x={78} y={28} width={64} height={8} rx={4} fill={layer.colorHex} {...STROKE} />
-        <path d="M86 30 Q110 6 134 30 Z" fill={layer.colorHex} {...STROKE} />
-      </g>
-    );
-  }
-  if (/tie|corbata|bow/.test(layer.subcategory)) {
-    // Tie sits at the neck and runs down the chest.
-    return <path d="M110 96 L104 140 L110 150 L116 140 Z" fill={layer.colorHex} {...STROKE} />;
-  }
-  if (/watch|reloj/.test(layer.subcategory)) {
-    // Wristwatch on the LEFT wrist (bottom of the left-drawn arm, x≈52–72).
-    return (
-      <g>
-        <rect x={54} y={181} width={16} height={6} rx={2} fill={MANNEQUIN_DARK} />
-        <circle cx={62} cy={184} r={5.5} fill={layer.colorHex} {...STROKE} />
-        <circle cx={62} cy={184} r={2} fill={layer.patternColorHex} opacity={0.7} />
-      </g>
-    );
-  }
-  if (/scarf|bufanda/.test(layer.subcategory)) {
-    return <rect x={92} y={88} width={36} height={12} rx={6} fill={layer.colorHex} {...STROKE} />;
-  }
-  if (/glass|gafa|lente|sunglass/.test(layer.subcategory)) {
-    // Eyewear on the face.
-    return (
-      <g>
-        <circle cx={100} cy={44} r={6} fill="none" stroke={layer.colorHex} strokeWidth={2} />
-        <circle cx={120} cy={44} r={6} fill="none" stroke={layer.colorHex} strokeWidth={2} />
-        <line x1={106} y1={44} x2={114} y2={44} stroke={layer.colorHex} strokeWidth={2} />
-      </g>
-    );
-  }
-  if (/bag|bolso|mochila|backpack/.test(layer.subcategory)) {
-    // Bag carried at the side.
-    return <rect x={158} y={150} width={20} height={26} rx={4} fill={layer.colorHex} {...STROKE} />;
-  }
-  // Unknown accessory: a discreet wrist band (never on the torso/abdomen).
   return <rect x={54} y={182} width={16} height={5} rx={2} fill={layer.colorHex} {...STROKE} />;
 }
 
@@ -184,11 +219,19 @@ const SLOT_RENDERERS: Record<
   GarmentLayer['slot'],
   (props: { layer: GarmentLayer }) => JSX.Element
 > = {
-  bottom: BottomLayer,
-  top: TopLayer,
-  outerwear: OuterwearLayer,
+  fullbody: FullBodyLayer,
+  pants: BottomLayer,
+  shirt: TopLayer,
   belt: BeltLayer,
+  tie: TieLayer,
+  jacket: JacketLayer,
+  coat: CoatLayer,
   shoes: ShoesLayer,
+  watch: WatchLayer,
+  scarf: ScarfLayer,
+  glasses: GlassesLayer,
+  hat: HatLayer,
+  bag: BagLayer,
   accessory: AccessoryLayer,
 };
 

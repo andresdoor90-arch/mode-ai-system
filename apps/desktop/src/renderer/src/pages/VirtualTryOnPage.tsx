@@ -68,14 +68,9 @@ export function VirtualTryOnPage(): JSX.Element {
 
   // Garments grouped by the body slot they occupy (only wearable ones).
   const bySlot = useMemo(() => {
-    const groups: Record<SlotId, typeof garments> = {
-      top: [],
-      bottom: [],
-      outerwear: [],
-      belt: [],
-      shoes: [],
-      accessory: [],
-    };
+    const groups = Object.fromEntries(
+      OUTFIT_SLOTS.map((s) => [s.id, [] as typeof garments]),
+    ) as Record<SlotId, typeof garments>;
     for (const garment of garments) {
       const slot = slotForGarment(garment);
       if (slot !== null) {
@@ -161,7 +156,9 @@ export function VirtualTryOnPage(): JSX.Element {
 
         {/* ----------------------------- outfit builder --------------------------- */}
         <div className="space-y-5">
-          {OUTFIT_SLOTS.map(({ id, label }) => {
+          {OUTFIT_SLOTS.filter(
+            ({ id }) => bySlot[id].length > 0 || selection[id] !== undefined,
+          ).map(({ id, label }) => {
             const options = bySlot[id];
             const selected = selection[id];
             return (

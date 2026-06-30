@@ -24,6 +24,47 @@ const MAX_PER_SLOT = 6;
 /** Hard cap on the number of candidate combinations produced. */
 const DEFAULT_MAX_CANDIDATES = 400;
 
+const norm = (text: string): string =>
+  text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+/**
+ * Classify an accessory by the INDEPENDENT body zone it occupies, so a belt, a
+ * tie and a watch can all be added to the same outfit (they no longer compete
+ * for a single "accessory" slot). Mirrors the try-on slot split.
+ */
+const accessoryKind = (g: Garment): string => {
+  const text = norm(
+    `${g.category} ${g.subcategory} ${g.name} ${g.metadata['garmentType'] ?? ''} ${g.metadata['subtype'] ?? ''}`,
+  );
+  if (/cinturon|correa|belt/.test(text)) return 'belt';
+  if (/corbata|corbatin|necktie|pajarita|tie/.test(text)) return 'tie';
+  if (/reloj|watch|smartwatch/.test(text)) return 'watch';
+  if (/gorra|sombrero|hat|cap|beanie|boina/.test(text)) return 'hat';
+  if (/gafa|lente|anteojo|sunglass|glasses/.test(text)) return 'glasses';
+  if (/bufanda|scarf|chalina/.test(text)) return 'scarf';
+  if (/bolso|mochila|cartera|maletin|bag|backpack/.test(text)) return 'bag';
+  return 'other';
+};
+
+/**
+ * A complementary accessory bundle: at most one accessory per distinct zone.
+ * Adding these is structurally safe (each occupies its own body region) and
+ * lets the advisor propose a complete look (shirt + tie + belt + watch …).
+ */
+const buildAccessoryBundle = (accessories: readonly Garment[]): readonly Garment[] => {
+  const byKind = new Map<string, Garment>();
+  for (const garment of accessories) {
+    const kind = accessoryKind(garment);
+    if (!byKind.has(kind)) {
+      byKind.set(kind, garment);
+    }
+  }
+  return [...byKind.values()].slice(0, 5);
+};
+
 export class OutfitCandidateGenerator {
   /** Generate bounded, structurally-valid candidates for the context. */
   public generate(
@@ -51,23 +92,30 @@ export class OutfitCandidateGenerator {
     const wantsOuter = context.weather?.isCold === true;
     const outerOptions: Array<Garment | null> =
       outerwear.length > 0 ? (wantsOuter ? [...outerwear, null] : [null, ...outerwear]) : [null];
-    // A single optional accessory adds variety without exploding the search.
-    const accessoryOptions: Array<Garment | null> =
-      accessories.length > 0 ? [null, ...accessories.slice(0, 2)] : [null];
+
+    // A complementary accessory bundle (belt + tie + watch + …), one per zone.
+    // Each base look is offered both with and without it, so the ranker keeps
+    // the bare version for casual contexts and the complete one when it fits.
+    const accessoryBundle = buildAccessoryBundle(accessories);
 
     const compose = (...parts: Array<Garment | null>): Garment[] =>
       parts.filter((g): g is Garment => g !== null);
+
+    const pushWithAccessories = (base: Garment[]): void => {
+      push(base);
+      if (accessoryBundle.length > 0) {
+        push([...base, ...accessoryBundle]);
+      }
+    };
 
     // Top + bottom based outfits.
     for (const top of tops) {
       for (const bottom of bottoms) {
         for (const shoe of shoeOptions) {
           for (const outer of outerOptions) {
-            for (const accessory of accessoryOptions) {
-              push(compose(top, bottom, shoe, outer, accessory));
-              if (candidates.length >= cap) {
-                return candidates;
-              }
+            pushWithAccessories(compose(top, bottom, shoe, outer));
+            if (candidates.length >= cap) {
+              return candidates;
             }
           }
         }
@@ -78,11 +126,9 @@ export class OutfitCandidateGenerator {
     for (const dress of dresses) {
       for (const shoe of shoeOptions) {
         for (const outer of outerOptions) {
-          for (const accessory of accessoryOptions) {
-            push(compose(dress, shoe, outer, accessory));
-            if (candidates.length >= cap) {
-              return candidates;
-            }
+          pushWithAccessories(compose(dress, shoe, outer));
+          if (candidates.length >= cap) {
+            return candidates;
           }
         }
       }
