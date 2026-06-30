@@ -539,11 +539,13 @@ export function registerIpcHandlers(container: AppContainer): void {
     const p = payload as {
       colorSamples?: readonly { r: number; g: number; b: number; weight?: number }[];
       freeText?: string;
+      categoryNames?: readonly string[];
       image?: { base64: string; mimeType: string };
     };
     const input = {
       ...(p.colorSamples !== undefined ? { colorSamples: p.colorSamples } : {}),
       ...(p.freeText !== undefined ? { freeText: p.freeText } : {}),
+      ...(p.categoryNames !== undefined ? { categoryNames: p.categoryNames } : {}),
       ...(p.image !== undefined
         ? { image: { base64: p.image.base64, mimeType: p.image.mimeType } }
         : {}),

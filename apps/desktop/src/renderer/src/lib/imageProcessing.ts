@@ -86,47 +86,57 @@ const colorDistanceSq = (
 /**
  * Segment the garment out of its background and return ONLY the garment pixels.
  *
- * Real photos put the garment on some backdrop (white/black/grey/wood/…). If we
- * sampled every pixel, a shirt on a white sheet would read as "white". So we:
+ * Real photos put the garment on some backdrop (white/black/grey/wood/desk/…).
+ * Sampling every pixel would let the backdrop dominate (a brown belt on a white
+ * sheet reads as "white"). So we:
  *  1. Estimate the background from the image BORDER (the frame is almost always
  *     backdrop), clustering border pixels into up to a few dominant colours.
- *  2. Keep only interior pixels whose colour is far enough (in RGB distance)
- *     from every background cluster — those are the garment.
- *  3. Degrade safely: if that leaves too few pixels (garment fills the frame, or
- *     its colour matches the backdrop), fall back to all opaque pixels so colour
- *     is never lost. Transparent pixels (cut-out PNGs) are always skipped.
+ *  2. Keep only pixels far enough (RGB distance) from every background cluster.
+ *  3. For large masks, gently erode 1px to drop anti-aliased halo pixels at the
+ *     garment/background edge (the source of spurious "sky-blue" secondaries).
+ *  4. Keep the result whenever it has at least a SMALL absolute number of pixels
+ *     — crucially this works for SMALL objects (a thin belt) that occupy a tiny
+ *     fraction of the frame. Only when essentially nothing separates from the
+ *     backdrop (garment colour ≈ backdrop) do we fall back to all opaque pixels.
+ * Transparent pixels (cut-out PNGs) are always skipped.
  *
  * Pure and deterministic — operates on raw RGBA so it is unit-tested without a
- * canvas. `THRESHOLD` (Euclidean ≈ 60) excludes near-background tones while
- * keeping genuinely different garment colours.
+ * canvas. `threshold` is the Euclidean colour distance from the background.
  */
 export function segmentGarmentSamples(
   rgba: Uint8ClampedArray | readonly number[],
   width: number,
   height: number,
-  threshold = 60,
+  threshold = 64,
 ): RgbSampleDTO[] {
   const thresholdSq = threshold * threshold;
   const at = (i: number): number => rgba[i] ?? 0;
-  const isOpaque = (px: number): boolean => at(px * 4 + 3) >= 128;
+  const total = width * height;
+  const R = new Uint8Array(total);
+  const G = new Uint8Array(total);
+  const B = new Uint8Array(total);
+  const opaque = new Uint8Array(total);
 
-  const allOpaque: RgbSampleDTO[] = [];
-  const borderBuckets = new Map<string, { r: number; g: number; b: number; n: number }>();
   const marginX = Math.max(1, Math.round(width * 0.12));
   const marginY = Math.max(1, Math.round(height * 0.12));
+  const borderBuckets = new Map<string, { r: number; g: number; b: number; n: number }>();
+  let opaqueCount = 0;
 
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
       const px = y * width + x;
-      if (!isOpaque(px)) {
-        continue;
+      if (at(px * 4 + 3) < 128) {
+        continue; // skip transparent pixels (cut-out backgrounds)
       }
       const r = at(px * 4);
       const g = at(px * 4 + 1);
       const b = at(px * 4 + 2);
-      allOpaque.push({ r, g, b, weight: 1 });
-      const onBorder = x < marginX || x >= width - marginX || y < marginY || y >= height - marginY;
-      if (onBorder) {
+      R[px] = r;
+      G[px] = g;
+      B[px] = b;
+      opaque[px] = 1;
+      opaqueCount += 1;
+      if (x < marginX || x >= width - marginX || y < marginY || y >= height - marginY) {
         const key = `${bucketChannel(r)},${bucketChannel(g)},${bucketChannel(b)}`;
         const acc = borderBuckets.get(key) ?? { r: 0, g: 0, b: 0, n: 0 };
         acc.r += r;
@@ -138,7 +148,17 @@ export function segmentGarmentSamples(
     }
   }
 
-  if (allOpaque.length === 0) {
+  const collect = (mask: Uint8Array): RgbSampleDTO[] => {
+    const out: RgbSampleDTO[] = [];
+    for (let px = 0; px < total; px += 1) {
+      if (mask[px] === 1) {
+        out.push({ r: R[px] ?? 0, g: G[px] ?? 0, b: B[px] ?? 0, weight: 1 });
+      }
+    }
+    return out;
+  };
+
+  if (opaqueCount === 0) {
     return [];
   }
 
@@ -152,21 +172,60 @@ export function segmentGarmentSamples(
     .map((c) => ({ r: c.r / c.n, g: c.g / c.n, b: c.b / c.n }));
 
   if (background.length === 0) {
-    return allOpaque;
+    return collect(opaque);
   }
 
-  const foreground = allOpaque.filter((s) =>
-    background.every((bg) => colorDistanceSq(s.r, s.g, s.b, bg.r, bg.g, bg.b) > thresholdSq),
-  );
+  const mask = new Uint8Array(total);
+  let fgCount = 0;
+  for (let px = 0; px < total; px += 1) {
+    if (
+      opaque[px] === 1 &&
+      background.every(
+        (bg) => colorDistanceSq(R[px] ?? 0, G[px] ?? 0, B[px] ?? 0, bg.r, bg.g, bg.b) > thresholdSq,
+      )
+    ) {
+      mask[px] = 1;
+      fgCount += 1;
+    }
+  }
 
-  // If segmentation kept too little, the backdrop estimate was unreliable (e.g.
-  // the garment fills the frame) — use every opaque pixel rather than lose colour.
-  const minKeep = Math.max(8, Math.round(allOpaque.length * 0.05));
-  return foreground.length >= minKeep ? foreground : allOpaque;
+  // Gentle 1px erosion for large masks only: removes anti-aliased halo pixels
+  // at the garment/background boundary without harming small/thin objects.
+  let useMask = mask;
+  if (fgCount >= 400) {
+    const eroded = new Uint8Array(total);
+    let erodedCount = 0;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const px = y * width + x;
+        if (mask[px] !== 1) {
+          continue;
+        }
+        let neighbours = 0;
+        if (x > 0 && mask[px - 1] === 1) neighbours += 1;
+        if (x < width - 1 && mask[px + 1] === 1) neighbours += 1;
+        if (y > 0 && mask[px - width] === 1) neighbours += 1;
+        if (y < height - 1 && mask[px + width] === 1) neighbours += 1;
+        if (neighbours >= 2) {
+          eroded[px] = 1;
+          erodedCount += 1;
+        }
+      }
+    }
+    if (erodedCount >= fgCount * 0.5) {
+      useMask = eroded;
+      fgCount = erodedCount;
+    }
+  }
+
+  // A small absolute floor: enough pixels for a stable colour, yet low enough to
+  // keep a SMALL object (belt/watch). Below it, garment ≈ backdrop → use all.
+  const MIN_FOREGROUND = 6;
+  return fgCount >= MIN_FOREGROUND ? collect(useMask) : collect(opaque);
 }
 
 /** Sample a downscaled grid and keep only garment (non-background) pixels. */
-function sampleColors(bitmap: ImageBitmap, grid = 64): RgbSampleDTO[] {
+function sampleColors(bitmap: ImageBitmap, grid = 72): RgbSampleDTO[] {
   const canvas = document.createElement('canvas');
   const w = (canvas.width = Math.max(1, Math.min(grid, bitmap.width || grid)));
   const h = (canvas.height = Math.max(1, Math.min(grid, bitmap.height || grid)));

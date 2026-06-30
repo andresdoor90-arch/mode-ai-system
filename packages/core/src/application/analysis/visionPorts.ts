@@ -59,6 +59,26 @@ export interface GarmentAnalysis {
   readonly category?: AnalyzedField<string>;
   /** Domain subcategory slug (GarmentSubcategory). */
   readonly subcategory?: AnalyzedField<string>;
+  /**
+   * The USER category the model chose for this garment. The model reasons over
+   * the user's own SQLite category names (passed in the input) and returns the
+   * exact name that best matches — there is NO fixed garment-type taxonomy. The
+   * UI uses this to pre-select the category; the user can always change it.
+   */
+  readonly detectedCategory?: AnalyzedField<string>;
+  /**
+   * The attribute keys that make sense for THIS garment, as judged by the model
+   * (e.g. a belt has no sleeve/neckline). Drives which optional form fields are
+   * shown so each garment only exposes relevant attributes. Canonical keys:
+   * secondaryColors, subtype, sleeve, neckline, pattern, season, occasions.
+   */
+  readonly applicableAttributes?: AnalyzedField<readonly string[]>;
+  /**
+   * A generic, type-specific descriptor the model fills when relevant
+   * ("analógico" for a watch, "Oxford" for shoes, "chino" for trousers). One
+   * universal field instead of a hardcoded per-type attribute.
+   */
+  readonly subtype?: AnalyzedField<string>;
   /** Predominant colour as a hex string (#rrggbb). */
   readonly primaryColor?: AnalyzedField<string>;
   /** Human-readable name for the predominant colour. */
@@ -100,6 +120,9 @@ export const GARMENT_ANALYSIS_FIELDS: readonly GarmentAnalysisField[] = [
   'garmentType',
   'category',
   'subcategory',
+  'detectedCategory',
+  'applicableAttributes',
+  'subtype',
   'primaryColor',
   'primaryColorName',
   'secondaryColors',
@@ -135,6 +158,12 @@ export interface VisionAnalysisInput {
    * uses these to extract predominant colours with no network/native deps.
    */
   readonly colorSamples?: readonly RgbSample[];
+  /**
+   * The user's category names (from SQLite). When present, a vision provider
+   * asks the model to choose the best-matching one — there is no fixed garment
+   * taxonomy; classification is contextual against the user's own categories.
+   */
+  readonly categoryNames?: readonly string[];
   /** Optional Spanish free text from the "help improve the analysis" box. */
   readonly freeText?: string;
 }

@@ -5,6 +5,7 @@ import type { GarmentAnalysisDTO } from '@shared/ipc';
 
 import {
   analysisToDraft,
+  applicableAttributes,
   confidencePercent,
   describeAnalysis,
   draftToMetadata,
@@ -18,6 +19,7 @@ const ANALYSIS: GarmentAnalysisDTO = {
   garmentType: { value: 'Camisa', confidence: 0.9, source: 'user' },
   category: { value: 'tops', confidence: 0.9, source: 'user' },
   subcategory: { value: 'shirt', confidence: 0.9, source: 'user' },
+  subtype: { value: 'Oxford', confidence: 0.7, source: 'vision' },
   primaryColor: { value: '#235a6e', confidence: 0.6, source: 'baseline' },
   primaryColorName: { value: 'Azul petróleo', confidence: 0.9, source: 'user' },
   secondaryColors: { value: ['#1a1a1a'], confidence: 0.5, source: 'baseline' },
@@ -38,6 +40,7 @@ describe('analysisToDraft', () => {
     expect(draft.colorHex).toBe('#235a6e');
     expect(draft.colorName).toBe('Azul petróleo');
     expect(draft.material).toBe('Lino');
+    expect(draft.subtype).toBe('Oxford');
     expect(draft.sleeve).toBe('Manga larga');
     expect(draft.neckline).toBe('Cuello mao');
     expect(draft.formality).toBe('9');
@@ -54,6 +57,7 @@ describe('analysisToDraft', () => {
     expect(draft.colorName).toBe('');
     expect(draft.secondaryColors).toEqual([]);
     expect(draft.material).toBe('');
+    expect(draft.subtype).toBe('');
     expect(draft.sleeve).toBe('');
     expect(draft.neckline).toBe('');
     expect(draft.pattern).toBe('');
@@ -64,6 +68,42 @@ describe('analysisToDraft', () => {
     expect(draft.brand).toBe('');
     expect(draft.notes).toBe('');
     expect(draft.tags).toEqual([]);
+  });
+});
+
+describe('applicableAttributes (dynamic form fields)', () => {
+  it('prefers the model\u2019s relevant-attribute list (Spanish tokens)', () => {
+    // A belt: the model says only colours/material/style/formality matter.
+    const set = applicableAttributes('accessory', [
+      'coloresSecundarios',
+      'material',
+      'estilo',
+      'formalidad',
+    ]);
+    expect(set.has('secondaryColors')).toBe(true);
+    // sleeve/neckline/pattern are NOT relevant for a belt → hidden.
+    expect(set.has('sleeve')).toBe(false);
+    expect(set.has('neckline')).toBe(false);
+    expect(set.has('pattern')).toBe(false);
+  });
+
+  it('falls back to the category zone when the model gives no list', () => {
+    const shirt = applicableAttributes('upper-body', undefined);
+    expect(shirt.has('sleeve')).toBe(true);
+    expect(shirt.has('neckline')).toBe(true);
+    expect(shirt.has('pattern')).toBe(true);
+
+    const shoes = applicableAttributes('feet', undefined);
+    expect(shoes.has('subtype')).toBe(true);
+    expect(shoes.has('sleeve')).toBe(false);
+    expect(shoes.has('neckline')).toBe(false);
+  });
+
+  it('shows all optional fields when neither signal is available', () => {
+    const set = applicableAttributes(undefined, undefined);
+    expect(set.has('sleeve')).toBe(true);
+    expect(set.has('subtype')).toBe(true);
+    expect(set.has('occasions')).toBe(true);
   });
 });
 

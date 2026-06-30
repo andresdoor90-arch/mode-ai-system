@@ -30,6 +30,8 @@ export interface GarmentDraft {
   /** Secondary colour hexes (editable swatch list). */
   secondaryColors: string[];
   material: string;
+  /** Generic type-specific descriptor ("analógico", "Oxford", "chino", …). */
+  subtype: string;
   /** Sleeve type. */
   sleeve: string;
   /** Neckline / collar type. */
@@ -50,6 +52,112 @@ export interface GarmentDraft {
   notes: string;
   tags: string[];
 }
+
+/**
+ * Optional, type-dependent attributes whose form field is shown only when it
+ * makes sense for the detected garment (e.g. a belt has no sleeve/neckline).
+ * Core fields (name, colour, material, style, formality, brand, tags, notes)
+ * are always shown and are NOT part of this set.
+ */
+export type GarmentAttributeKey =
+  | 'secondaryColors'
+  | 'subtype'
+  | 'sleeve'
+  | 'neckline'
+  | 'pattern'
+  | 'season'
+  | 'occasions';
+
+const ALL_OPTIONAL_ATTRIBUTES: readonly GarmentAttributeKey[] = [
+  'secondaryColors',
+  'subtype',
+  'sleeve',
+  'neckline',
+  'pattern',
+  'season',
+  'occasions',
+];
+
+/**
+ * Fallback applicability by the category's structural zone (the LayerSlot the
+ * USER assigned in SQLite). Used only when the model did not return an explicit
+ * relevant-attribute list, so the form still shows a sensible set per zone.
+ * This is structural UI logic — NOT a hardcoded garment-type taxonomy.
+ */
+const LAYER_SLOT_ATTRIBUTES: Readonly<Record<string, readonly GarmentAttributeKey[]>> = {
+  'upper-body': ['secondaryColors', 'sleeve', 'neckline', 'pattern', 'season', 'occasions'],
+  'full-body': ['secondaryColors', 'sleeve', 'neckline', 'pattern', 'season', 'occasions'],
+  outer: ['secondaryColors', 'sleeve', 'neckline', 'pattern', 'season', 'occasions'],
+  'lower-body': ['secondaryColors', 'pattern', 'season', 'occasions'],
+  feet: ['secondaryColors', 'subtype', 'season', 'occasions'],
+  accessory: ['secondaryColors', 'subtype', 'pattern', 'occasions'],
+};
+
+/** Normalise an attribute token (accent/case/separator-insensitive). */
+const normAttr = (s: string): string =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+
+/** Map the model's free attribute tokens onto our canonical optional keys. */
+const ATTRIBUTE_ALIASES: Readonly<Record<string, GarmentAttributeKey>> = {
+  coloressecundarios: 'secondaryColors',
+  secondarycolors: 'secondaryColors',
+  secondarycolours: 'secondaryColors',
+  subtipo: 'subtype',
+  tipoespecifico: 'subtype',
+  subtype: 'subtype',
+  tipodereloj: 'subtype',
+  tipodezapato: 'subtype',
+  manga: 'sleeve',
+  mangas: 'sleeve',
+  sleeve: 'sleeve',
+  sleeves: 'sleeve',
+  cuello: 'neckline',
+  escote: 'neckline',
+  neckline: 'neckline',
+  collar: 'neckline',
+  patron: 'pattern',
+  pattern: 'pattern',
+  estampado: 'pattern',
+  temporada: 'season',
+  season: 'season',
+  estacion: 'season',
+  ocasiones: 'occasions',
+  occasions: 'occasions',
+  occasion: 'occasions',
+  eventos: 'occasions',
+};
+
+/**
+ * Decide which optional attribute fields the form should show for the detected
+ * garment. The model's own judgement (`aiKeys`, from `applicableAttributes`)
+ * takes priority — that is the "intelligent" path. When the model says nothing,
+ * fall back to the category's structural zone; with neither signal, show all.
+ */
+export const applicableAttributes = (
+  layerSlot: string | undefined,
+  aiKeys: readonly string[] | undefined,
+): Set<GarmentAttributeKey> => {
+  if (aiKeys !== undefined && aiKeys.length > 0) {
+    const mapped = new Set<GarmentAttributeKey>();
+    for (const key of aiKeys) {
+      const canonical = ATTRIBUTE_ALIASES[normAttr(key)];
+      if (canonical !== undefined) {
+        mapped.add(canonical);
+      }
+    }
+    if (mapped.size > 0) {
+      return mapped;
+    }
+  }
+  if (layerSlot !== undefined && layerSlot in LAYER_SLOT_ATTRIBUTES) {
+    return new Set(LAYER_SLOT_ATTRIBUTES[layerSlot]);
+  }
+  return new Set(ALL_OPTIONAL_ATTRIBUTES);
+};
 
 /** A single attribute shown on the preview card. */
 export interface AttributeRow {
@@ -124,6 +232,7 @@ export const analysisToDraft = (analysis: GarmentAnalysisDTO): GarmentDraft => (
   colorName: analysis.primaryColorName?.value ?? '',
   secondaryColors: [...(analysis.secondaryColors?.value ?? [])],
   material: analysis.material?.value ?? '',
+  subtype: analysis.subtype?.value ?? '',
   sleeve: analysis.sleeve?.value ?? '',
   neckline: analysis.neckline?.value ?? '',
   pattern: analysis.pattern?.value ?? '',
@@ -200,6 +309,7 @@ export const draftToMetadata = (
   put('pattern', draft.pattern);
   put('sleeve', draft.sleeve);
   put('neckline', draft.neckline);
+  put('subtype', draft.subtype);
   put('style', draft.style);
   put('formality', draft.formality);
   const occasions = parseTags(draft.occasions);

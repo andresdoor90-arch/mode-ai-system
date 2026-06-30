@@ -25,6 +25,7 @@ import { cn } from '../../lib/cn';
 import {
   analysisPassthroughMetadata,
   analysisToDraft,
+  applicableAttributes,
   draftToMetadata,
   parseTags,
   type GarmentDraft,
@@ -160,20 +161,37 @@ export function AddGarmentDialog(): JSX.Element {
     };
   }, [open]);
 
-  // After an analysis completes, pre-select the user category whose zone best
-  // matches the detected coarse category. Never invents a category.
+  // After analysis, pre-select the category the user owns. Priority:
+  //  1. The category the MODEL chose from the user's own list (by exact name).
+  //  2. Otherwise, the user category whose structural zone matches the detected
+  //     coarse category. Never invents a category; the user can always change it.
   useEffect(() => {
     if (result === null || categories.length === 0 || selectedTopId !== '') {
       return;
     }
+    const normName = (s: string): string =>
+      s
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+    const chosen = result.analysis.detectedCategory?.value;
+    const byName =
+      chosen !== undefined
+        ? categories.find((n) => normName(n.category.name) === normName(chosen))
+        : undefined;
+    if (byName !== undefined) {
+      setSelectedTopId(byName.category.id);
+      return;
+    }
     const detected = result.analysis.category?.value;
     const wantSlot = detected !== undefined ? DETECTED_CATEGORY_TO_LAYER_SLOT[detected] : undefined;
-    const match =
+    const byZone =
       wantSlot !== undefined
         ? categories.find((n) => n.category.metadata.layerSlot === wantSlot)
         : undefined;
-    if (match !== undefined) {
-      setSelectedTopId(match.category.id);
+    if (byZone !== undefined) {
+      setSelectedTopId(byZone.category.id);
     }
   }, [result, categories, selectedTopId]);
 
@@ -198,12 +216,15 @@ export function AddGarmentDialog(): JSX.Element {
   };
 
   const analyze = useCallback(
-    async (image: ProcessedImage): Promise<void> => {
+    async (image: ProcessedImage, categoryNames: readonly string[]): Promise<void> => {
       setPhase('analyzing');
       try {
         const analysis = await ipc.analyzeGarment({
           colorSamples: image.colorSamples,
           image: { base64: image.base64, mimeType: image.mimeType },
+          // Hand the model the user's OWN categories so it classifies the
+          // garment against them (contextual classification, no fixed list).
+          ...(categoryNames.length > 0 ? { categoryNames } : {}),
         });
         // Diagnostic: shows in DevTools which providers actually ran. If
         // `providers` lacks 'ollama-vision', the model was not reached/installed;
@@ -213,6 +234,7 @@ export function AddGarmentDialog(): JSX.Element {
           providers: analysis.providers,
           visionAvailable: analysis.visionAvailable,
           populatedFields: analysis.populatedFields,
+          detectedCategory: analysis.analysis.detectedCategory?.value,
           fields: Object.keys(analysis.analysis),
         });
         setResult(analysis);
@@ -252,7 +274,10 @@ export function AddGarmentDialog(): JSX.Element {
       try {
         const image = await processImageFile(file);
         setProcessed(image);
-        await analyze(image);
+        await analyze(
+          image,
+          categories.map((node) => node.category.name),
+        );
       } catch (error) {
         toast({
           title: 'No se pudo abrir la imagen',
@@ -262,7 +287,7 @@ export function AddGarmentDialog(): JSX.Element {
         setPhase('await-photo');
       }
     },
-    [analyze, toast],
+    [analyze, categories, toast],
   );
 
   const onFileChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -386,6 +411,14 @@ export function AddGarmentDialog(): JSX.Element {
 
   const busy = phase === 'processing' || phase === 'analyzing';
   const noCategories = categories.length === 0;
+
+  // Which optional attribute fields to show: the model's own judgement of what
+  // matters for THIS garment, falling back to the category's structural zone.
+  const applicable = applicableAttributes(
+    topNode?.category.metadata.layerSlot,
+    result?.analysis.applicableAttributes?.value,
+  );
+  const show = (key: Parameters<typeof applicable.has>[0]): boolean => applicable.has(key);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -557,30 +590,34 @@ export function AddGarmentDialog(): JSX.Element {
                       />
                     </div>
                   </FormField>
-                  <FormField label="Temporada recomendada" htmlFor="g-season">
-                    <Select
-                      id="g-season"
-                      value={draft.season}
-                      onChange={(e) => setField('season', e.target.value)}
+                  {show('season') && (
+                    <FormField label="Temporada recomendada" htmlFor="g-season">
+                      <Select
+                        id="g-season"
+                        value={draft.season}
+                        onChange={(e) => setField('season', e.target.value)}
+                      >
+                        <option value="">Sin determinar</option>
+                        {SEASON_OPTIONS.map((o) => (
+                          <option key={o.value} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormField>
+                  )}
+                  {show('secondaryColors') && (
+                    <FormField
+                      label="Colores secundarios"
+                      hint="Detectados por la IA · haz clic en un color para quitarlo"
+                      className="sm:col-span-2"
                     >
-                      <option value="">Sin determinar</option>
-                      {SEASON_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                  <FormField
-                    label="Colores secundarios"
-                    hint="Detectados por la IA · haz clic en un color para quitarlo"
-                    className="sm:col-span-2"
-                  >
-                    <SecondaryColorsField
-                      colors={draft.secondaryColors}
-                      onChange={(next) => setField('secondaryColors', next)}
-                    />
-                  </FormField>
+                      <SecondaryColorsField
+                        colors={draft.secondaryColors}
+                        onChange={(next) => setField('secondaryColors', next)}
+                      />
+                    </FormField>
+                  )}
                   <FormField label="Material" htmlFor="g-material">
                     <Input
                       id="g-material"
@@ -589,30 +626,50 @@ export function AddGarmentDialog(): JSX.Element {
                       placeholder="Lino, algodón, mezclilla…"
                     />
                   </FormField>
-                  <FormField label="Patrón o estampado" htmlFor="g-pattern">
-                    <Input
-                      id="g-pattern"
-                      value={draft.pattern}
-                      onChange={(e) => setField('pattern', e.target.value)}
-                      placeholder="Liso, rayas, cuadros…"
-                    />
-                  </FormField>
-                  <FormField label="Tipo de manga" htmlFor="g-sleeve">
-                    <Input
-                      id="g-sleeve"
-                      value={draft.sleeve}
-                      onChange={(e) => setField('sleeve', e.target.value)}
-                      placeholder="Manga larga, corta, sin mangas…"
-                    />
-                  </FormField>
-                  <FormField label="Tipo de cuello" htmlFor="g-neckline">
-                    <Input
-                      id="g-neckline"
-                      value={draft.neckline}
-                      onChange={(e) => setField('neckline', e.target.value)}
-                      placeholder="Cuello redondo, en V, mao…"
-                    />
-                  </FormField>
+                  {show('subtype') && (
+                    <FormField
+                      label="Tipo específico"
+                      htmlFor="g-subtype"
+                      hint="p.ej. analógico, Oxford"
+                    >
+                      <Input
+                        id="g-subtype"
+                        value={draft.subtype}
+                        onChange={(e) => setField('subtype', e.target.value)}
+                        placeholder="Analógico, Oxford, chino…"
+                      />
+                    </FormField>
+                  )}
+                  {show('pattern') && (
+                    <FormField label="Patrón o estampado" htmlFor="g-pattern">
+                      <Input
+                        id="g-pattern"
+                        value={draft.pattern}
+                        onChange={(e) => setField('pattern', e.target.value)}
+                        placeholder="Liso, rayas, cuadros…"
+                      />
+                    </FormField>
+                  )}
+                  {show('sleeve') && (
+                    <FormField label="Tipo de manga" htmlFor="g-sleeve">
+                      <Input
+                        id="g-sleeve"
+                        value={draft.sleeve}
+                        onChange={(e) => setField('sleeve', e.target.value)}
+                        placeholder="Manga larga, corta, sin mangas…"
+                      />
+                    </FormField>
+                  )}
+                  {show('neckline') && (
+                    <FormField label="Tipo de cuello" htmlFor="g-neckline">
+                      <Input
+                        id="g-neckline"
+                        value={draft.neckline}
+                        onChange={(e) => setField('neckline', e.target.value)}
+                        placeholder="Cuello redondo, en V, mao…"
+                      />
+                    </FormField>
+                  )}
                   <FormField label="Nivel de formalidad" htmlFor="g-formality" hint="0 a 10">
                     <Input
                       id="g-formality"
@@ -625,18 +682,20 @@ export function AddGarmentDialog(): JSX.Element {
                       placeholder="0–10"
                     />
                   </FormField>
-                  <FormField
-                    label="Ocasiones recomendadas"
-                    htmlFor="g-occasions"
-                    hint="Separadas por comas"
-                  >
-                    <Input
-                      id="g-occasions"
-                      value={draft.occasions}
-                      onChange={(e) => setField('occasions', e.target.value)}
-                      placeholder="formal, trabajo, fiesta…"
-                    />
-                  </FormField>
+                  {show('occasions') && (
+                    <FormField
+                      label="Ocasiones recomendadas"
+                      htmlFor="g-occasions"
+                      hint="Separadas por comas"
+                    >
+                      <Input
+                        id="g-occasions"
+                        value={draft.occasions}
+                        onChange={(e) => setField('occasions', e.target.value)}
+                        placeholder="formal, trabajo, fiesta…"
+                      />
+                    </FormField>
+                  )}
                   <FormField label="Marca" htmlFor="g-brand" hint="Opcional">
                     <Input
                       id="g-brand"

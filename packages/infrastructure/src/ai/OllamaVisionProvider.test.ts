@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { OllamaClient, type OllamaFetch, type OllamaHttpResponse } from './OllamaClient';
 import {
   buildGarmentVisionMessages,
+  buildVisionUserPrompt,
   OllamaVisionProvider,
   parseGarmentVisionResponse,
 } from './OllamaVisionProvider';
@@ -117,6 +118,51 @@ describe('parseGarmentVisionResponse', () => {
     expect(a.brand).toBeUndefined();
     expect(a.material).toBeUndefined();
     expect(a.sleeve?.value).toBe('Manga larga');
+  });
+
+  it('classifies against the USER categories (exact name match)', () => {
+    const a = parseGarmentVisionResponse(JSON.stringify({ categoria: 'Correas' }), [
+      'Camisas',
+      'Pantalones',
+      'Correas',
+      'Relojes',
+    ]);
+    expect(a.detectedCategory?.value).toBe('Correas');
+    expect(a.detectedCategory?.source).toBe('vision');
+  });
+
+  it('matches the chosen category tolerantly (singular/plural, accents)', () => {
+    const a = parseGarmentVisionResponse(JSON.stringify({ categoria: 'corbata' }), [
+      'Camisas',
+      'Corbatas',
+    ]);
+    expect(a.detectedCategory?.value).toBe('Corbatas');
+  });
+
+  it('omits the user category when none of them fits', () => {
+    const a = parseGarmentVisionResponse(JSON.stringify({ categoria: 'sombrero' }), [
+      'Camisas',
+      'Pantalones',
+    ]);
+    expect(a.detectedCategory).toBeUndefined();
+  });
+
+  it('parses the relevant-attribute list and a generic subtype', () => {
+    const a = parseGarmentVisionResponse(
+      JSON.stringify({
+        subtipo: 'analógico',
+        atributosRelevantes: ['material', 'subtipo', 'estilo', 'formalidad'],
+      }),
+    );
+    expect(a.subtype?.value).toBe('analógico');
+    expect(a.applicableAttributes?.value).toEqual(['material', 'subtipo', 'estilo', 'formalidad']);
+  });
+
+  it('embeds the user category names in the prompt sent to the model', () => {
+    const prompt = buildVisionUserPrompt(['Camisas', 'Relojes']);
+    expect(prompt).toContain('"Camisas"');
+    expect(prompt).toContain('"Relojes"');
+    expect(prompt).toContain('atributosRelevantes');
   });
 
   it('maps category and season synonyms to domain slugs', () => {

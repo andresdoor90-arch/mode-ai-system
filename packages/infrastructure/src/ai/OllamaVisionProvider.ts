@@ -35,36 +35,60 @@ export const VISION_SYSTEM_PROMPT =
 
 /**
  * The per-image instruction. It lists exactly the attributes the product wants
- * filled (it deliberately does NOT ask for the garment "type/category as a
- * field" the user must own — that comes from the user's own taxonomy). Keys are
- * Spanish to match the model's likely vocabulary; the parser also accepts the
- * English/snake_case variants real models emit.
+ * filled and asks the model to (a) CHOOSE the best-matching USER category from
+ * the list we pass in (contextual classification — no fixed taxonomy), (b)
+ * report which attributes are RELEVANT for this garment so the form can show
+ * only those, and (c) fill a generic `subtipo`. Keys are Spanish to match the
+ * model's vocabulary; the parser also accepts English/snake_case variants.
+ *
+ * It deliberately does NOT invent a garment "type" of its own — the type is the
+ * user category it selects from {@link categoryNames}.
  */
-export const VISION_USER_PROMPT =
-  'Analiza la prenda y devuelve un JSON con estas claves (en español). Omite ' +
-  'cualquier clave que no puedas determinar con seguridad; NO adivines:\n' +
-  '- nombre: nombre corto y útil, p.ej. "Camisa azul oscuro manga larga".\n' +
-  '- colorPrincipal: color dominante de la PRENDA en hex #rrggbb.\n' +
-  '- colorPrincipalNombre: nombre del color principal.\n' +
-  '- coloresSecundarios: arreglo de hex de los colores secundarios de la prenda.\n' +
-  '- material: tejido aproximado (algodón, lino, mezclilla, lana, cuero, …).\n' +
-  '- manga: tipo de manga (manga larga, manga corta, sin mangas, …).\n' +
-  '- cuello: tipo de cuello o escote (redondo, en V, mao, polo, …).\n' +
-  '- patron: liso, rayas, cuadros, lunares o estampado.\n' +
-  '- estilo: casual, formal, deportivo, urbano, elegante, …\n' +
-  '- formalidad: número entero de 0 (muy informal) a 10 (muy formal).\n' +
-  '- temporada: spring, summer, autumn, winter o all-season.\n' +
-  '- ocasiones: arreglo de ocasiones recomendadas (trabajo, formal, fiesta, …).\n' +
-  '- marca: SOLO si hay un logotipo o etiqueta claramente legible; si no, omítela.\n' +
-  '- observaciones: una frase breve y útil sobre la prenda (detalles, uso, combinación).\n' +
-  'Responde únicamente con el JSON.';
+export const buildVisionUserPrompt = (categoryNames: readonly string[] = []): string => {
+  const categoriesBlock =
+    categoryNames.length > 0
+      ? 'Estas son las categorías del usuario: [' +
+        categoryNames.map((n) => `"${n}"`).join(', ') +
+        ']. En "categoria" elige EXACTAMENTE una de esa lista, la que mejor ' +
+        'corresponda a la prenda de la foto. Si ninguna corresponde, omite "categoria".\n'
+      : '';
+  return (
+    'Analiza la prenda y devuelve un JSON con estas claves (en español). Omite ' +
+    'cualquier clave que no puedas determinar con seguridad; NO adivines:\n' +
+    categoriesBlock +
+    '- nombre: nombre corto y útil, p.ej. "Camisa azul oscuro manga larga".\n' +
+    '- subtipo: tipo específico de la prenda (p.ej. "analógico" para un reloj, ' +
+    '"Oxford" para zapatos, "chino" para un pantalón).\n' +
+    '- colorPrincipal: color dominante de la PRENDA en hex #rrggbb.\n' +
+    '- colorPrincipalNombre: nombre del color principal.\n' +
+    '- coloresSecundarios: arreglo de hex de los colores secundarios de la prenda.\n' +
+    '- material: tejido aproximado (algodón, lino, mezclilla, lana, cuero, …).\n' +
+    '- manga: tipo de manga (manga larga, manga corta, sin mangas, …).\n' +
+    '- cuello: tipo de cuello o escote (redondo, en V, mao, polo, …).\n' +
+    '- patron: liso, rayas, cuadros, lunares o estampado.\n' +
+    '- estilo: casual, formal, deportivo, urbano, elegante, …\n' +
+    '- formalidad: número entero de 0 (muy informal) a 10 (muy formal).\n' +
+    '- temporada: spring, summer, autumn, winter o all-season.\n' +
+    '- ocasiones: arreglo de ocasiones recomendadas (trabajo, formal, fiesta, …).\n' +
+    '- marca: SOLO si hay un logotipo o etiqueta claramente legible; si no, omítela.\n' +
+    '- observaciones: una frase breve y útil sobre la prenda.\n' +
+    '- atributosRelevantes: arreglo con los nombres de los atributos que TIENEN ' +
+    'SENTIDO para esta prenda, elegidos de: coloresSecundarios, material, ' +
+    'subtipo, manga, cuello, patron, estilo, formalidad, temporada, ocasiones. ' +
+    '(Ej.: una correa no tiene manga ni cuello; un reloj no tiene patrón.)\n' +
+    'Responde únicamente con el JSON.'
+  );
+};
 
 /** Build the chat messages for analysing a garment image. */
-export const buildGarmentVisionMessages = (base64: string): OllamaChatMessage[] => [
+export const buildGarmentVisionMessages = (
+  base64: string,
+  categoryNames: readonly string[] = [],
+): OllamaChatMessage[] => [
   { role: 'system', content: VISION_SYSTEM_PROMPT },
   {
     role: 'user',
-    content: VISION_USER_PROMPT,
+    content: buildVisionUserPrompt(categoryNames),
     images: [base64],
   },
 ];
@@ -274,12 +298,43 @@ const toSeasonSlug = (v: unknown): string | undefined => {
 };
 
 /**
+ * Match the model's chosen category string against the USER's category names
+ * (case/accent-insensitive, tolerant of partial containment). Returns the
+ * ORIGINAL user name so the UI can select it exactly. Never invents a name.
+ */
+const matchUserCategory = (
+  value: unknown,
+  categoryNames: readonly string[],
+): string | undefined => {
+  const s = str(value);
+  if (s === undefined || categoryNames.length === 0) {
+    return undefined;
+  }
+  const target = norm(s);
+  const exact = categoryNames.find((name) => norm(name) === target);
+  if (exact !== undefined) {
+    return exact;
+  }
+  // Tolerate "camisa" vs "Camisas", or a phrase that contains the name.
+  return categoryNames.find((name) => {
+    const n = norm(name);
+    return n.length > 0 && (target.includes(n) || n.includes(target));
+  });
+};
+
+/**
  * Map a model's JSON object to a (vision-sourced) GarmentAnalysis, tolerant of
  * the key/value variations real models emit (Spanish/English keys, snake_case,
- * camelCase, one level of nesting, colour names vs hex, category/season
- * synonyms). Only fields with a real value are emitted — never fabricated.
+ * camelCase, nesting, colour names vs hex, category/season synonyms). Only
+ * fields with a real value are emitted — never fabricated.
+ *
+ * When `categoryNames` is provided, the model's chosen category is matched
+ * against the user's own categories and surfaced as `detectedCategory`.
  */
-export const parseGarmentVisionResponse = (content: string): GarmentAnalysis => {
+export const parseGarmentVisionResponse = (
+  content: string,
+  categoryNames: readonly string[] = [],
+): GarmentAnalysis => {
   const json = extractJson(content);
   if (json === null) {
     return {};
@@ -306,11 +361,43 @@ export const parseGarmentVisionResponse = (content: string): GarmentAnalysis => 
     'clothingtype',
   ]);
   put('garmentType', str(typeValue));
-  put(
+  const categoryValue = pick(map, [
     'category',
-    toCategorySlug(pick(map, ['category', 'categoria'])) ?? toCategorySlug(typeValue),
-  );
+    'categoria',
+    'categoriausuario',
+    'usercategory',
+    'categoriaelegida',
+  ]);
+  put('category', toCategorySlug(categoryValue) ?? toCategorySlug(typeValue));
   put('subcategory', str(pick(map, ['subcategory', 'subcategoria'])));
+  // Contextual classification against the user's own categories.
+  put('detectedCategory', matchUserCategory(categoryValue ?? typeValue, categoryNames));
+  put(
+    'subtype',
+    descr(
+      pick(map, [
+        'subtipo',
+        'subtype',
+        'tipoespecifico',
+        'tipodereloj',
+        'tipodezapato',
+        'specifictype',
+        'variante',
+      ]),
+    ),
+  );
+  put(
+    'applicableAttributes',
+    strArray(
+      pick(map, [
+        'atributosrelevantes',
+        'applicableattributes',
+        'atributos',
+        'relevantattributes',
+        'camposrelevantes',
+      ]),
+    ),
+  );
 
   const colorValue = pick(map, [
     'primarycolor',
@@ -433,9 +520,9 @@ export class OllamaVisionProvider implements IVisionProvider {
       const result = await this.client.chat({
         model: this.resolvedModel ?? this.model,
         format: 'json',
-        messages: buildGarmentVisionMessages(base64),
+        messages: buildGarmentVisionMessages(base64, input.categoryNames ?? []),
       });
-      return parseGarmentVisionResponse(result.content);
+      return parseGarmentVisionResponse(result.content, input.categoryNames ?? []);
     } catch {
       // Transport/model failure → defer entirely to the colour baseline.
       return {};

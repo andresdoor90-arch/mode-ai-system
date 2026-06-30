@@ -464,6 +464,12 @@ export interface GarmentAnalysisDTO {
   readonly garmentType?: AnalyzedFieldDTO<string>;
   readonly category?: AnalyzedFieldDTO<string>;
   readonly subcategory?: AnalyzedFieldDTO<string>;
+  /** The user (SQLite) category the model chose — exact name from the input. */
+  readonly detectedCategory?: AnalyzedFieldDTO<string>;
+  /** Canonical attribute keys relevant to this garment (drives dynamic fields). */
+  readonly applicableAttributes?: AnalyzedFieldDTO<readonly string[]>;
+  /** Generic type-specific descriptor ("analógico", "Oxford", …). */
+  readonly subtype?: AnalyzedFieldDTO<string>;
   readonly primaryColor?: AnalyzedFieldDTO<string>;
   readonly primaryColorName?: AnalyzedFieldDTO<string>;
   readonly secondaryColors?: AnalyzedFieldDTO<readonly string[]>;
@@ -506,6 +512,11 @@ export interface RgbSampleDTO {
 export interface AnalyzeGarmentPayload {
   readonly colorSamples?: readonly RgbSampleDTO[];
   readonly freeText?: string;
+  /**
+   * The user's category names (from SQLite). Passed so the vision model can
+   * classify the garment against the user's OWN categories — no fixed list.
+   */
+  readonly categoryNames?: readonly string[];
   /** Image bytes for vision providers (e.g. Ollama). */
   readonly image?: { readonly base64: string; readonly mimeType: string };
 }

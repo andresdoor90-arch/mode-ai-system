@@ -60,6 +60,23 @@ describe('segmentGarmentSamples', () => {
     expect(samples.every((s) => s.r > 150 && s.g < 90 && s.b < 90)).toBe(true);
   });
 
+  it('keeps a SMALL object (e.g. a thin belt) that covers a tiny % of the frame', () => {
+    // 40×40 white frame with a thin brown belt (~3% of pixels). The previous
+    // 5%-of-frame floor discarded this and fell back to the white background;
+    // the small absolute floor now keeps the belt so its colour wins.
+    const size = 40;
+    const BROWN: readonly [number, number, number, number] = [120, 70, 40, 255];
+    const data = buildRgba(size, size, (x, y) => {
+      const onBelt = y >= 19 && y <= 20 && x >= 8 && x <= 31;
+      return onBelt ? BROWN : WHITE;
+    });
+    const samples = segmentGarmentSamples(data, size, size);
+    expect(samples.length).toBe(48);
+    expect(samples.every((s) => s.r === 120 && s.g === 70 && s.b === 40)).toBe(true);
+    const [primary] = new BaselineColorExtractor().extract(samples, 1);
+    expect(primary).not.toBe('#ffffff'); // the white sheet must NOT win
+  });
+
   it('falls back to every opaque pixel when the garment fills the frame', () => {
     const size = 10;
     // Uniform colour everywhere: the border estimate equals the garment, so
