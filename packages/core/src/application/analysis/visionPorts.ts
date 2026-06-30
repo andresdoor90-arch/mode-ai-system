@@ -81,6 +81,10 @@ export interface GarmentAnalysis {
   readonly gender?: AnalyzedField<string>;
   /** Recommended occasion slugs (Occasion). */
   readonly occasions?: AnalyzedField<readonly string[]>;
+  /** Brand name — only when a logo/label is genuinely visible. */
+  readonly brand?: AnalyzedField<string>;
+  /** A short, useful free-text observation about the garment. */
+  readonly notes?: AnalyzedField<string>;
   /** Free-form suggested tags. */
   readonly suggestedTags?: AnalyzedField<readonly string[]>;
   /** Category slugs this garment pairs well with. */
@@ -111,6 +115,8 @@ export const GARMENT_ANALYSIS_FIELDS: readonly GarmentAnalysisField[] = [
   'season',
   'gender',
   'occasions',
+  'brand',
+  'notes',
   'suggestedTags',
   'compatibleCategories',
 ];

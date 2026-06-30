@@ -23,8 +23,6 @@ import type { AnalyzedFieldDTO, GarmentAnalysisDTO } from '@shared/ipc';
 export interface GarmentDraft {
   /** Suggested name (from the model, or derived from type + colour). */
   name: string;
-  /** Kind of garment ("camisa", "pantalón", …). */
-  garmentType: string;
   /** Primary colour hex (the colour baseline almost always supplies one). */
   colorHex: string;
   /** Human name for the primary colour. */
@@ -122,7 +120,6 @@ const COLOR_WIDGET_FALLBACK = '#cccccc';
  */
 export const analysisToDraft = (analysis: GarmentAnalysisDTO): GarmentDraft => ({
   name: analysis.suggestedName?.value ?? analysis.garmentType?.value ?? '',
-  garmentType: analysis.garmentType?.value ?? '',
   colorHex: analysis.primaryColor?.value ?? COLOR_WIDGET_FALLBACK,
   colorName: analysis.primaryColorName?.value ?? '',
   secondaryColors: [...(analysis.secondaryColors?.value ?? [])],
@@ -134,8 +131,8 @@ export const analysisToDraft = (analysis: GarmentAnalysisDTO): GarmentDraft => (
   formality: analysis.formality?.value !== undefined ? String(analysis.formality.value) : '',
   season: analysis.season?.value ?? '',
   occasions: (analysis.occasions?.value ?? []).join(', '),
-  brand: '',
-  notes: '',
+  brand: analysis.brand?.value ?? '',
+  notes: analysis.notes?.value ?? '',
   tags: [...(analysis.suggestedTags?.value ?? [])],
 });
 
@@ -159,7 +156,6 @@ export const describeAnalysis = (analysis: GarmentAnalysisDTO): AttributeRow[] =
     }
   };
 
-  add('garmentType', 'Tipo', analysis.garmentType);
   add('material', 'Material', analysis.material);
   add('pattern', 'Patrón', analysis.pattern);
   add('texture', 'Textura', analysis.texture);
@@ -201,7 +197,6 @@ export const draftToMetadata = (
       meta[key] = trimmed;
     }
   };
-  put('garmentType', draft.garmentType);
   put('pattern', draft.pattern);
   put('sleeve', draft.sleeve);
   put('neckline', draft.neckline);

@@ -22,27 +22,49 @@ import { OllamaClient, type OllamaChatMessage } from './OllamaClient';
 
 const VISION_CONFIDENCE = 0.72;
 
-/** System instruction: behave like a fashion cataloguer, output strict JSON. */
+/**
+ * System instruction: act like a fashion cataloguer and emit STRICT JSON only.
+ * Kept short on purpose — vision models attend better to the instruction that
+ * travels in the same user turn as the image (see {@link buildGarmentVisionMessages}).
+ */
 export const VISION_SYSTEM_PROMPT =
-  'Eres un catalogador de moda. Analiza la prenda de la fotografía y responde ' +
-  'ÚNICAMENTE con un objeto JSON válido, sin texto adicional ni markdown. ' +
-  'Usa estas claves (omite o usa null las que no puedas determinar con seguridad; ' +
-  'NO inventes): ' +
-  'garmentType (string, p.ej. "camisa","pantalón","zapatos"), ' +
-  'category (uno de: tops,bottoms,outerwear,shoes,accessories,dresses), ' +
-  'subcategory (string), primaryColorName (string), primaryColor (hex #rrggbb), ' +
-  'secondaryColors (array de hex), material (string), pattern (uno de: liso,rayas,cuadros,lunares,estampado), ' +
-  'texture (string), sleeve (string), length (string), neckline (string), fit (string), ' +
-  'style (string), formality (número 0-10), season (uno de: spring,summer,autumn,winter,all-season), ' +
-  'gender (male,female,unisex), occasions (array), tags (array de strings), ' +
-  'suggestedName (nombre corto y útil, p.ej. "Camisa azul oscuro manga larga").';
+  'Eres un catalogador de moda experto. Observa ÚNICAMENTE la prenda principal ' +
+  'de la fotografía e ignora por completo el fondo, la piel, el cuerpo y otros ' +
+  'objetos. Responde solo con un objeto JSON válido, sin markdown ni texto extra. ' +
+  'No inventes: si no puedes determinar un dato con seguridad, omite esa clave.';
+
+/**
+ * The per-image instruction. It lists exactly the attributes the product wants
+ * filled (it deliberately does NOT ask for the garment "type/category as a
+ * field" the user must own — that comes from the user's own taxonomy). Keys are
+ * Spanish to match the model's likely vocabulary; the parser also accepts the
+ * English/snake_case variants real models emit.
+ */
+export const VISION_USER_PROMPT =
+  'Analiza la prenda y devuelve un JSON con estas claves (en español). Omite ' +
+  'cualquier clave que no puedas determinar con seguridad; NO adivines:\n' +
+  '- nombre: nombre corto y útil, p.ej. "Camisa azul oscuro manga larga".\n' +
+  '- colorPrincipal: color dominante de la PRENDA en hex #rrggbb.\n' +
+  '- colorPrincipalNombre: nombre del color principal.\n' +
+  '- coloresSecundarios: arreglo de hex de los colores secundarios de la prenda.\n' +
+  '- material: tejido aproximado (algodón, lino, mezclilla, lana, cuero, …).\n' +
+  '- manga: tipo de manga (manga larga, manga corta, sin mangas, …).\n' +
+  '- cuello: tipo de cuello o escote (redondo, en V, mao, polo, …).\n' +
+  '- patron: liso, rayas, cuadros, lunares o estampado.\n' +
+  '- estilo: casual, formal, deportivo, urbano, elegante, …\n' +
+  '- formalidad: número entero de 0 (muy informal) a 10 (muy formal).\n' +
+  '- temporada: spring, summer, autumn, winter o all-season.\n' +
+  '- ocasiones: arreglo de ocasiones recomendadas (trabajo, formal, fiesta, …).\n' +
+  '- marca: SOLO si hay un logotipo o etiqueta claramente legible; si no, omítela.\n' +
+  '- observaciones: una frase breve y útil sobre la prenda (detalles, uso, combinación).\n' +
+  'Responde únicamente con el JSON.';
 
 /** Build the chat messages for analysing a garment image. */
 export const buildGarmentVisionMessages = (base64: string): OllamaChatMessage[] => [
   { role: 'system', content: VISION_SYSTEM_PROMPT },
   {
     role: 'user',
-    content: 'Analiza esta prenda y devuelve el JSON solicitado.',
+    content: VISION_USER_PROMPT,
     images: [base64],
   },
 ];
@@ -86,28 +108,34 @@ const norm = (s: string): string =>
     .replace(/[^a-z0-9]/g, '');
 
 /**
- * Flatten a JSON object into a normalised-key → value map, descending one level
- * into nested objects (so `{ "garment": { "type": … } }` and `{ "tipo": … }`
- * resolve the same). Top-level keys take precedence over nested ones.
+ * Flatten a JSON object into a normalised-key → value map, descending into
+ * nested objects at ANY depth (so `{ "analisis": { "prenda": { "tipo": … } } }`
+ * and a flat `{ "tipo": … }` resolve the same). Shallower keys win over deeper
+ * ones, and earlier branches win over later ones, so a top-level value always
+ * takes precedence. Arrays are left intact (handled by the array coercers).
  */
 const flattenKeys = (obj: Record<string, unknown>): Record<string, unknown> => {
   const map: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    const nk = norm(k);
-    if (!(nk in map)) {
-      map[nk] = v;
+  const visit = (node: Record<string, unknown>, depth: number): void => {
+    if (depth > 5) {
+      return;
     }
-  }
-  for (const v of Object.values(obj)) {
-    if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-      for (const [k2, v2] of Object.entries(v as Record<string, unknown>)) {
-        const nk = norm(k2);
-        if (!(nk in map)) {
-          map[nk] = v2;
-        }
+    // Record this level's scalar/array values first (shallower wins).
+    for (const [k, v] of Object.entries(node)) {
+      const nk = norm(k);
+      const isPlainObject = v !== null && typeof v === 'object' && !Array.isArray(v);
+      if (!isPlainObject && !(nk in map)) {
+        map[nk] = v;
       }
     }
-  }
+    // Then descend into nested objects.
+    for (const v of Object.values(node)) {
+      if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+        visit(v as Record<string, unknown>, depth + 1);
+      }
+    }
+  };
+  visit(obj, 0);
   return map;
 };
 
@@ -128,6 +156,47 @@ const str = (v: unknown): string | undefined =>
     : typeof v === 'number'
       ? String(v)
       : undefined;
+
+/**
+ * Normalised tokens that some models emit to mean "I don't know". Treated as
+ * "not determined" so the field stays empty instead of showing junk like
+ * "desconocido" or "no visible" — especially important for brand.
+ */
+const UNKNOWN_TOKENS: ReadonlySet<string> = new Set([
+  'desconocido',
+  'desconocida',
+  'noidentificado',
+  'noidentificada',
+  'nodisponible',
+  'ninguno',
+  'ninguna',
+  'sinmarca',
+  'sininformacion',
+  'sindatos',
+  'noespecificado',
+  'noespecificada',
+  'indeterminado',
+  'indeterminada',
+  'noaplica',
+  'novisible',
+  'nodefinido',
+  'unknown',
+  'none',
+  'na',
+  'null',
+  'undefined',
+  'notvisible',
+  'notapplicable',
+  'notspecified',
+]);
+
+const isUnknownToken = (s: string): boolean => UNKNOWN_TOKENS.has(norm(s));
+
+/** A descriptive string that rejects "unknown" sentinels (e.g. for brand). */
+const descr = (v: unknown): string | undefined => {
+  const s = str(v);
+  return s !== undefined && !isUnknownToken(s) ? s : undefined;
+};
 
 const hex = (v: unknown): string | undefined => {
   const s = str(v);
@@ -272,17 +341,17 @@ export const parseGarmentVisionResponse = (content: string): GarmentAnalysis => 
       pick(map, ['secondarycolors', 'secondarycolours', 'coloressecundarios', 'colorssecundarios']),
     ),
   );
-  put('material', str(pick(map, ['material', 'materialaproximado', 'fabric', 'tela'])));
-  put('pattern', str(pick(map, ['pattern', 'patron', 'estampado', 'print'])));
-  put('texture', str(pick(map, ['texture', 'textura'])));
+  put('material', descr(pick(map, ['material', 'materialaproximado', 'fabric', 'tela'])));
+  put('pattern', descr(pick(map, ['pattern', 'patron', 'estampado', 'print'])));
+  put('texture', descr(pick(map, ['texture', 'textura'])));
   put(
     'sleeve',
-    str(pick(map, ['sleeve', 'sleeves', 'manga', 'mangas', 'sleevelength', 'tipodemanga'])),
+    descr(pick(map, ['sleeve', 'sleeves', 'manga', 'mangas', 'sleevelength', 'tipodemanga'])),
   );
-  put('length', str(pick(map, ['length', 'largo', 'longitud'])));
-  put('neckline', str(pick(map, ['neckline', 'cuello', 'collar', 'tipodecuello', 'escote'])));
-  put('fit', str(pick(map, ['fit', 'corte', 'ajuste', 'silueta'])));
-  put('style', str(pick(map, ['style', 'estilo'])));
+  put('length', descr(pick(map, ['length', 'largo', 'longitud'])));
+  put('neckline', descr(pick(map, ['neckline', 'cuello', 'collar', 'tipodecuello', 'escote'])));
+  put('fit', descr(pick(map, ['fit', 'corte', 'ajuste', 'silueta'])));
+  put('style', descr(pick(map, ['style', 'estilo'])));
   put(
     'formality',
     num0to10(pick(map, ['formality', 'formalidad', 'niveldeformalidad', 'formalitylevel'])),
@@ -292,6 +361,22 @@ export const parseGarmentVisionResponse = (content: string): GarmentAnalysis => 
   put(
     'occasions',
     strArray(pick(map, ['occasions', 'ocasiones', 'ocasionesrecomendadas', 'occasion', 'eventos'])),
+  );
+  put('brand', descr(pick(map, ['brand', 'marca', 'fabricante', 'label'])));
+  put(
+    'notes',
+    descr(
+      pick(map, [
+        'notes',
+        'observaciones',
+        'observacion',
+        'notas',
+        'comentarios',
+        'descripcion',
+        'observations',
+        'comments',
+      ]),
+    ),
   );
   put(
     'suggestedTags',

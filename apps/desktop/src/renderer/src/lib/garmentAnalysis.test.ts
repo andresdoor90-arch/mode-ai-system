@@ -26,6 +26,8 @@ const ANALYSIS: GarmentAnalysisDTO = {
   neckline: { value: 'Cuello mao', confidence: 0.95, source: 'user' },
   formality: { value: 9, confidence: 0.85, source: 'user' },
   occasions: { value: ['formal'], confidence: 0.9, source: 'user' },
+  brand: { value: 'Uniqlo', confidence: 0.7, source: 'vision' },
+  notes: { value: 'Ideal para clima templado', confidence: 0.6, source: 'vision' },
   suggestedTags: { value: ['Lino', 'formal'], confidence: 0.85, source: 'user' },
 };
 
@@ -33,7 +35,6 @@ describe('analysisToDraft', () => {
   it('fills the draft from the analysis', () => {
     const draft = analysisToDraft(ANALYSIS);
     expect(draft.name).toBe('Camisa de lino azul petróleo');
-    expect(draft.garmentType).toBe('Camisa');
     expect(draft.colorHex).toBe('#235a6e');
     expect(draft.colorName).toBe('Azul petróleo');
     expect(draft.material).toBe('Lino');
@@ -42,13 +43,14 @@ describe('analysisToDraft', () => {
     expect(draft.formality).toBe('9');
     expect(draft.occasions).toBe('formal');
     expect(draft.secondaryColors).toEqual(['#1a1a1a']);
+    expect(draft.brand).toBe('Uniqlo');
+    expect(draft.notes).toBe('Ideal para clima templado');
     expect(draft.tags).toEqual(['Lino', 'formal']);
   });
 
   it('leaves undetermined fields empty (never invents a value)', () => {
     const draft = analysisToDraft({});
     expect(draft.name).toBe('');
-    expect(draft.garmentType).toBe('');
     expect(draft.colorName).toBe('');
     expect(draft.secondaryColors).toEqual([]);
     expect(draft.material).toBe('');
@@ -88,7 +90,6 @@ describe('draftToMetadata', () => {
     draft.style = 'Clásico'; // a user edit
     draft.pattern = ''; // a cleared field
     const meta = draftToMetadata(draft, 0.82);
-    expect(meta.garmentType).toBe('Camisa');
     expect(meta.sleeve).toBe('Manga larga');
     expect(meta.neckline).toBe('Cuello mao');
     expect(meta.style).toBe('Clásico');
@@ -98,6 +99,8 @@ describe('draftToMetadata', () => {
     expect(meta.analysisConfidence).toBe('0.82');
     // Cleared/undetermined fields are simply absent.
     expect(meta.pattern).toBeUndefined();
+    // The garment type is owned by the user's categories — never AI-persisted.
+    expect(meta.garmentType).toBeUndefined();
   });
 });
 
@@ -168,12 +171,13 @@ describe('end-to-end: Qwen2.5-VL response → auto-filled form', () => {
       formality: 7,
       season: 'all-season',
       occasions: ['trabajo', 'formal'],
+      marca: 'Zara',
+      observaciones: 'Combina bien con pantalón beige',
       tags: ['oficina', 'clásico'],
     });
     const analysis = parseGarmentVisionResponse(raw) as unknown as GarmentAnalysisDTO;
     const draft = analysisToDraft(analysis);
     expect(draft.name).toBe('Camisa azul oscuro manga larga');
-    expect(draft.garmentType).toBe('Camisa');
     expect(draft.colorHex).toBe('#1b2a4a');
     expect(draft.colorName).toBe('Azul oscuro');
     expect(draft.secondaryColors).toEqual(['#ffffff']);
@@ -185,14 +189,20 @@ describe('end-to-end: Qwen2.5-VL response → auto-filled form', () => {
     expect(draft.formality).toBe('7');
     expect(draft.season).toBe('all-season');
     expect(draft.occasions).toBe('trabajo, formal');
+    expect(draft.brand).toBe('Zara');
+    expect(draft.notes).toBe('Combina bien con pantalón beige');
     expect(draft.tags).toEqual(['oficina', 'clásico']);
   });
 
   it('fills what it detects (Spanish keys) and leaves the rest empty', () => {
-    const raw = JSON.stringify({ tipo: 'Pantalón', color_principal: 'Beige', material: 'Lino' });
+    const raw = JSON.stringify({
+      tipo: 'Pantalón',
+      color_principal: 'Beige',
+      material: 'Lino',
+      marca: 'desconocida',
+    });
     const analysis = parseGarmentVisionResponse(raw) as unknown as GarmentAnalysisDTO;
     const draft = analysisToDraft(analysis);
-    expect(draft.garmentType).toBe('Pantalón');
     expect(draft.colorName).toBe('Beige');
     expect(draft.material).toBe('Lino');
     // Undetected attributes stay empty — never guessed.
@@ -201,5 +211,7 @@ describe('end-to-end: Qwen2.5-VL response → auto-filled form', () => {
     expect(draft.pattern).toBe('');
     expect(draft.season).toBe('');
     expect(draft.formality).toBe('');
+    // "desconocida" is an unknown sentinel → brand stays empty, never shown.
+    expect(draft.brand).toBe('');
   });
 });

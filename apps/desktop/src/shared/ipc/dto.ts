@@ -479,6 +479,8 @@ export interface GarmentAnalysisDTO {
   readonly season?: AnalyzedFieldDTO<string>;
   readonly gender?: AnalyzedFieldDTO<string>;
   readonly occasions?: AnalyzedFieldDTO<readonly string[]>;
+  readonly brand?: AnalyzedFieldDTO<string>;
+  readonly notes?: AnalyzedFieldDTO<string>;
   readonly suggestedTags?: AnalyzedFieldDTO<readonly string[]>;
   readonly compatibleCategories?: AnalyzedFieldDTO<readonly string[]>;
 }

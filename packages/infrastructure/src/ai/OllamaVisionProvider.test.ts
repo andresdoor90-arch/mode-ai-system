@@ -90,6 +90,35 @@ describe('parseGarmentVisionResponse', () => {
     expect(a.material?.value).toBe('Denim');
   });
 
+  it('resolves attributes nested several levels deep', () => {
+    const a = parseGarmentVisionResponse(
+      JSON.stringify({ resultado: { analisis: { prenda: { material: 'Lana', manga: 'corta' } } } }),
+    );
+    expect(a.material?.value).toBe('Lana');
+    expect(a.sleeve?.value).toBe('corta');
+  });
+
+  it('parses brand and observations (Spanish keys)', () => {
+    const a = parseGarmentVisionResponse(
+      JSON.stringify({
+        marca: 'Nike',
+        observaciones: 'Tela transpirable, ideal para deporte',
+      }),
+    );
+    expect(a.brand?.value).toBe('Nike');
+    expect(a.brand?.source).toBe('vision');
+    expect(a.notes?.value).toBe('Tela transpirable, ideal para deporte');
+  });
+
+  it('drops "unknown" sentinel values (esp. brand) instead of showing junk', () => {
+    const a = parseGarmentVisionResponse(
+      JSON.stringify({ marca: 'No visible', material: 'desconocido', sleeve: 'Manga larga' }),
+    );
+    expect(a.brand).toBeUndefined();
+    expect(a.material).toBeUndefined();
+    expect(a.sleeve?.value).toBe('Manga larga');
+  });
+
   it('maps category and season synonyms to domain slugs', () => {
     expect(
       parseGarmentVisionResponse(JSON.stringify({ category: 'zapatos' })).category?.value,

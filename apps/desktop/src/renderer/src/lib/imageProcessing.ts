@@ -70,8 +70,103 @@ const readAsDataUrl = (file: Blob): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
-/** Sample a downscaled grid of opaque pixels (most informative for colour). */
-function sampleColors(bitmap: ImageBitmap, grid = 48): RgbSampleDTO[] {
+/** Quantise a channel to a coarse bucket for grouping similar colours. */
+const bucketChannel = (value: number, step = 32): number => Math.round(value / step) * step;
+
+/** Squared Euclidean distance in RGB (cheap; avoids a sqrt per pixel). */
+const colorDistanceSq = (
+  ar: number,
+  ag: number,
+  ab: number,
+  br: number,
+  bg: number,
+  bb: number,
+): number => (ar - br) ** 2 + (ag - bg) ** 2 + (ab - bb) ** 2;
+
+/**
+ * Segment the garment out of its background and return ONLY the garment pixels.
+ *
+ * Real photos put the garment on some backdrop (white/black/grey/wood/…). If we
+ * sampled every pixel, a shirt on a white sheet would read as "white". So we:
+ *  1. Estimate the background from the image BORDER (the frame is almost always
+ *     backdrop), clustering border pixels into up to a few dominant colours.
+ *  2. Keep only interior pixels whose colour is far enough (in RGB distance)
+ *     from every background cluster — those are the garment.
+ *  3. Degrade safely: if that leaves too few pixels (garment fills the frame, or
+ *     its colour matches the backdrop), fall back to all opaque pixels so colour
+ *     is never lost. Transparent pixels (cut-out PNGs) are always skipped.
+ *
+ * Pure and deterministic — operates on raw RGBA so it is unit-tested without a
+ * canvas. `THRESHOLD` (Euclidean ≈ 60) excludes near-background tones while
+ * keeping genuinely different garment colours.
+ */
+export function segmentGarmentSamples(
+  rgba: Uint8ClampedArray | readonly number[],
+  width: number,
+  height: number,
+  threshold = 60,
+): RgbSampleDTO[] {
+  const thresholdSq = threshold * threshold;
+  const at = (i: number): number => rgba[i] ?? 0;
+  const isOpaque = (px: number): boolean => at(px * 4 + 3) >= 128;
+
+  const allOpaque: RgbSampleDTO[] = [];
+  const borderBuckets = new Map<string, { r: number; g: number; b: number; n: number }>();
+  const marginX = Math.max(1, Math.round(width * 0.12));
+  const marginY = Math.max(1, Math.round(height * 0.12));
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const px = y * width + x;
+      if (!isOpaque(px)) {
+        continue;
+      }
+      const r = at(px * 4);
+      const g = at(px * 4 + 1);
+      const b = at(px * 4 + 2);
+      allOpaque.push({ r, g, b, weight: 1 });
+      const onBorder = x < marginX || x >= width - marginX || y < marginY || y >= height - marginY;
+      if (onBorder) {
+        const key = `${bucketChannel(r)},${bucketChannel(g)},${bucketChannel(b)}`;
+        const acc = borderBuckets.get(key) ?? { r: 0, g: 0, b: 0, n: 0 };
+        acc.r += r;
+        acc.g += g;
+        acc.b += b;
+        acc.n += 1;
+        borderBuckets.set(key, acc);
+      }
+    }
+  }
+
+  if (allOpaque.length === 0) {
+    return [];
+  }
+
+  // Dominant background colours = the most populated border buckets that each
+  // cover a meaningful share of the border (keeps multi-tone backdrops sane).
+  const sortedBorder = [...borderBuckets.values()].sort((a, b) => b.n - a.n);
+  const borderTotal = sortedBorder.reduce((sum, c) => sum + c.n, 0);
+  const background = sortedBorder
+    .filter((c) => c.n / Math.max(1, borderTotal) >= 0.08)
+    .slice(0, 3)
+    .map((c) => ({ r: c.r / c.n, g: c.g / c.n, b: c.b / c.n }));
+
+  if (background.length === 0) {
+    return allOpaque;
+  }
+
+  const foreground = allOpaque.filter((s) =>
+    background.every((bg) => colorDistanceSq(s.r, s.g, s.b, bg.r, bg.g, bg.b) > thresholdSq),
+  );
+
+  // If segmentation kept too little, the backdrop estimate was unreliable (e.g.
+  // the garment fills the frame) — use every opaque pixel rather than lose colour.
+  const minKeep = Math.max(8, Math.round(allOpaque.length * 0.05));
+  return foreground.length >= minKeep ? foreground : allOpaque;
+}
+
+/** Sample a downscaled grid and keep only garment (non-background) pixels. */
+function sampleColors(bitmap: ImageBitmap, grid = 64): RgbSampleDTO[] {
   const canvas = document.createElement('canvas');
   const w = (canvas.width = Math.max(1, Math.min(grid, bitmap.width || grid)));
   const h = (canvas.height = Math.max(1, Math.min(grid, bitmap.height || grid)));
@@ -81,15 +176,7 @@ function sampleColors(bitmap: ImageBitmap, grid = 48): RgbSampleDTO[] {
   }
   ctx.drawImage(bitmap, 0, 0, w, h);
   const { data } = ctx.getImageData(0, 0, w, h);
-  const samples: RgbSampleDTO[] = [];
-  for (let i = 0; i < data.length; i += 4) {
-    const alpha = data[i + 3] ?? 0;
-    if (alpha < 128) {
-      continue; // skip transparent pixels (e.g. cut-out backgrounds)
-    }
-    samples.push({ r: data[i] ?? 0, g: data[i + 1] ?? 0, b: data[i + 2] ?? 0, weight: 1 });
-  }
-  return samples;
+  return segmentGarmentSamples(data, w, h);
 }
 
 /** Render an optimized thumbnail (WebP, falling back to JPEG) from the bitmap. */

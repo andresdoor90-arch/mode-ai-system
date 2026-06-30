@@ -497,14 +497,6 @@ export function AddGarmentDialog(): JSX.Element {
                       placeholder="Camisa de lino azul"
                     />
                   </FormField>
-                  <FormField label="Tipo de prenda" htmlFor="g-type">
-                    <Input
-                      id="g-type"
-                      value={draft.garmentType}
-                      onChange={(e) => setField('garmentType', e.target.value)}
-                      placeholder="Camisa, pantalón, zapatos…"
-                    />
-                  </FormField>
                   <FormField label="Estilo" htmlFor="g-style">
                     <Input
                       id="g-style"
