@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { GarmentCategory } from '../../domain/value-objects/GarmentCategory';
 import { Photograph } from '../../domain/value-objects/Photograph';
-import { type PhotoId } from '../../shared/Identifier';
+import { type CategoryId, type PhotoId } from '../../shared/Identifier';
 import {
   TopSubcategory,
   BottomSubcategory,
@@ -538,5 +538,47 @@ describe('AIOrchestrator — LLM outfit planner', () => {
     // into the planner catalog (so the model reasons over the real photo).
     expect(loaded).toContain('garments/shirt-thumb.webp');
     expect(planner.lastCatalog.find((g) => g.id === 'shirt')?.imageBase64).toBe('THUMB_BASE64');
+  });
+});
+
+describe('AIOrchestrator — user-defined categories (regression: "no hay prendas")', () => {
+  const userGarment = (
+    id: string,
+    name: string,
+    category: string,
+    slot: string,
+    hex: string,
+  ): ReturnType<typeof makeGarment> =>
+    makeGarment({
+      id,
+      name,
+      category, // arbitrary user slug, NOT a GarmentCategory enum value
+      subcategory: category,
+      categoryId: `cat-${category}` as CategoryId,
+      color: color(hex, name),
+      seasons: [Season.AllSeason],
+      metadata: { layerSlot: slot },
+    });
+
+  it('assembles outfits from garments in USER categories (rule engine, no LLM)', async () => {
+    const garments = new InMemoryGarmentRepository();
+    await garments.save(userGarment('c1', 'Camisa azul', 'camisas', 'upper-body', '#23527a'));
+    await garments.save(userGarment('p1', 'Pantalón gris', 'pantalones', 'lower-body', '#444444'));
+    await garments.save(userGarment('z1', 'Zapatos negros', 'zapatos', 'feet', '#111111'));
+    const orchestrator = new AIOrchestrator({
+      garments,
+      outfits: new InMemoryOutfitRepository(),
+      profiles: new InMemoryUserProfileRepository(),
+    });
+
+    const set = await orchestrator.recommend({ message: 'tengo una reunión de trabajo' });
+
+    // The bug: it returned 0 recommendations because it bucketed by the fixed
+    // category enum (which never matched user slugs). Now it buckets by the
+    // structural layerSlot, so the garments are found and combined.
+    expect(set.recommendations.length).toBeGreaterThan(0);
+    const ids = set.recommendations[0]?.garments.map((g) => g.id) ?? [];
+    expect(ids).toContain('c1');
+    expect(ids).toContain('p1');
   });
 });

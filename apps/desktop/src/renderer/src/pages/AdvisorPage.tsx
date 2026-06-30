@@ -12,7 +12,18 @@
  * No mocks, no sample data: with an empty wardrobe the engine returns nothing
  * and the screen says so.
  */
-import { Bot, ExternalLink, Loader2, RefreshCw, Send, Shirt, Sparkles, User } from 'lucide-react';
+import {
+  Bot,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  Send,
+  Shirt,
+  Sparkles,
+  ThumbsDown,
+  ThumbsUp,
+  User,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,6 +32,8 @@ import { GarmentImage } from '../components/common/GarmentImage';
 import { PageHeader } from '../components/common/PageHeader';
 import { TryOnMannequin } from '../components/common/TryOnMannequin';
 import { Badge, Button, Card, CardContent, Textarea } from '../components/ui';
+import { useToast } from '../hooks/useToast';
+import { ipc } from '../ipc/client';
 import { cn } from '../lib/cn';
 import { thumbnailKeyOf } from '../lib/garmentImages';
 import { buildOutfitLayers, selectionFromGarments } from '../lib/outfitModel';
@@ -49,6 +62,7 @@ const nextId = (): string => {
 
 export function AdvisorPage(): JSX.Element {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const wardrobeLoaded = useWardrobeStore((s) => s.loaded);
   const loadWardrobe = useWardrobeStore((s) => s.load);
@@ -118,17 +132,38 @@ export function AdvisorPage(): JSX.Element {
       return;
     }
     const offline =
-      state.set?.degraded === true ? ' (modo sin conexión: usé reglas de estilo locales)' : '';
-    append(
-      'assistant',
-      `Te propongo "${picked.label}"${offline}. ${picked.explanation} ` +
-        'Lo verás puesto en el maniquí; si te gusta, ábrelo en el Probador.',
-    );
+      state.set?.degraded === true
+        ? '\n\n(Sin conexión con el modelo: usé mis reglas de estilo locales.)'
+        : '';
+    // The explanation already opens with a warm greeting + per-garment reasoning
+    // (from the LLM advisor). Present it as the assistant's own voice.
+    append('assistant', `${picked.explanation.trim()}${offline}`);
   };
 
   const openInTryOn = (): void => {
     requestTryOn();
     navigate('/try-on');
+  };
+
+  const giveFeedback = async (accepted: boolean): Promise<void> => {
+    if (current === null) {
+      return;
+    }
+    try {
+      await ipc.recordOutfitFeedback(
+        current.garments.map((g) => g.id),
+        accepted,
+      );
+      append(
+        'assistant',
+        accepted
+          ? '¡Genial! Tomo nota: te gustan combinaciones así y las tendré más en cuenta. 😎'
+          : 'Entendido, lo recuerdo: evitaré proponerte combinaciones como esta.',
+      );
+      toast({ title: accepted ? 'Aprendido 👍' : 'Anotado 👎' });
+    } catch {
+      toast({ title: 'No pude guardar tu opinión', variant: 'destructive' });
+    }
   };
 
   const hasConversation = messages.length > 0;
@@ -323,6 +358,31 @@ export function AdvisorPage(): JSX.Element {
                   title="Generar otra propuesta"
                 >
                   <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Feedback teaches the advisor your taste over time. */}
+              <div className="flex items-center gap-2 border-t border-border pt-3">
+                <span className="text-xs text-muted-foreground">¿Te gusta este look?</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void giveFeedback(true)}
+                  title="Me gusta — aprende de esto"
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  Me gusta
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void giveFeedback(false)}
+                  title="No me gusta — evita combinaciones así"
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                  No me gusta
                 </Button>
               </div>
             </div>

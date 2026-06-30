@@ -3,10 +3,8 @@ import { type CategoryId, type GarmentId, type PhotoId } from '../../shared/Iden
 import { type Result, ok, err, unwrapOr } from '../../shared/Result';
 import { ValidationError, InvariantViolationError, NotFoundError } from '../../shared/errors';
 import { type Color } from '../value-objects/Color';
-import {
-  type CategoryMetadata,
-} from '../value-objects/CategoryMetadata';
-import { categoryLayerSlot, type LayerSlot } from '../value-objects/GarmentCategory';
+import { type CategoryMetadata } from '../value-objects/CategoryMetadata';
+import { categoryLayerSlot, LayerSlot } from '../value-objects/GarmentCategory';
 import { isSubcategoryOf } from '../value-objects/GarmentSubcategory';
 import { Photograph } from '../value-objects/Photograph';
 import { Season } from '../value-objects/Season';
@@ -84,6 +82,10 @@ export interface CreateGarmentInput {
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Known {@link LayerSlot} values, for validating a persisted metadata string. */
+const LAYER_SLOT_VALUES: ReadonlySet<string> = new Set(Object.values(LayerSlot));
+const isLayerSlot = (value: string): value is LayerSlot => LAYER_SLOT_VALUES.has(value);
+
 /**
  * A single wearable item. Entity (identity = a stable, persistent id). Mutating
  * operations return a `Result` and protect the garment's invariants.
@@ -141,10 +143,7 @@ export class Garment extends Entity<'Garment'> {
     this._metadata = { ...props.metadata };
   }
 
-  public static create(
-    id: GarmentId,
-    input: CreateGarmentInput,
-  ): Result<Garment, ValidationError> {
+  public static create(id: GarmentId, input: CreateGarmentInput): Result<Garment, ValidationError> {
     if (typeof input.name !== 'string' || input.name.trim().length === 0) {
       return err(new ValidationError('Garment name must be a non-empty string.'));
     }
@@ -275,9 +274,19 @@ export class Garment extends Entity<'Garment'> {
   public get formality(): number {
     return this._categoryMetadata?.formality ?? garmentFormality(this._subcategory);
   }
-  /** Body layer slot: from category metadata, else the seed taxonomy. */
+  /** Body layer slot: from category metadata, then the photo-flow metadata bag,
+   * then the seed taxonomy. The metadata bag holds the structural zone the user
+   * assigned to their OWN category, so user-defined categories resolve to the
+   * right slot (not the seed fallback) for recommendations and the try-on. */
   public get layerSlot(): LayerSlot {
-    return this._categoryMetadata?.layerSlot ?? categoryLayerSlot(this._category);
+    if (this._categoryMetadata?.layerSlot !== undefined) {
+      return this._categoryMetadata.layerSlot;
+    }
+    const fromMetadata = this._metadata['layerSlot'];
+    if (fromMetadata !== undefined && isLayerSlot(fromMetadata)) {
+      return fromMetadata;
+    }
+    return categoryLayerSlot(this._category);
   }
   /** Comfort/mobility (0–1): from category metadata, else the seed taxonomy. */
   public get comfort(): number {

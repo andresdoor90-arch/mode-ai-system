@@ -15,11 +15,15 @@ const photo = (id: string, order = 0, primary = false): Photograph =>
 describe('Photograph value object', () => {
   it('validates rotation and crop bounds', () => {
     expect(Photograph.create({ id: toId('p'), storageKey: '' }).ok).toBe(false);
+    expect(Photograph.create({ id: toId('p'), storageKey: 'k', rotation: 45 as never }).ok).toBe(
+      false,
+    );
     expect(
-      Photograph.create({ id: toId('p'), storageKey: 'k', rotation: 45 as never }).ok,
-    ).toBe(false);
-    expect(
-      Photograph.create({ id: toId('p'), storageKey: 'k', crop: { x: 0.5, y: 0, width: 0.7, height: 1 } }).ok,
+      Photograph.create({
+        id: toId('p'),
+        storageKey: 'k',
+        crop: { x: 0.5, y: 0, width: 0.7, height: 1 },
+      }).ok,
     ).toBe(false);
     expect(Photograph.create({ id: toId('p'), storageKey: 'k', crop: FULL_CROP }).ok).toBe(true);
   });
@@ -27,7 +31,9 @@ describe('Photograph value object', () => {
   it('rotates non-destructively in 90° steps', () => {
     const p = photo('a');
     expect(p.rotateClockwise().rotation).toBe(90);
-    expect(p.rotateClockwise().rotateClockwise().rotateClockwise().rotateClockwise().rotation).toBe(0);
+    expect(p.rotateClockwise().rotateClockwise().rotateClockwise().rotateClockwise().rotation).toBe(
+      0,
+    );
   });
 
   it('starts in the original (un-processed) stage', () => {
@@ -61,6 +67,40 @@ describe('Garment — dynamic category metadata', () => {
     // blazer formality from the legacy seed map is 8
     expect(g.formality).toBe(8);
     expect(g.layerSlot).toBe(LayerSlot.Outer);
+  });
+
+  it('reads the layer slot from the metadata bag for photo-added user categories', () => {
+    // The photo-add flow persists the chosen category zone in metadata.layerSlot
+    // (without a resolved CategoryMetadata). The garment must still expose the
+    // right structural slot so recommendations can place it — not the
+    // accessory fallback that the user slug would otherwise yield.
+    const g = unwrap(
+      Garment.create(toId('g'), {
+        name: 'Pantalón chino',
+        category: 'pantalones', // user slug → categoryLayerSlot() would say Accessory
+        subcategory: 'pantalones',
+        categoryId: toId('cat-pantalones'),
+        color: color('#b8a98a'),
+        seasons: [Season.AllSeason],
+        metadata: { layerSlot: 'lower-body' },
+      }),
+    );
+    expect(g.layerSlot).toBe(LayerSlot.LowerBody);
+  });
+
+  it('ignores an invalid layerSlot string in the metadata bag', () => {
+    const g = unwrap(
+      Garment.create(toId('g'), {
+        name: 'Cosa',
+        category: 'tops',
+        subcategory: 't-shirt',
+        color: color('#222222'),
+        seasons: [Season.AllSeason],
+        metadata: { layerSlot: 'not-a-slot' },
+      }),
+    );
+    // Invalid value → seed fallback from the (valid) category.
+    expect(g.layerSlot).toBe(LayerSlot.UpperBody);
   });
 
   it('skips hardcoded subcategory validation on the dynamic path', () => {

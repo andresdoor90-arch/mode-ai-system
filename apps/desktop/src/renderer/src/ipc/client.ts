@@ -153,4 +153,15 @@ export const ipc = {
   exportWardrobe: (): Promise<{ json: string }> => unwrap(bridge().transfer.export()),
   importWardrobe: (json: string): Promise<{ imported: number }> =>
     unwrap(bridge().transfer.import(json)),
+
+  /**
+   * Record that the user liked (accepted) or disliked (rejected) a recommended
+   * outfit. This feeds the preference MemoryEngine the advisor uses, so future
+   * recommendations learn from the choice.
+   */
+  recordOutfitFeedback: (
+    garmentIds: readonly string[],
+    accepted: boolean,
+  ): Promise<{ historyEntryId: string | null; accepted: boolean }> =>
+    unwrap(bridge().history.recordFeedback({ garmentIds, accepted })),
 } as const;

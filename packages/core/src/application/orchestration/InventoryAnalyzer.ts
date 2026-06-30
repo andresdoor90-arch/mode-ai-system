@@ -9,7 +9,7 @@
  * later disqualify.
  */
 import { type Garment } from '../../domain/entities/Garment';
-import { GarmentCategory } from '../../domain/value-objects/GarmentCategory';
+import { LayerSlot } from '../../domain/value-objects/GarmentCategory';
 import { type IGarmentRepository } from '../../domain/repositories/IGarmentRepository';
 import { type RecommendationContext } from './types';
 
@@ -45,17 +45,22 @@ export class InventoryAnalyzer {
       return true;
     });
 
-    const byCategory = (category: GarmentCategory): readonly Garment[] =>
-      eligible.filter((g) => g.category === category);
+    // Group by the STRUCTURAL body zone (LayerSlot), not the category label.
+    // Categories are user-defined, so a garment's `category` is an arbitrary
+    // slug; its `layerSlot` (from the user's category metadata, resolved on the
+    // entity) is what tells us where it goes on the body. Bucketing by layerSlot
+    // is what lets the engine assemble outfits from the user's own categories.
+    const bySlot = (slot: LayerSlot): readonly Garment[] =>
+      eligible.filter((g) => g.layerSlot === slot);
 
     return {
       all: eligible,
-      tops: byCategory(GarmentCategory.Tops),
-      bottoms: byCategory(GarmentCategory.Bottoms),
-      dresses: byCategory(GarmentCategory.Dresses),
-      shoes: byCategory(GarmentCategory.Shoes),
-      outerwear: byCategory(GarmentCategory.Outerwear),
-      accessories: byCategory(GarmentCategory.Accessories),
+      tops: bySlot(LayerSlot.UpperBody),
+      bottoms: bySlot(LayerSlot.LowerBody),
+      dresses: bySlot(LayerSlot.FullBody),
+      shoes: bySlot(LayerSlot.Feet),
+      outerwear: bySlot(LayerSlot.Outer),
+      accessories: bySlot(LayerSlot.Accessory),
     };
   }
 }

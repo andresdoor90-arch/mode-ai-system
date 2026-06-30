@@ -49,6 +49,10 @@ export const makeGarment = (
     subcategory: overrides.subcategory ?? TopSubcategory.TShirt,
     color: overrides.color ?? color('#3366cc', 'blue'),
     seasons: overrides.seasons ?? [Season.AllSeason],
+    ...(overrides.categoryId !== undefined ? { categoryId: overrides.categoryId } : {}),
+    ...(overrides.categoryMetadata !== undefined
+      ? { categoryMetadata: overrides.categoryMetadata }
+      : {}),
     ...(overrides.brand !== undefined ? { brand: overrides.brand } : {}),
     ...(overrides.size !== undefined ? { size: overrides.size } : {}),
     ...(overrides.images !== undefined ? { images: overrides.images } : {}),
