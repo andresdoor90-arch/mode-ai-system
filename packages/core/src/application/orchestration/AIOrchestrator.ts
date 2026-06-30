@@ -335,7 +335,7 @@ export class AIOrchestrator {
       return null;
     }
 
-    const byId = new Map(garments.map((g) => [g.id, g] as const));
+    const byId = new Map<string, Garment>(garments.map((g) => [g.id, g]));
     const scoringContext: ScoringContext = {
       ...(context.weather !== undefined ? { weather: context.weather } : {}),
       referenceDate,
